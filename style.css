@@ -35,3 +35,18 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
   #pad { opacity: 0.85; transform: scale(0.85); transform-origin: bottom right; }
 }
 .blue { color: #5fd0ff; font-weight: 700; }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 22px; }
+.btns .big { margin-top: 0; padding: 12px 28px; font-size: 18px; }
+.big small { display: block; font-size: 11px; letter-spacing: 0.05em; font-weight: 400; }
+.big.alt { background: linear-gradient(#cfe9ff, #7fb8f0); border-color: #eef7ff; box-shadow: 0 5px 0 #2a4f9c; }
+.profile { margin: 16px auto 0; max-width: 420px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: rgba(0,0,0,0.3); font-size: 15px; line-height: 1.7; text-align: left; }
+.profile b { color: #ffcf6b; }
+.profile .small { font-size: 12px; color: #cfc4dc; }
+.xwbar { height: 6px; margin: 4px 0 6px; background: #2a2238; border-radius: 3px; overflow: hidden; }
+.xwbar i { display: block; height: 100%; background: linear-gradient(90deg, #7fb8f0, #ffe066); }
+.gain { margin-top: 12px; font-size: 18px; font-weight: 700; color: #9fe8ff; }
+.breakthrough { margin-top: 8px; font-size: 20px; font-weight: 900; color: #ffe066; text-shadow: 0 0 14px rgba(255,220,90,0.6); }
+.drop { margin-top: 8px; font-size: 15px; }
+.drop b { color: #ffcf6b; }
+.panel small { color: #a99bb8; }
+@media (max-height: 500px) { .howto { display: none; } .panel h1 { font-size: 30px; } }

@@ -105,6 +105,49 @@ let state = "title"; // title / run / runEnd / runFail / intro / play / win / lo
 let player, boss, hazards, shots, pshots, particles, floaters, shake, time, stats, cam, slowmo;
 let hitstop = 0, combo = 0, comboT = 0, comboPop = 0, flashT = 0, flashColor = "255,255,255", introT = 0, ultFx = 0, ultA = 0, embers = [], cracks = [];
 
+// ───────── 存檔：境界、法寶、靈獸、每日紀錄（存在瀏覽器 localStorage）─────────
+const SAVE_KEY = "pixelraid_save_v1";
+const REALMS = [
+  { n: "練氣", need: 0 }, { n: "築基", need: 300 }, { n: "金丹", need: 900 },
+  { n: "元嬰", need: 2000 }, { n: "化神", need: 4000 }, { n: "渡劫", need: 7000 },
+];
+const TREASURES = {
+  box: { n: "青鋒劍匣", d: "開場飛劍 +8" },
+  wind: { n: "疾風符", d: "飛劍齊射快 8%" },
+  shell: { n: "玄龜甲", d: "生命 +15" },
+  pearl: { n: "聚靈珠", d: "天罰能量 +15%" },
+  furnace: { n: "回春丹爐", d: "丹藥 +1", max: 3 },
+};
+const PETS = {
+  fox: { n: "赤焰狐", d: "每 3 秒吐火球打魔王" },
+  crane: { n: "白羽鶴", d: "每 5 秒幫你回血" },
+};
+const PET_MAX = 5;
+const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {} });
+function loadSave() {
+  try { return Object.assign(blankSave(), JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch { return blankSave(); }
+}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* 無痕模式存不了就算了 */ } }
+let save = loadSave();
+const realmIdx = (xw = save.xiuwei) => REALMS.reduce((i, r, j) => (xw >= r.need ? j : i), 0);
+const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+let mode = "normal"; // normal：一般修行（吃境界、法寶加成）／ daily：每日渡劫（大家同一張地圖、同樣起點）
+let B = null; // 這一場的加成
+function bonus() {
+  const daily = mode === "daily", r = daily ? 0 : realmIdx(), lv = (k) => (daily ? 0 : save.tr[k] || 0);
+  return {
+    realm: r, startSwords: 5 + r * 5 + lv("box") * 8, maxHp: 120 + r * 20 + lv("shell") * 15, atk: 1 + 0.15 * r,
+    vol: 2.2 * Math.pow(0.92, lv("wind")), ult: 1 + 0.15 * lv("pearl"), potions: 3 + lv("furnace"),
+    bossHp: Math.round(1600 * (1 + 0.35 * r)), bossDmg: 1 + 0.12 * r, pet: daily ? null : save.pet, petLv: save.petLv,
+  };
+}
+// 可以指定種子的亂數（每日渡劫用日期當種子，大家的門和妖群都一樣）
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+let rng = Math.random;
+const R = (a, b) => a + rng() * (b - a);
+
 const SKILLS = {
   attack: { cd: 0.32 },
   spin: { cd: 6 },
@@ -114,10 +157,11 @@ const SKILLS = {
 const ULT_MAX = 100;
 
 function reset() {
-  player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: 120, maxHp: 120, speed: 95, face: -Math.PI / 2, flip: false,
-    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: 3, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0,
-    swords: 0, volT: 1.5 };
-  boss = { x: ARENA.w / 2, y: 120, r: 22, hp: 1600, maxHp: 1600, phase: 1, state: "idle", t: 1.6, flash: 0, dashV: null, pattern: 0, rage: false, stagger: 0 };
+  const b = B || bonus();
+  player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: b.maxHp, maxHp: b.maxHp, speed: 95, face: -Math.PI / 2, flip: false,
+    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: b.potions, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0,
+    swords: 0, volT: 1.5, pet: b.pet, petLv: b.petLv, petT: 2, petX: ARENA.w / 2 - 16, petY: ARENA.h - 76 };
+  boss = { x: ARENA.w / 2, y: 120, r: 22, hp: b.bossHp, maxHp: b.bossHp, phase: 1, state: "idle", t: 1.6, flash: 0, dashV: null, pattern: 0, rage: false, stagger: 0 };
   hazards = [];
   shots = [];
   pshots = [];
@@ -155,6 +199,7 @@ function floatText(x, y, text, color, big = false) {
 }
 function hurtPlayer(dmg, from) {
   if (player.iframe > 0 || state !== "play") return;
+  dmg = Math.round(dmg * (B ? B.bossDmg : 1)); // 境界越高，魔王也越強
   player.hp = Math.max(0, player.hp - dmg);
   stats.taken += dmg;
   player.iframe = 0.7;
@@ -174,13 +219,14 @@ function hurtPlayer(dmg, from) {
 function hitBoss(base, x, y, quiet = false) {
   if (state !== "play") return;
   const crit = !quiet && Math.random() < 0.15;
+  base *= B ? B.atk : 1;
   const dmg = Math.max(1, Math.round(base * rand(0.9, 1.15) * (crit ? 2 : 1)));
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.flash = 0.1;
   stats.dealt += dmg;
   if (crit) stats.crits++;
   if (quiet) {
-    player.ult = Math.min(ULT_MAX, player.ult + dmg / 16);
+    player.ult = Math.min(ULT_MAX, player.ult + (dmg / 16) * (B ? B.ult : 1));
     burst(x, y, "#9fe8ff", 4, 50);
     if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
     if (boss.hp <= 0) end(true);
@@ -189,7 +235,7 @@ function hitBoss(base, x, y, quiet = false) {
   floatText(x, y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
   hitstop = Math.max(hitstop, crit ? 0.07 : 0.035);
   combo++; comboT = 2.2; comboPop = 1;
-  player.ult = Math.min(ULT_MAX, player.ult + dmg / (crit ? 7 : 9));
+  player.ult = Math.min(ULT_MAX, player.ult + (dmg / (crit ? 7 : 9)) * (B ? B.ult : 1));
   burst(x, y, crit ? "#ffd84a" : "#ffb070", crit ? 14 : 8, crit ? 90 : 60);
   shake = Math.max(shake, crit ? 4 : 2);
   if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
@@ -298,7 +344,7 @@ function updatePlayer(dt) {
   if (p.swords > 0) {
     p.volT -= dt;
     if (p.volT <= 0) {
-      p.volT = 2.2;
+      p.volT = B ? B.vol : 2.2;
       const n = Math.min(p.swords, 12);
       const total = 8 + Math.min(p.swords, 400) * 0.6;
       for (let i = 0; i < n; i++) {
@@ -306,6 +352,24 @@ function updatePlayer(dt) {
         pshots.push({ x: p.x + Math.cos(a) * 14, y: p.y + Math.sin(a) * 10 - 4, delay: i * 0.05, dmg: total / n, vx: 0, vy: 0, last: i === n - 1 ? Math.round(total) : 0 });
       }
     }
+  }
+}
+
+// 靈獸：跟在修士旁邊
+function updatePet(dt) {
+  const p = player;
+  if (!p.pet) return;
+  p.petX += (p.x - 16 - p.petX) * Math.min(1, dt * 5);
+  p.petY += (p.y - 6 - p.petY) * Math.min(1, dt * 5);
+  p.petT -= dt;
+  if (p.petT > 0) return;
+  if (p.pet === "fox") {
+    p.petT = 3;
+    pshots.push({ x: p.petX, y: p.petY, delay: 0, dmg: 15 * (1 + 0.3 * (p.petLv - 1)), vx: 0, vy: 0, last: 0, fox: true });
+  } else {
+    p.petT = 5;
+    const heal = Math.min(4 + p.petLv * 2, p.maxHp - p.hp);
+    if (heal > 0) { p.hp += heal; floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.petX, p.petY, "#ffffff", 8, 40); }
   }
 }
 
@@ -469,6 +533,58 @@ function end(win) {
   if (win) { burst(boss.x, boss.y, "#ffd84a", 60, 160, 1.2); burst(boss.x, boss.y, "#ff7a2e", 60, 120, 1.2); shake = 14; }
   setTimeout(() => showEnd(win), 1300);
 }
+// 結算：給修為、看有沒有突破、掉法寶或靈獸、記每日成績。回傳要顯示的文字（HTML）
+function settle(win, rank, ranFail = false) {
+  let gain = ranFail ? 15 : win ? Math.round(100 + player.swords * 0.5 + { S: 120, A: 80, B: 40, C: 0 }[rank]) : Math.round(stats.dealt / 10 + player.swords * 0.2);
+  if (mode === "daily") gain = Math.round(gain / 2);
+  const before = realmIdx();
+  save.xiuwei += gain;
+  const after = realmIdx();
+  let html = `<div class="gain">修為 +${gain}</div>`;
+  if (after > before) html += `<div class="breakthrough">突破！進入「${REALMS[after].n}期」<br><small>飛劍、生命、攻擊都變強了，但魔王也會更強</small></div>`;
+  if (win && mode === "normal") {
+    const pool = Object.keys(TREASURES).filter((k) => !TREASURES[k].max || (save.tr[k] || 0) < TREASURES[k].max);
+    if (Math.random() < 0.7 && pool.length) {
+      const k = pool[Math.floor(Math.random() * pool.length)];
+      save.tr[k] = (save.tr[k] || 0) + 1;
+      html += `<div class="drop">獲得法寶：<b>${TREASURES[k].n}</b> Lv.${save.tr[k]}<br><small>${TREASURES[k].d}</small></div>`;
+    } else if (!save.pet) {
+      const k = Math.random() < 0.5 ? "fox" : "crane";
+      save.pet = k; save.petLv = 1;
+      html += `<div class="drop">靈獸認主：<b>${PETS[k].n}</b><br><small>${PETS[k].d}</small></div>`;
+    } else if (save.petLv < PET_MAX) {
+      save.petLv++;
+      html += `<div class="drop">靈獸成長：<b>${PETS[save.pet].n}</b> Lv.${save.petLv}</div>`;
+    }
+  }
+  if (mode === "daily") {
+    const score = ranFail ? 0 : win ? Math.max(0, Math.round(3000 - time * 20 - stats.taken * 3)) + player.swords * 2 : Math.round(stats.dealt / 2);
+    const k = todayKey(), old = save.daily[k] || 0;
+    if (score > old) save.daily[k] = score;
+    html += `<div class="drop">每日渡劫得分 <b>${score}</b>${score > old ? "（今日新紀錄！）" : `（今日最佳 ${old}）`}</div>`;
+    lastShare = `御劍渡劫・每日渡劫 ${k}：${score} 分（飛劍 ${player.swords} 把${win ? `，${time.toFixed(1)} 秒渡劫成功` : ""}）`;
+  }
+  writeSave();
+  return html;
+}
+let lastShare = "";
+function endButtons() {
+  return `<div class="btns"><button id="again" class="big">再挑戰</button>
+    ${mode === "daily" ? `<button id="share" class="big alt">分享成績</button>` : ""}
+    <button id="home" class="big alt">回主畫面</button></div>`;
+}
+function bindEndButtons() {
+  document.getElementById("again").onclick = () => start(mode);
+  document.getElementById("home").onclick = renderTitle;
+  const sh = document.getElementById("share");
+  if (sh) sh.onclick = async () => {
+    try {
+      if (navigator.share) await navigator.share({ text: lastShare });
+      else { await navigator.clipboard.writeText(lastShare); sh.textContent = "已複製"; }
+    } catch { /* 使用者取消分享 */ }
+  };
+}
+
 function showEnd(win) {
   pad.classList.add("hidden");
   const t = time.toFixed(1);
@@ -477,24 +593,29 @@ function showEnd(win) {
     const score = stats.taken + time * 0.8;
     rank = score < 60 ? "S" : score < 110 ? "A" : score < 170 ? "B" : "C";
   }
+  const reward = settle(win, rank);
   screenEl.innerHTML = `<div class="panel">
     <h1>${win ? "渡劫成功！" : "渡劫失敗…"}</h1>
     <div class="result">
       ${win ? `評價<br><span class="rank">${rank}</span><br>` : `石魔剩下 ${Math.ceil((boss.hp / boss.maxHp) * 100)}% 血量<br>`}
       飛劍 ${player.swords} 把　時間 ${t} 秒<br>受到傷害 ${stats.taken}　造成傷害 ${stats.dealt}　爆擊 ${stats.crits} 次
     </div>
-    <button id="again" class="big">${win ? "再修一次" : "再挑戰"}</button>
+    ${reward}
+    ${endButtons()}
   </div>`;
   screenEl.classList.remove("hidden");
-  document.getElementById("again").onclick = start;
+  bindEndButtons();
 }
-function start() {
+function start(m = "normal") {
+  mode = m;
+  B = bonus();
   resetRun();
   state = "run";
   screenEl.classList.add("hidden");
   pad.classList.add("hidden");
 }
 function startBoss(swords) {
+  if (!B) B = bonus();
   reset();
   player.swords = swords;
   state = "intro";
@@ -502,7 +623,38 @@ function startBoss(swords) {
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
 }
-document.getElementById("start").onclick = start;
+// 主畫面：境界、修為、法寶、靈獸、兩種模式
+function renderTitle() {
+  pad.classList.add("hidden");
+  state = "title";
+  const r = realmIdx(), next = REALMS[r + 1];
+  const pct = next ? Math.round(((save.xiuwei - REALMS[r].need) / (next.need - REALMS[r].need)) * 100) : 100;
+  const trs = Object.keys(TREASURES).filter((k) => save.tr[k]).map((k) => `${TREASURES[k].n} Lv.${save.tr[k]}`);
+  const best = save.daily[todayKey()];
+  screenEl.innerHTML = `<div class="panel">
+    <h1>御劍<br>渡劫</h1>
+    <p class="sub">PIXEL RAID · 原型 v0.4</p>
+    <div class="profile">
+      <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
+      <div class="xwbar"><i style="width:${pct}%"></i></div>
+      <div class="small">法寶：${trs.length ? trs.join("、") : "還沒有，渡劫成功會掉落"}</div>
+      <div class="small">靈獸：${save.pet ? `${PETS[save.pet].n} Lv.${save.petLv}（${PETS[save.pet].d}）` : "還沒有"}</div>
+    </div>
+    <div class="btns">
+      <button id="start" class="big">踏上仙途</button>
+      <button id="daily" class="big alt">每日渡劫${best ? `<small>今日最佳 ${best}</small>` : ""}</button>
+    </div>
+    <div class="howto">
+      <p><b>第一關 御劍</b>　左右拖曳／A、D 選門，<span class="blue">藍門</span>加飛劍、<span class="red">紅門</span>扣飛劍；靠近封印石會自動用飛劍打，打碎有獎勵；閃開紫色妖群</p>
+      <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
+      <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
+      <p><b>每日渡劫</b>　每天一張固定地圖，大家同樣起點、不吃境界加成，比分數</p>
+    </div>
+  </div>`;
+  screenEl.classList.remove("hidden");
+  document.getElementById("start").onclick = () => start("normal");
+  document.getElementById("daily").onclick = () => start("daily");
+}
 
 // ───────── 繪圖 ─────────
 const floorTile = (() => {
@@ -705,8 +857,38 @@ function drawOrbit(x, y, count) {
     drawSword(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.55 - 3, -Math.PI / 2, 6);
   }
 }
+const FOX = sprite([
+  "k.....k..",
+  "kRk..kRk.",
+  "kRRkkRRk.",
+  "kRWRRWRk.",
+  ".kRRRRk.k",
+  "..kRRRkkR",
+  "..kRkRkRk",
+  "..kk.kk..",
+], { k: "#1b1424", R: "#ff7a2e", W: "#fff6c0" });
+const CRANE = sprite([
+  "...kk....",
+  "..kWRk...",
+  "..kWWk...",
+  "...kWkkk.",
+  "..kWWWWWk",
+  ".kWWWWkk.",
+  "..kkkk...",
+  "...k.k...",
+], { k: "#1b1424", W: "#f4f6ff", R: "#e8433a" });
+function drawPet() {
+  const p = player;
+  if (!p.pet) return;
+  const bob = Math.sin(time * 5) * 1.5;
+  ctx.drawImage(p.pet === "fox" ? FOX : CRANE, Math.round(p.petX - 4), Math.round(p.petY - 4 + bob));
+}
 function drawShots() {
-  for (const s of pshots) if (s.delay <= 0) drawSword(s.x, s.y, Math.atan2(s.vy, s.vx), 8);
+  for (const s of pshots) {
+    if (s.delay > 0) continue;
+    if (s.fox) { ctx.fillStyle = "#ff7a2e"; ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe066"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
+    else drawSword(s.x, s.y, Math.atan2(s.vy, s.vx), 8);
+  }
   for (const s of shots) {
     if (s.delay > 0) continue;
     ctx.fillStyle = "#ff5a1e"; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
@@ -896,6 +1078,7 @@ function render() {
   // 依 y 排序：誰在下面誰後畫
   if (player.y < boss.y) { drawPlayer(); if (state !== "win" || slowmo > 0.6) drawBoss(); }
   else { if (state !== "win" || slowmo > 0.6) drawBoss(); drawPlayer(); }
+  drawPet();
   drawShots();
   drawEmbers();
   drawUlt();
@@ -921,21 +1104,32 @@ cvs.addEventListener("pointerup", endDrag);
 cvs.addEventListener("pointercancel", endDrag);
 
 function pairGates(tier) {
-  const good = () => (Math.random() < 0.2 + tier * 0.15
-    ? { op: "×", v: Math.random() < 0.25 ? 3 : 2 }
-    : { op: "+", v: Math.round(rand(5, 12) + tier * 40) });
-  const bad = () => (Math.random() < 0.35 ? { op: "÷", v: 2 } : { op: "−", v: Math.round(rand(4, 10) + tier * 35) });
-  const pair = Math.random() < 0.3 ? [good(), good()] : [good(), bad()];
-  return Math.random() < 0.5 ? pair : pair.reverse();
+  const good = () => (rng() < 0.2 + tier * 0.15
+    ? { op: "×", v: rng() < 0.25 ? 3 : 2 }
+    : { op: "+", v: Math.round(R(5, 12) + tier * 40) });
+  const bad = () => (rng() < 0.35 ? { op: "÷", v: 2 } : { op: "−", v: Math.round(R(4, 10) + tier * 35) });
+  const pair = rng() < 0.3 ? [good(), good()] : [good(), bad()];
+  return rng() < 0.5 ? pair : pair.reverse();
 }
+// 會動的門：中間的分隔線左右滑動
+const gateSplit = (r) => (r.move ? Math.sin(time * 1.6 + r.phase) * 45 : 0);
 function resetRun() {
-  run = { x: 0, y: 0, swords: 5, shown: 5, rows: [], endY: 0, endT: 0 };
-  const N = 14;
+  const k = todayKey();
+  rng = mode === "daily" ? mulberry32(Number(k.replace(/-/g, ""))) : Math.random;
+  const start0 = B ? B.startSwords : 5;
+  run = { x: 0, y: 0, swords: start0, shown: start0, rows: [], endY: 0, endT: 0, fireT: 0 };
+  const N = 16;
   let y = -240;
   for (let i = 0; i < N; i++) {
     const tier = i / N; // 越後面數字越大
-    if (i % 4 === 3) run.rows.push({ y, type: "mob", x: rand(-40, 40), n: Math.round(rand(6, 14) + tier * 50), w: 50, hit: false });
-    else run.rows.push({ y, type: "gate", gates: pairGates(tier), pick: -1 });
+    if (i % 4 === 3) {
+      if (i % 8 === 3) run.rows.push({ y, type: "mob", x: R(-40, 40), n: Math.round(R(6, 14) + tier * 50), w: 50, hit: false });
+      else {
+        // 封印石：在一邊擋路，靠近時飛劍會自動打它，打碎有獎勵；沒打碎撞上去會損失飛劍
+        const hp = Math.round(R(25, 45) + tier * 250);
+        run.rows.push({ y, type: "seal", x: rng() < 0.5 ? -40 : 40, hp, max: hp, reward: Math.round(R(8, 15) + tier * 60), hit: false });
+      }
+    } else run.rows.push({ y, type: "gate", gates: pairGates(tier), pick: -1, move: tier > 0.3 && rng() < 0.4, phase: R(0, 6) });
     y -= 190;
   }
   run.endY = y - 40;
@@ -958,9 +1152,37 @@ function updateRun(dt) {
   const prevY = run.y;
   run.y -= RUN_SPEED * dt;
   for (const r of run.rows) {
+    // 封印石：在前方 130 以內、同一邊時，飛劍自動攻擊
+    if (r.type === "seal" && r.hp > 0 && r.y < run.y && run.y - r.y < 130 && Math.abs(run.x - r.x) < 36) {
+      r.hp -= run.swords * 1.5 * dt;
+      run.fireT -= dt;
+      if (run.fireT <= 0) {
+        run.fireT = 0.06;
+        particles.push({ x: run.x + rand(-8, 8), y: run.y - 6, vx: (r.x - run.x) * 2, vy: -(run.y - r.y) * 3.2, life: 0.3, max: 0.3, color: "#cfefff", size: 2 });
+      }
+      if (r.hp <= 0) {
+        r.hp = 0;
+        run.swords = clamp(run.swords + r.reward, 1, 999);
+        floatText(r.x, r.y - 30, `封印破！+${r.reward}`, "#ffe066", true);
+        burst(r.x, r.y - 12, "#ffe066", 30, 120, 0.7);
+        shake = 6; flashT = 0.12; flashColor = "255,230,120";
+      }
+    }
     if (!(prevY > r.y && run.y <= r.y)) continue;
+    if (r.type === "seal") {
+      if (r.hp > 0 && Math.abs(run.x - r.x) < 36) {
+        const lose = Math.ceil(r.hp / 3);
+        run.swords -= lose;
+        floatText(run.x, run.y - 18, `−${lose}`, "#ff6b6b", true);
+        burst(r.x, r.y - 12, "#c9c2d8", 24, 90);
+        shake = 8; flashT = 0.15; flashColor = "255,40,40";
+        if (run.swords <= 0) { run.swords = 0; state = "runFail"; setTimeout(showRunFail, 900); return; }
+      }
+      continue;
+    }
     if (r.type === "gate") {
-      r.pick = run.x < 0 ? 0 : 1;
+      r.splitAt = gateSplit(r);
+      r.pick = run.x < r.splitAt ? 0 : 1;
       const g = r.gates[r.pick], good = isGood(g);
       applyGate(g);
       floatText(run.x, run.y - 18, `${g.op}${g.v}`, good ? "#9fe8ff" : "#ff6b6b", true);
@@ -985,13 +1207,16 @@ function updateRun(dt) {
   }
 }
 function showRunFail() {
+  player.swords = 0; stats.dealt = 0;
+  const reward = settle(false, "C", true);
   screenEl.innerHTML = `<div class="panel">
     <h1>飛劍耗盡…</h1>
-    <div class="result">被妖群吃光了飛劍，到不了渡劫台。<br>下次記得閃開紫色妖群，或先多穿幾道加乘門。</div>
-    <button id="again" class="big">再挑戰</button>
+    <div class="result">飛劍被吃光了，到不了渡劫台。<br>下次閃開紫色妖群、沒把握打碎的封印石，或多穿幾道加乘門。</div>
+    ${reward}
+    ${endButtons()}
   </div>`;
   screenEl.classList.remove("hidden");
-  document.getElementById("again").onclick = start;
+  bindEndButtons();
 }
 
 const hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
@@ -1075,18 +1300,38 @@ function renderRun() {
   for (const r of run.rows) {
     if (r.y < top - 30 || r.y > bot + 30) continue;
     if (r.type === "gate") {
+      const split = r.pick >= 0 ? r.splitAt : gateSplit(r);
       r.gates.forEach((g, i) => {
-        const x0 = i === 0 ? -ROAD : 0, good = isGood(g), picked = r.pick === i, faded = r.pick >= 0 && !picked;
+        const x0 = i === 0 ? -ROAD : split, w = i === 0 ? split + ROAD : ROAD - split;
+        const good = isGood(g), picked = r.pick === i, faded = r.pick >= 0 && !picked;
         const col = good ? "95,208,255" : "255,80,70";
         ctx.globalAlpha = faded ? 0.25 : 1;
-        ctx.fillStyle = `rgba(${col},${picked ? 0.15 : 0.32})`; ctx.fillRect(x0 + 3, r.y - 22, ROAD - 6, 22);
-        ctx.fillStyle = `rgb(${col})`; ctx.fillRect(x0 + 3, r.y - 24, ROAD - 6, 2);
-        ctx.fillStyle = "#5c5478"; ctx.fillRect(x0 + 1, r.y - 26, 4, 28); ctx.fillRect(x0 + ROAD - 5, r.y - 26, 4, 28);
-        ctx.font = "900 15px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-        ctx.fillStyle = "#1b1424"; ctx.fillText(`${g.op}${g.v}`, x0 + ROAD / 2 + 1, r.y - 6);
-        ctx.fillStyle = good ? "#e6f8ff" : "#ffd0cc"; ctx.fillText(`${g.op}${g.v}`, x0 + ROAD / 2, r.y - 7);
+        ctx.fillStyle = `rgba(${col},${picked ? 0.15 : 0.32})`; ctx.fillRect(x0 + 3, r.y - 22, w - 6, 22);
+        ctx.fillStyle = `rgb(${col})`; ctx.fillRect(x0 + 3, r.y - 24, w - 6, 2);
+        ctx.fillStyle = "#5c5478"; ctx.fillRect(x0 + 1, r.y - 26, 4, 28); ctx.fillRect(x0 + w - 5, r.y - 26, 4, 28);
+        ctx.font = `900 ${w < 60 ? 12 : 15}px 'Noto Sans TC', sans-serif`; ctx.textAlign = "center";
+        ctx.fillStyle = "#1b1424"; ctx.fillText(`${g.op}${g.v}`, x0 + w / 2 + 1, r.y - 6);
+        ctx.fillStyle = good ? "#e6f8ff" : "#ffd0cc"; ctx.fillText(`${g.op}${g.v}`, x0 + w / 2, r.y - 7);
         ctx.globalAlpha = 1;
       });
+      if (r.move && r.pick < 0) { // 提示：這道門會動
+        ctx.fillStyle = "#ffe066"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif";
+        ctx.fillText("◀ ▶", split, r.y - 30);
+      }
+    } else if (r.type === "seal") {
+      if (r.hp <= 0) continue;
+      const k2 = r.hp / r.max;
+      ctx.fillStyle = "#1b1424"; ctx.fillRect(r.x - 22, r.y - 30, 44, 30);
+      ctx.fillStyle = "#6f6888"; ctx.fillRect(r.x - 20, r.y - 28, 40, 26);
+      ctx.fillStyle = "#8a83a6"; ctx.fillRect(r.x - 20, r.y - 28, 40, 4);
+      ctx.fillStyle = `rgba(255,224,102,${0.5 + Math.sin(time * 4) * 0.3})`;
+      ctx.fillRect(r.x - 1, r.y - 24, 2, 18); ctx.fillRect(r.x - 7, r.y - 16, 14, 2);
+      if (k2 < 0.66) { ctx.fillStyle = "#1b1424"; ctx.fillRect(r.x - 14, r.y - 22, 2, 8); ctx.fillRect(r.x - 12, r.y - 14, 4, 2); }
+      if (k2 < 0.33) { ctx.fillStyle = "#1b1424"; ctx.fillRect(r.x + 10, r.y - 26, 2, 10); ctx.fillRect(r.x + 6, r.y - 16, 4, 2); }
+      ctx.font = "900 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#1b1424"; ctx.fillText(`封印 ${Math.ceil(r.hp)}`, r.x + 1, r.y - 33);
+      ctx.fillStyle = "#e9e2ff"; ctx.fillText(`封印 ${Math.ceil(r.hp)}`, r.x, r.y - 34);
+      ctx.fillStyle = "#ffe066"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText(`打碎 +${r.reward}`, r.x, r.y + 9);
     } else if (!r.hit) {
       const m = Math.min(r.n, 14);
       for (let i = 0; i < m; i++) {
@@ -1119,12 +1364,13 @@ function renderRun() {
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(bx - 3, 11, bw + 6, 12);
   ctx.fillStyle = "#ffd27a"; ctx.fillRect(bx, 14, bw * prog, 6);
   ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#ffe0b0"; ctx.fillText(`飛劍 ×${run.swords}　前往渡劫台`, W / 2, 42);
+  ctx.fillStyle = "#ffe0b0"; ctx.fillText(`${mode === "daily" ? "【每日渡劫】" : `【${REALMS[B ? B.realm : 0].n}期】`}飛劍 ×${run.swords}　前往渡劫台`, W / 2, 42);
   if (time < 3.5 && state === "run") {
     ctx.globalAlpha = Math.min(1, (3.5 - time) * 2);
     ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Noto Sans TC', sans-serif";
     ctx.fillText("左右拖曳（或 A／D）選門", W / 2, H * 0.74);
     ctx.fillText("藍門加劍、紅門扣劍，閃開紫色妖群", W / 2, H * 0.74 + 22);
+    ctx.fillText("靠近封印石會自動攻擊，打碎有獎勵", W / 2, H * 0.74 + 44);
     ctx.globalAlpha = 1;
   }
   if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.5, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }
@@ -1146,6 +1392,7 @@ function frame(now) {
     updateBoss(dt);
     updateHazards(dt);
     updateSwords(dt);
+    updatePet(dt);
   } else if (state === "run") {
     time += dt;
     updateRun(dt);
@@ -1183,6 +1430,7 @@ if (params.has("run")) {
   keys.clear();
   cam.x = 0; cam.y = run.y - 45;
 } else if (params.has("demo")) {
+  if (params.has("pet")) { save.pet = params.get("pet"); save.petLv = 3; }
   startBoss(Number(params.get("swords") || 60));
   if (params.has("sim")) { state = "play"; cam.zoom = 1; }
   // 測試用：?demo&sim=秒數 先快轉（玩家會自動繞著魔王走、偶爾攻擊）
@@ -1201,4 +1449,5 @@ if (params.has("run")) {
   }
   keys.clear();
 }
-requestAnimationFrame(frame);
+if (!params.has("run") && !params.has("demo")) renderTitle();
+requestAnimationFrame(frame); // 啟動主迴圈
