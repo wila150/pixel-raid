@@ -118,6 +118,7 @@ const act = (name, ...ks) => padAct.has(name) || ks.some((k) => pressed.has(k));
 // ───────── 遊戲狀態 ─────────
 let state = "title"; // title / play / win / lose
 let player, boss, hazards, shots, particles, floaters, shake, time, stats, cam, slowmo;
+let hitstop = 0, combo = 0, comboT = 0, comboPop = 0, flashT = 0, flashColor = "255,255,255", introT = 0, ultFx = 0, ultA = 0, embers = [], cracks = [];
 
 const SKILLS = {
   attack: { cd: 0.32 },
@@ -125,10 +126,11 @@ const SKILLS = {
   roll: { cd: 1.1 },
   potion: { cd: 1 },
 };
+const ULT_MAX = 100;
 
 function reset() {
   player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: 120, maxHp: 120, speed: 95, face: -Math.PI / 2, flip: false,
-    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: 3, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0 };
+    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: 3, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0 };
   boss = { x: ARENA.w / 2, y: 120, r: 22, hp: 1600, maxHp: 1600, phase: 1, state: "idle", t: 1.6, flash: 0, dashV: null, pattern: 0, rage: false, stagger: 0 };
   hazards = [];
   shots = [];
@@ -138,7 +140,20 @@ function reset() {
   time = 0;
   slowmo = 0;
   stats = { taken: 0, dealt: 0, crits: 0 };
-  cam = { x: player.x, y: player.y };
+  cam = { x: boss.x, y: boss.y, zoom: 1 };
+  hitstop = 0; combo = 0; comboT = 0; flashT = 0; ultFx = 0; embers = [];
+  // 地板上的熔岩裂縫（每場隨機）
+  cracks = [];
+  for (let i = 0; i < 16; i++) {
+    let x = rand(30, ARENA.w - 30), y = rand(40, ARENA.h - 30), a = rand(0, Math.PI * 2);
+    const pts = [[x, y]];
+    for (let j = 0; j < 5 + Math.floor(rand(0, 4)); j++) {
+      a += rand(-0.8, 0.8);
+      x += Math.cos(a) * rand(8, 18); y += Math.sin(a) * rand(8, 18);
+      pts.push([x, y]);
+    }
+    cracks.push({ pts, phase: rand(0, 6) });
+  }
 }
 
 // ───────── 戰鬥共用 ─────────
@@ -149,7 +164,7 @@ function burst(x, y, color, n = 10, spd = 60, life = 0.5) {
   }
 }
 function floatText(x, y, text, color, big = false) {
-  floaters.push({ x: x + rand(-6, 6), y, text, color, life: 0.9, big });
+  floaters.push({ x: x + rand(-6, 6), y, text, color, life: 0.9, big, age: 0 });
 }
 function hurtPlayer(dmg, from) {
   if (player.iframe > 0 || state !== "play") return;
@@ -157,6 +172,8 @@ function hurtPlayer(dmg, from) {
   stats.taken += dmg;
   player.iframe = 0.7;
   player.hurt = 0.25;
+  combo = 0;
+  flashT = 0.12; flashColor = "255,40,40";
   shake = Math.max(shake, 6);
   floatText(player.x, player.y - 14, `-${dmg}`, "#ff6b6b");
   burst(player.x, player.y, "#ff6b6b", 8, 50);
@@ -176,6 +193,9 @@ function hitBoss(base, x, y) {
   stats.dealt += dmg;
   if (crit) stats.crits++;
   floatText(x, y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
+  hitstop = Math.max(hitstop, crit ? 0.07 : 0.035);
+  combo++; comboT = 2.2; comboPop = 1;
+  player.ult = Math.min(ULT_MAX, player.ult + dmg / (crit ? 7 : 9));
   burst(x, y, crit ? "#ffd84a" : "#ffb070", crit ? 14 : 8, crit ? 90 : 60);
   shake = Math.max(shake, crit ? 4 : 2);
   if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
@@ -187,7 +207,9 @@ function enterPhase2() {
   boss.t = 1.4;
   hazards = [];
   shots = [];
-  shake = 10;
+  shake = 12;
+  flashT = 0.3; flashColor = "255,90,40";
+  slowmo = 0.6;
   floatText(boss.x, boss.y - 40, "魔像暴走了！", "#ff8a3d", true);
 }
 
@@ -255,6 +277,19 @@ function updatePlayer(dt) {
     p.roll = 0.26;
     p.rollDir = mlen > 0.1 ? Math.atan2(my, mx) : p.face;
     p.iframe = Math.max(p.iframe, 0.32);
+  }
+  if (act("ult", "u", "i") && p.ult >= ULT_MAX && p.roll <= 0) {
+    p.ult = 0;
+    ultFx = 0.7;
+    ultA = angTo(p, boss);
+    p.iframe = Math.max(p.iframe, 0.8);
+    flashT = 0.35; flashColor = "255,250,220";
+    hitstop = 0.18;
+    shake = 16;
+    burst(boss.x, boss.y, "#fff6c0", 40, 180, 0.8);
+    burst(boss.x, boss.y, "#ffd84a", 30, 140, 0.8);
+    floatText(p.x, p.y - 24, "光刃・斷罪！", "#fff6c0", true);
+    hitBoss(260, boss.x, boss.y);
   }
   if (act("potion", "h", "c") && p.cds.potion <= 0 && p.potions > 0 && p.hp < p.maxHp) {
     p.cds.potion = SKILLS.potion.cd;
@@ -389,6 +424,17 @@ function updateFx(dt) {
   for (const f of floaters) { f.y -= 26 * dt; f.life -= dt; }
   floaters = floaters.filter((f) => f.life > 0);
   shake = Math.max(0, shake - dt * 30);
+  for (const f of floaters) f.age += dt;
+  comboPop = Math.max(0, comboPop - dt * 5);
+  if (comboT > 0) { comboT -= dt; if (comboT <= 0) combo = 0; }
+  flashT = Math.max(0, flashT - dt);
+  ultFx = Math.max(0, ultFx - dt);
+  // 往上飄的火星
+  const rate = boss && boss.phase === 2 ? 40 : 22;
+  for (let i = 0; i < rate * dt; i++) embers.push({ x: rand(0, ARENA.w), y: rand(20, ARENA.h + 10), vx: rand(-6, 6), vy: rand(-28, -12), life: rand(1.5, 3), max: 3, s: Math.random() < 0.3 ? 2 : 1 });
+  if (Math.random() < rate * dt - Math.floor(rate * dt)) embers.push({ x: rand(0, ARENA.w), y: rand(20, ARENA.h + 10), vx: rand(-6, 6), vy: rand(-28, -12), life: rand(1.5, 3), max: 3, s: 1 });
+  for (const e of embers) { e.x += (e.vx + Math.sin(time * 2 + e.y * 0.05) * 6) * dt; e.y += e.vy * dt; e.life -= dt; }
+  embers = embers.filter((e) => e.life > 0);
 }
 
 // ───────── 結束 ─────────
@@ -420,7 +466,8 @@ function showEnd(win) {
 }
 function start() {
   reset();
-  state = "play";
+  state = "intro";
+  introT = 2.8;
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
 }
@@ -440,6 +487,27 @@ const floorTile = (() => {
 
 function drawArena() {
   for (let y = 0; y < ARENA.h; y += 32) for (let x = 0; x < ARENA.w; x += 32) ctx.drawImage(floorTile, x, y);
+  // 熔岩裂縫
+  for (const c of cracks) {
+    const glow = 0.45 + Math.sin(time * 2.2 + c.phase) * 0.3 + (boss.phase === 2 ? 0.2 : 0);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.strokeStyle = "#140c12"; ctx.lineWidth = 3.5;
+    ctx.beginPath(); c.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+    ctx.strokeStyle = `rgba(255,${boss.phase === 2 ? 70 : 120},40,${glow})`; ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  // 中央魔法陣
+  const cx = ARENA.w / 2, cy = ARENA.h / 2 + 10;
+  const runeCol = boss.phase === 2 ? "255,70,50" : "170,110,255";
+  ctx.strokeStyle = `rgba(${runeCol},${0.25 + Math.sin(time * 1.5) * 0.08})`; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 64, 0, Math.PI * 2); ctx.stroke();
+  for (let i = 0; i < 6; i++) {
+    const a = time * 0.25 + (i * Math.PI) / 3, b = a + (Math.PI * 2) / 3;
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * 64, cy + Math.sin(a) * 64); ctx.lineTo(cx + Math.cos(b) * 64, cy + Math.sin(b) * 64); ctx.stroke();
+  }
+  ctx.fillStyle = `rgba(${runeCol},0.45)`;
+  for (let i = 0; i < 12; i++) { const a = -time * 0.4 + (i * Math.PI) / 6; ctx.fillRect(cx + Math.cos(a) * 71 - 1.5, cy + Math.sin(a) * 71 - 1.5, 3, 3); }
   // 牆與熔岩邊
   ctx.fillStyle = "#120d18";
   ctx.fillRect(-200, -200, ARENA.w + 400, 200);
@@ -594,6 +662,24 @@ function drawShots() {
   }
 }
 
+function drawEmbers() {
+  for (const e of embers) {
+    ctx.globalAlpha = Math.min(1, e.life / e.max * 2) * 0.9;
+    ctx.fillStyle = e.s > 1 ? "#ffd27a" : "#ff8a3d";
+    ctx.fillRect(e.x, e.y, e.s, e.s);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawUlt() {
+  if (ultFx <= 0) return;
+  const k = ultFx / 0.7;
+  ctx.save();
+  ctx.translate(boss.x, boss.y);
+  ctx.rotate(ultA);
+  ctx.fillStyle = `rgba(255,216,74,${k * 0.6})`; ctx.fillRect(-420, -10 * k - 3, 840, 20 * k + 6);
+  ctx.fillStyle = `rgba(255,255,255,${k})`; ctx.fillRect(-420, -4 * k - 1, 840, 8 * k + 2);
+  ctx.restore();
+}
 function drawFx() {
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.max);
@@ -604,11 +690,52 @@ function drawFx() {
   ctx.textAlign = "center";
   for (const f of floaters) {
     ctx.globalAlpha = Math.min(1, f.life * 2);
-    ctx.font = `bold ${f.big ? 12 : 9}px "Noto Sans TC", sans-serif`;
+    const pop = 1 + Math.max(0, 0.12 - f.age) * (f.big ? 8 : 5);
+    ctx.font = `bold ${Math.round((f.big ? 12 : 9) * pop)}px "Noto Sans TC", sans-serif`;
     ctx.fillStyle = "#1b1424"; ctx.fillText(f.text, f.x + 1, f.y + 1);
     ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
   }
   ctx.globalAlpha = 1;
+}
+
+// 光影：先蓋一層暗色，再在光源處挖洞；最後疊一層彩色光暈
+const lightCvs = document.createElement("canvas");
+const lctx = lightCvs.getContext("2d");
+function drawLights(k, ox, oy) {
+  if (lightCvs.width !== cvs.width || lightCvs.height !== cvs.height) { lightCvs.width = cvs.width; lightCvs.height = cvs.height; }
+  const lights = [];
+  const L = (x, y, r, a = 1, color = null) => lights.push({ x, y, r, a, color });
+  for (const [x, y] of [[40, 40], [ARENA.w - 40, 40], [40, ARENA.h - 30], [ARENA.w - 40, ARENA.h - 30]]) L(x, y - 26, 85 + Math.sin(time * 7 + x) * 4, 1, "255,140,50");
+  L(player.x, player.y, 75, 0.95, "120,160,255");
+  L(boss.x, boss.y, boss.phase === 2 ? 110 : 90, 0.85, boss.phase === 2 ? "255,60,30" : "255,120,40");
+  L(ARENA.w / 2, ARENA.h / 2 + 10, 95, 0.35, boss.phase === 2 ? "255,60,40" : "160,100,255");
+  for (const c of cracks) { const [x, y] = c.pts[Math.floor(c.pts.length / 2)]; L(x, y, 28, 0.45, "255,110,40"); }
+  for (const sh of shots) if (sh.delay <= 0) L(sh.x, sh.y, 30, 0.9, "255,120,30");
+  for (const h of hazards) if (h.delay <= 0 && h.type === "circle") L(h.x, h.y, h.r * 1.5, h.warn > 0 ? 0.5 : 1, h.warn > 0 ? "255,40,40" : "255,170,60");
+  if (ultFx > 0) L(boss.x, boss.y, 260, ultFx, "255,240,180");
+
+  lctx.globalCompositeOperation = "source-over";
+  lctx.clearRect(0, 0, lightCvs.width, lightCvs.height);
+  lctx.fillStyle = boss.phase === 2 ? "rgba(22,4,6,0.8)" : "rgba(6,3,16,0.8)";
+  lctx.fillRect(0, 0, lightCvs.width, lightCvs.height);
+  lctx.globalCompositeOperation = "destination-out";
+  for (const l of lights) {
+    const X = ox + l.x * k, Y = oy + l.y * k, R = l.r * k;
+    const g = lctx.createRadialGradient(X, Y, 0, X, Y, R);
+    g.addColorStop(0, `rgba(0,0,0,${l.a})`); g.addColorStop(0.5, `rgba(0,0,0,${l.a * 0.6})`); g.addColorStop(1, "rgba(0,0,0,0)");
+    lctx.fillStyle = g; lctx.fillRect(X - R, Y - R, R * 2, R * 2);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(lightCvs, 0, 0);
+  ctx.globalCompositeOperation = "lighter";
+  for (const l of lights) {
+    if (!l.color) continue;
+    const X = ox + l.x * k, Y = oy + l.y * k, R = l.r * k * 0.7;
+    const g = ctx.createRadialGradient(X, Y, 0, X, Y, R);
+    g.addColorStop(0, `rgba(${l.color},${0.16 * l.a})`); g.addColorStop(1, `rgba(${l.color},0)`);
+    ctx.fillStyle = g; ctx.fillRect(X - R, Y - R, R * 2, R * 2);
+  }
+  ctx.globalCompositeOperation = "source-over";
 }
 
 // 畫面上的介面（不跟鏡頭移動）
@@ -635,7 +762,26 @@ function drawHud() {
   ctx.fillStyle = player.hp / player.maxHp < 0.3 ? "#ff5a4a" : "#5fdc6a"; ctx.fillRect(px, py, pw * (player.hp / player.maxHp), 12);
   ctx.font = "bold 12px 'Noto Sans TC', sans-serif";
   ctx.fillStyle = "#fff"; ctx.fillText(`劍士 HP ${player.hp}/${player.maxHp}　藥水 ×${player.potions}`, px, py - 8);
-  ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.fillText(`${time.toFixed(1)} 秒`, px, py + 30);
+  // 必殺能量
+  const full = player.ult >= ULT_MAX;
+  ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(px - 3, py + 15, pw + 6, 10);
+  ctx.fillStyle = full ? `rgba(255,${200 + Math.sin(time * 12) * 55},80,1)` : "#c9a2ff"; ctx.fillRect(px, py + 17, pw * (player.ult / ULT_MAX), 6);
+  ctx.fillStyle = full ? "#ffe066" : "rgba(255,255,255,0.6)";
+  ctx.fillText(full ? "必殺技準備好了！按 U／必殺" : `${time.toFixed(1)} 秒`, px, py + 40);
+  // 連擊
+  if (combo >= 3) {
+    const sc = 1 + comboPop * 0.5;
+    ctx.save();
+    ctx.translate(W - 30, H * 0.32);
+    ctx.scale(sc, sc);
+    ctx.textAlign = "right";
+    ctx.font = "900 34px 'Noto Sans TC', sans-serif";
+    ctx.fillStyle = "#1b1424"; ctx.fillText(`${combo}`, 2, 2);
+    ctx.fillStyle = combo >= 30 ? "#ff5a4a" : combo >= 15 ? "#ffd84a" : "#ffffff"; ctx.fillText(`${combo}`, 0, 0);
+    ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffcf6b"; ctx.fillText("連擊", 0, 18);
+    ctx.restore();
+    ctx.textAlign = "left";
+  }
 
   // 搖桿
   if (stick.id !== null) {
@@ -646,11 +792,30 @@ function drawHud() {
     ctx.beginPath(); ctx.arc(stick.ox + dx * k, stick.oy + dy * k, 22, 0, Math.PI * 2); ctx.fill();
   }
 
+  // 開場：魔王登場卡片
+  if (state === "intro") {
+    const t = 2.8 - introT;
+    const bar = Math.min(1, t * 3) * H * 0.12;
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bar); ctx.fillRect(0, H - bar, W, bar);
+    if (t > 0.9) {
+      const a = Math.min(1, (t - 0.9) * 3) * Math.min(1, introT * 3);
+      ctx.globalAlpha = a;
+      ctx.textAlign = "center";
+      ctx.font = "bold 14px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffcf6b";
+      ctx.fillText("— 熔岩深淵的守門者 —", W / 2, H * 0.7);
+      ctx.font = "900 44px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#1b1424"; ctx.fillText("暗焰魔像", W / 2 + 3, H * 0.7 + 49);
+      ctx.fillStyle = "#ffb347"; ctx.fillText("暗焰魔像", W / 2, H * 0.7 + 46);
+      ctx.globalAlpha = 1;
+    }
+  }
+  if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.7, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }
   // 技能冷卻（按鈕上的黑色遮罩）
   for (const name of ["spin", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${name}"] .cd`);
     if (el) el.style.transform = `scaleY(${player.cds[name] / SKILLS[name].cd})`;
   }
+  const ultBtn = pad.querySelector('[data-act="ult"]');
+  if (ultBtn) { ultBtn.style.setProperty("--ult", player.ult / ULT_MAX); ultBtn.classList.toggle("ready", player.ult >= ULT_MAX); }
   const cnt = pad.querySelector(".count");
   if (cnt) cnt.textContent = player.potions;
 }
@@ -661,12 +826,15 @@ function render() {
   ctx.fillRect(0, 0, cvs.width, cvs.height);
   if (!player) return;
   // 鏡頭跟著玩家，稍微往魔王方向偏
-  const tx = player.x * 0.75 + boss.x * 0.25, ty = player.y * 0.75 + boss.y * 0.25;
-  cam.x += (tx - cam.x) * 0.1;
-  cam.y += (ty - cam.y) * 0.1;
-  const k = SCALE * DPR;
-  const sx = shake > 0 ? rand(-shake, shake) : 0, sy = shake > 0 ? rand(-shake, shake) : 0;
-  ctx.setTransform(k, 0, 0, k, Math.round(W * DPR / 2 - cam.x * k + sx), Math.round(H * DPR / 2 - cam.y * k + sy));
+  const intro = state === "intro";
+  const tx = intro ? boss.x : player.x * 0.75 + boss.x * 0.25, ty = intro ? boss.y : player.y * 0.75 + boss.y * 0.25;
+  cam.x += (tx - cam.x) * (intro ? 0.06 : 0.1);
+  cam.y += (ty - cam.y) * (intro ? 0.06 : 0.1);
+  cam.zoom += ((intro ? 1.35 : ultFx > 0 ? 1.12 : 1) - cam.zoom) * 0.08;
+  const k = SCALE * DPR * cam.zoom;
+  const sx = shake > 0 ? rand(-shake, shake) * DPR : 0, sy = shake > 0 ? rand(-shake, shake) * DPR : 0;
+  const ox = Math.round(W * DPR / 2 - cam.x * k + sx), oy = Math.round(H * DPR / 2 - cam.y * k + sy);
+  ctx.setTransform(k, 0, 0, k, ox, oy);
   ctx.imageSmoothingEnabled = false;
   drawArena();
   drawHazards();
@@ -674,6 +842,10 @@ function render() {
   if (player.y < boss.y) { drawPlayer(); if (state !== "win" || slowmo > 0.6) drawBoss(); }
   else { if (state !== "win" || slowmo > 0.6) drawBoss(); drawPlayer(); }
   drawShots();
+  drawEmbers();
+  drawUlt();
+  drawLights(k, ox, oy);
+  ctx.setTransform(k, 0, 0, k, ox, oy);
   drawFx();
   drawHud();
 }
@@ -683,7 +855,12 @@ let last = performance.now();
 function frame(now) {
   let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (state === "play") {
+  if (hitstop > 0) { hitstop -= dt; render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return; }
+  if (state === "intro") {
+    introT -= dt;
+    if (introT < 1.6 && introT + dt >= 1.6) { shake = 12; burst(boss.x, boss.y - 20, "#ff8a3d", 40, 150, 0.9); flashT = 0.15; flashColor = "255,120,40"; }
+    if (introT <= 0) state = "play";
+  } else if (state === "play") {
     time += dt;
     updatePlayer(dt);
     updateBoss(dt);
@@ -704,6 +881,7 @@ reset();
 const params = new URLSearchParams(location.search);
 if (params.has("demo")) {
   start();
+  if (params.has("sim")) { state = "play"; cam.zoom = 1; }
   // 測試用：?demo&sim=秒數 先快轉（玩家會自動繞著魔王走、偶爾攻擊）
   const sim = Number(params.get("sim") || 0);
   for (let t = 0; t < sim && state === "play"; t += 1 / 60) {
@@ -713,6 +891,8 @@ if (params.has("demo")) {
     if (Math.sin(a) > 0.3) keys.add("s"); else if (Math.sin(a) < -0.3) keys.add("w");
     if (Math.random() < 0.08) pressed.add("j");
     time += 1 / 60;
+    if (Math.random() < 0.01) pressed.add("u");
+    hitstop = 0;
     updatePlayer(1 / 60); updateBoss(1 / 60); updateHazards(1 / 60); updateFx(1 / 60);
     pressed.clear();
   }
