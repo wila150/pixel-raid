@@ -93,7 +93,7 @@ function renderTitle() {
   const best = save.daily[todayKey()];
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v0.4</p>
+    <p class="sub">PIXEL RAID · 原型 v0.6</p>
     <div class="profile">
       <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
       <div class="xwbar"><i style="width:${pct}%"></i></div>
