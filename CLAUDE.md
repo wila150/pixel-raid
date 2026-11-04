@@ -18,4 +18,4 @@
 
 ## 規則
 - 角色與美術一律原創，不能用 Pokémon 等既有遊戲的角色、名字、圖。光序的小蛇吉祥物是客戶的，不能拿來用。
-- commit：`git -c user.name=XieChengFang -c user.email=114204364+wila150@users.noreply.github.com commit`（還沒有 GitHub repo）。
+- commit：`git -c user.name=XieChengFang -c user.email=114204364+wila150@users.noreply.github.com commit`。GitHub：https://github.com/wila150/pixel-raid （私人，分支 master）；push 要用 Windows GCM（見記憶 wsl-machine-setup-gaps）。
