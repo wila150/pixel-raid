@@ -35,15 +35,19 @@ function resetRun() {
   let y = -240;
   for (let i = 0; i < N; i++) {
     const tier = i / N; // 越後面數字越大
-    if (i % 4 === 3) {
+    if (i === 5 || i === 10) run.rows.push({ y, type: "lotus", taken: false }); // 機緣：三選一功法
+    else if (i === 9) {
+      // 小王「守關妖將」：擋住整條路，飛劍遠遠就開始打；沒打倒撞上去損失大量飛劍
+      const hp = Math.round(R(55, 70) + tier * 300);
+      run.rows.push({ y, type: "elite", hp, max: hp, reward: Math.round(R(15, 25) + tier * 90), hit: false });
+    } else if (i % 4 === 3) {
       if (i % 8 === 3) run.rows.push({ y, type: "mob", x: R(-40, 40), n: Math.round(R(6, 14) + tier * 50), w: 50, hit: false });
       else {
         // 封印石：在一邊擋路，靠近時飛劍會自動打它，打碎有獎勵；沒打碎撞上去會損失飛劍
         const hp = Math.round(R(25, 45) + tier * 250);
         run.rows.push({ y, type: "seal", x: rng() < 0.5 ? -40 : 40, hp, max: hp, reward: Math.round(R(8, 15) + tier * 60), hit: false });
       }
-    } else if (i === 5 || i === 11) run.rows.push({ y, type: "lotus", taken: false }); // 機緣：三選一功法
-    else run.rows.push({ y, type: "gate", gates: pairGates(tier), pick: -1, move: tier > 0.3 && rng() < 0.4, phase: R(0, 6) });
+    } else run.rows.push({ y, type: "gate", gates: pairGates(tier), pick: -1, move: tier > 0.3 && rng() < 0.4, phase: R(0, 6) });
     y -= 190;
   }
   run.endY = y - 40;
@@ -55,6 +59,14 @@ function applyGate(g) {
   let s = run.swords;
   if (g.op === "+") s += g.v + 5 * P("split"); else if (g.op === "−") s -= g.v; else if (g.op === "×") s *= g.v + 0.5 * P("mult"); else s = Math.ceil(s / 2);
   run.swords = clamp(Math.round(s), 1, 999);
+}
+const bountyOf = (n) => Math.round(n * (1 + 0.5 * P("bounty")));
+// 飛劍射向目標的小光點
+function swordFx(tx, ty) {
+  run.fireT -= 1 / 60;
+  if (run.fireT > 0) return;
+  run.fireT = 0.06;
+  particles.push({ x: run.x + rand(-8, 8), y: run.y - 6, vx: (tx - run.x) * 2, vy: -(run.y - ty) * 3.2, life: 0.3, max: 0.3, color: "#cfefff", size: 2 });
 }
 function updateRun(dt) {
   let mx = 0;
@@ -77,8 +89,9 @@ function updateRun(dt) {
       }
       if (r.hp <= 0) {
         r.hp = 0;
-        run.swords = clamp(run.swords + r.reward, 1, 999);
-        floatText(r.x, r.y - 30, `封印破！+${r.reward}`, "#ffe066", true);
+        const rw = bountyOf(r.reward);
+        run.swords = clamp(run.swords + rw, 1, 999);
+        floatText(r.x, r.y - 30, `封印破！+${rw}`, "#ffe066", true);
         sfx("break");
         burst(r.x, r.y - 12, "#ffe066", 30, 120, 0.7);
         shake = 6; flashT = 0.12; flashColor = "255,230,120";
@@ -97,11 +110,28 @@ function updateRun(dt) {
       }
       if (r.n <= 0) {
         r.hit = true;
-        const gain = Math.ceil(r.orig / 4);
+        const gain = bountyOf(Math.ceil(r.orig / 4));
         run.swords = clamp(run.swords + gain, 1, 999);
         floatText(r.x, r.y - 30, `妖群全滅！+${gain}`, "#ffe066", true);
         burst(r.x, r.y - 10, "#b07dff", 40, 130, 0.8);
         shake = 6; sfx("break");
+      }
+    }
+    // 守關妖將：前方 230 以內就開始打（整條路都打得到）
+    if (r.type === "elite" && r.hp > 0 && r.y < run.y && run.y - r.y < 250) {
+      if (!r.warned) { r.warned = true; floatText(0, run.y - 70, "守關妖將擋路！", "#ff8a3d", true); sfx("roar"); shake = 6; }
+      r.hp -= run.swords * 1.2 * (1 + 0.5 * P("pierce")) * dt;
+      swordFx(rand(-20, 20), r.y - 16);
+      if (Math.random() < 0.25) burst(rand(-20, 20), r.y - 20, "#ff8a3d", 3, 50);
+      if (r.hp <= 0) {
+        r.hp = 0; r.hit = true;
+        const rw = bountyOf(r.reward);
+        run.swords = clamp(run.swords + rw, 1, 999);
+        floatText(0, r.y - 40, `斬殺妖將！+${rw}`, "#ffe066", true);
+        sfx("break"); burst(0, r.y - 16, "#ff8a3d", 50, 160, 0.9); burst(0, r.y - 16, "#ffe066", 30, 120, 0.8);
+        shake = 10; flashT = 0.2; flashColor = "255,200,120";
+        openPick("斬殺妖將，掉落機緣！", () => {});
+        return;
       }
     }
     if (!(prevY > r.y && run.y <= r.y)) continue;
@@ -117,6 +147,17 @@ function updateRun(dt) {
       burst(run.x, run.y, "#ffe066", 24, 90); sfx("good");
       return true;
     };
+    if (r.type === "elite") {
+      if (r.hp > 0 && !blocked()) {
+        const lose = Math.ceil(r.hp / 2);
+        run.swords -= lose; r.hp = 0;
+        floatText(run.x, run.y - 18, `被妖將重擊 −${lose}`, "#ff6b6b", true);
+        sfx("bad"); burst(run.x, run.y, "#ff8a3d", 30, 110);
+        shake = 12; flashT = 0.2; flashColor = "255,40,40";
+        if (run.swords <= 0) { run.swords = 0; state = "runFail"; setTimeout(showRunFail, 900); return; }
+      } else r.hp = 0;
+      continue;
+    }
     if (r.type === "seal") {
       if (r.hp > 0 && Math.abs(run.x - r.x) < 36 && !blocked()) {
         const lose = Math.ceil(r.hp / 3);
@@ -186,6 +227,22 @@ const MOB = sprite([
   "..kk..kk..",
 ], MOB_PAL);
 
+const ELITE_PAL = { k: "#1b1424", R: "#8a2a2a", r: "#c2443a", H: "#e0a050", E: "#ffe066", W: "#e9e2ff" };
+const ELITE = sprite([
+  "...H........H...",
+  "...HH......HH...",
+  "....HkkkkkkH....",
+  "...kRRRRRRRRk...",
+  "..kRREkRRkERRk..",
+  "..kRRRRRRRRRRk..",
+  "..kRRkWkkWkRRk..",
+  ".kkRRRRRRRRRRkk.",
+  "kRrkRRRRRRRRkrRk",
+  "kRrkRRrrrrRRkrRk",
+  ".kk.kRRRRRRk.kk.",
+  "....kRRkkRRk....",
+  "....kkk..kkk....",
+], ELITE_PAL);
 function renderRun() {
   // 路固定置中；手機直放時自動縮小，確保整條路（兩道門）都看得到
   const fit = Math.min(0.85, (W * 0.96) / ((ROAD + 14) * 2) / SCALE);
@@ -285,6 +342,18 @@ function renderRun() {
       ctx.font = "900 12px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
       ctx.fillStyle = "#1b1424"; ctx.fillText("機 緣", 1, r.y - 27);
       ctx.fillStyle = "#ffe066"; ctx.fillText("機 緣", 0, r.y - 28);
+    } else if (r.type === "elite") {
+      if (r.hp <= 0) continue;
+      const k2 = r.hp / r.max, bob = Math.sin(time * 3) * 1.5;
+      ctx.fillStyle = "rgba(255,90,40,0.15)"; ctx.fillRect(-ROAD, r.y - 6, ROAD * 2, 6);
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, r.y, 26, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.translate(-16, r.y - 28 + bob); ctx.scale(2, 2); ctx.drawImage(ELITE, 0, 0); ctx.restore();
+      ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(-36, r.y - 44, 72, 6);
+      ctx.fillStyle = "#ff6a3a"; ctx.fillRect(-35, r.y - 43, 70 * k2, 4);
+      ctx.font = "900 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#1b1424"; ctx.fillText(`守關妖將 ${Math.ceil(r.hp)}`, 1, r.y - 48);
+      ctx.fillStyle = "#ffb08a"; ctx.fillText(`守關妖將 ${Math.ceil(r.hp)}`, 0, r.y - 49);
+      ctx.fillStyle = "#ffe066"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText(`斬殺 +${bountyOf(r.reward)} 再得機緣`, 0, r.y + 11);
     } else if (r.type === "seal") {
       if (r.hp <= 0) continue;
       const k2 = r.hp / r.max;
@@ -298,7 +367,7 @@ function renderRun() {
       ctx.font = "900 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
       ctx.fillStyle = "#1b1424"; ctx.fillText(`封印 ${Math.ceil(r.hp)}`, r.x + 1, r.y - 33);
       ctx.fillStyle = "#e9e2ff"; ctx.fillText(`封印 ${Math.ceil(r.hp)}`, r.x, r.y - 34);
-      ctx.fillStyle = "#ffe066"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText(`打碎 +${r.reward}`, r.x, r.y + 9);
+      ctx.fillStyle = "#ffe066"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText(`打碎 +${bountyOf(r.reward)}`, r.x, r.y + 9);
     } else if (!r.hit) {
       const m = Math.min(r.n, 14);
       for (let i = 0; i < m; i++) {

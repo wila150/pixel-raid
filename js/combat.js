@@ -11,6 +11,7 @@ function reset() {
   hazards = [];
   shots = [];
   pshots = [];
+  bolts = [];
   particles = [];
   floaters = [];
   shake = 0;
@@ -33,6 +34,7 @@ function reset() {
   }
 }
 
+let bolts = []; // 天雷特效
 // ───────── 戰鬥共用 ─────────
 function burst(x, y, color, n = 10, spd = 60, life = 0.5) {
   for (let i = 0; i < n; i++) {
@@ -76,7 +78,7 @@ function hitBoss(base, x, y, quiet = false) {
     if (Math.random() < 0.3) sfx("tick");
     player.ult = Math.min(ULT_MAX, player.ult + (dmg / 16) * (B ? B.ult : 1));
     burst(x, y, "#9fe8ff", 4, 50);
-    if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
+    checkPhase();
     if (boss.hp <= 0) end(true);
     return;
   }
@@ -87,8 +89,30 @@ function hitBoss(base, x, y, quiet = false) {
   player.ult = Math.min(ULT_MAX, player.ult + (dmg / (crit ? 7 : 9)) * (B ? B.ult : 1));
   burst(x, y, crit ? "#ffd84a" : "#ffb070", crit ? 14 : 8, crit ? 90 : 60);
   shake = Math.max(shake, crit ? 4 : 2);
-  if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
+  checkPhase();
   if (boss.hp <= 0) end(true);
+}
+// 天雷：從天而降打魔王
+function thunderStrike(dmg) {
+  bolts.push({ x: boss.x + rand(-8, 8), y: boss.y, life: 0.25 });
+  flashT = Math.max(flashT, 0.08); flashColor = "200,220,255";
+  shake = Math.max(shake, 5);
+  sfx("crit");
+  burst(boss.x, boss.y, "#cfe0ff", 14, 100, 0.5);
+  hitBoss(dmg, boss.x, boss.y - 10, true);
+  floatText(boss.x + 14, boss.y - 24, `天雷 ${Math.round(dmg * (B ? B.atk : 1))}`, "#cfe0ff");
+}
+function checkPhase() {
+  if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
+  else if (boss.phase === 2 && boss.hp <= boss.maxHp * 0.2 && boss.hp > 0) enterPhase3();
+}
+function enterPhase3() {
+  boss.phase = 3;
+  boss.state = "roar"; boss.t = 1.6;
+  hazards = []; shots = [];
+  shake = 16; flashT = 0.4; flashColor = "255,40,20"; slowmo = 0.8;
+  floatText(boss.x, boss.y - 40, "石魔燃盡元神，最後一搏！", "#ff4a2a", true);
+  sfx("roar");
 }
 function enterPhase2() {
   boss.phase = 2;
@@ -152,7 +176,11 @@ function updatePlayer(dt) {
     const reach = 30 + boss.r;
     const d = dist(p, boss);
     let diff = Math.abs(((angTo(p, boss) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-    if (d < reach && (diff < 1.0 || d < boss.r + 8)) hitBoss(22, boss.x + Math.cos(angTo(boss, p)) * boss.r, boss.y + Math.sin(angTo(boss, p)) * boss.r);
+    if (d < reach && (diff < 1.0 || d < boss.r + 8)) {
+      hitBoss(22, boss.x + Math.cos(angTo(boss, p)) * boss.r, boss.y + Math.sin(angTo(boss, p)) * boss.r);
+      if (P("vamp") && p.hp < p.maxHp) { const h = Math.min(2 * P("vamp"), p.maxHp - p.hp); p.hp += h; floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); }
+      if (P("thunder") && Math.random() < 0.25 && state === "play") thunderStrike(35 * P("thunder") ** 0.5);
+    }
   }
   if (act("spin", "k", "x") && p.cds.spin <= 0 && p.roll <= 0) {
     p.cds.spin = SKILLS.spin.cd;
@@ -199,6 +227,7 @@ function updatePlayer(dt) {
     if (p.volT <= 0) {
       p.volT = B ? B.vol : 2.2;
       sfx("volley");
+      if (P("storm")) setTimeout(() => { if (state === "play") thunderStrike(45); }, 400);
       const n = Math.min(p.swords, 12);
       const total = (8 + Math.min(p.swords, 400) * 0.6) * ((B && B.volMul) || 1);
       for (let i = 0; i < n; i++) {
@@ -246,12 +275,13 @@ function updateSwords(dt) {
 // ───────── 魔王 ─────────
 const PATTERNS_1 = ["slam", "fireballs", "charge", "slam", "fireballs"];
 const PATTERNS_2 = ["slam", "nova", "charge", "fireballs", "meteor", "charge", "nova"];
+const PATTERNS_3 = ["spiral", "charge", "meteor", "slam", "spiral", "nova", "charge"];
 
 function nextAttack() {
-  const list = boss.phase === 1 ? PATTERNS_1 : PATTERNS_2;
+  const list = boss.phase === 1 ? PATTERNS_1 : boss.phase === 2 ? PATTERNS_2 : PATTERNS_3;
   const name = list[boss.pattern % list.length];
   boss.pattern++;
-  const p2 = boss.phase === 2;
+  const p2 = boss.phase >= 2;
   if (name === "slam") {
     // 在玩家腳下和周圍砸出火焰圈
     const n = p2 ? 5 : 3;
@@ -281,6 +311,15 @@ function nextAttack() {
         shots.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * 95, vy: Math.sin(a) * 95, r: 5, dmg: 12, life: 5, delay: 0.5 + ring * 0.55 });
       }
     }
+  } else if (name === "spiral") {
+    // 第三階段：旋轉火焰螺旋，要繞著跑
+    boss.state = "cast"; boss.t = 2.4;
+    for (let i = 0; i < 36; i++) {
+      for (const arm of [0, Math.PI]) {
+        const a = i * 0.32 + arm;
+        shots.push({ x: boss.x, y: boss.y, vx: Math.cos(a) * 90, vy: Math.sin(a) * 90, r: 5, dmg: 13, life: 5, delay: 0.4 + i * 0.05 });
+      }
+    }
   } else if (name === "meteor") {
     boss.state = "cast"; boss.t = 2.0;
     for (let i = 0; i < 10; i++) {
@@ -294,7 +333,7 @@ function updateBoss(dt) {
   const b = boss;
   b.flash = Math.max(0, b.flash - dt);
   b.t -= dt;
-  const speed = b.phase === 2 ? 46 : 34;
+  const speed = [0, 34, 46, 56][b.phase];
 
   if (b.state === "idle") {
     // 慢慢走向玩家，保持一點距離
@@ -308,7 +347,7 @@ function updateBoss(dt) {
   } else if (b.state === "windup") {
     if (b.t <= 0) { b.state = "dash"; b.t = 0.55; }
   } else if (b.state === "dash") {
-    const v = b.phase === 2 ? 560 : 480;
+    const v = b.phase >= 2 ? 560 : 480;
     b.x += Math.cos(b.dashA) * v * dt;
     b.y += Math.sin(b.dashA) * v * dt;
     if (Math.random() < 0.8) burst(b.x, b.y + 10, "#ff7a2e", 2, 30, 0.35);
@@ -321,10 +360,10 @@ function updateBoss(dt) {
         burst(b.x, b.y, "#c9a27a", 18, 90);
         b.state = "stun"; b.t = 1.6;
         floatText(b.x, b.y - 34, "暈眩！", "#9fd0ff", true);
-      } else { b.state = "idle"; b.t = b.phase === 2 ? 0.8 : 1.2; }
+      } else { b.state = "idle"; b.t = b.phase >= 2 ? 0.8 : 1.2; }
     }
   } else if (b.state === "stun" || b.state === "cast" || b.state === "roar") {
-    if (b.t <= 0) { b.state = "idle"; b.t = b.phase === 2 ? 0.7 : 1.1; }
+    if (b.t <= 0) { b.state = "idle"; b.t = [0, 1.1, 0.7, 0.55][b.phase]; }
   }
   b.x = clamp(b.x, b.r + 8, ARENA.w - b.r - 8);
   b.y = clamp(b.y, b.r + 16, ARENA.h - b.r - 4);
@@ -372,9 +411,11 @@ function updateFx(dt) {
   flashT = Math.max(0, flashT - dt);
   ultFx = Math.max(0, ultFx - dt);
   // 往上飄的火星
-  const rate = boss && boss.phase === 2 ? 40 : 22;
+  const rate = boss && boss.phase >= 2 ? 40 : 22;
   for (let i = 0; i < rate * dt; i++) embers.push({ x: rand(0, ARENA.w), y: rand(20, ARENA.h + 10), vx: rand(-6, 6), vy: rand(-28, -12), life: rand(1.5, 3), max: 3, s: Math.random() < 0.3 ? 2 : 1 });
   if (Math.random() < rate * dt - Math.floor(rate * dt)) embers.push({ x: rand(0, ARENA.w), y: rand(20, ARENA.h + 10), vx: rand(-6, 6), vy: rand(-28, -12), life: rand(1.5, 3), max: 3, s: 1 });
   for (const e of embers) { e.x += (e.vx + Math.sin(time * 2 + e.y * 0.05) * 6) * dt; e.y += e.vy * dt; e.life -= dt; }
   embers = embers.filter((e) => e.life > 0);
+  for (const t of bolts) t.life -= dt;
+  bolts = bolts.filter((t) => t.life > 0);
 }

@@ -125,11 +125,11 @@ function drawHud() {
   const bw = Math.min(W * 0.7, 520), bx = (W - bw) / 2, by = 14;
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(bx - 3, by - 3, bw + 6, 20);
   ctx.fillStyle = "#3a1a1a"; ctx.fillRect(bx, by, bw, 14);
-  ctx.fillStyle = boss.phase === 2 ? "#ff3a2a" : "#ff8a2e"; ctx.fillRect(bx, by, bw * (boss.hp / boss.maxHp), 14);
+  ctx.fillStyle = boss.phase >= 2 ? "#ff3a2a" : "#ff8a2e"; ctx.fillRect(bx, by, bw * (boss.hp / boss.maxHp), 14);
   ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(bx, by, bw * (boss.hp / boss.maxHp), 4);
   ctx.fillStyle = "#fff"; ctx.fillRect(bx + bw / 2 - 1, by, 2, 14); // 50% 標記（第二階段）
   ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  const bname = `焚天石魔 ${boss.phase === 2 ? "【暴走】" : ""}  ${boss.hp} / ${boss.maxHp}`;
+  const bname = `焚天石魔 ${["", "", "【暴走】", "【元神燃燒】"][boss.phase]}  ${boss.hp} / ${boss.maxHp}`;
   ctx.fillStyle = "#1b1424"; ctx.fillText(bname, W / 2 + 1, by + 32);
   ctx.fillStyle = "#ffe0b0"; ctx.fillText(bname, W / 2, by + 31);
 

@@ -13,9 +13,14 @@ const PERKS = {
   body: { n: "護體靈光", tag: "打王", d: "渡劫時生命 +30", max: 3 },
   focus: { n: "丹田充盈", tag: "打王", d: "天罰能量累積快 30%", max: 2 },
   pill: { n: "靈丹", tag: "打王", d: "丹藥 +1", max: 2 },
+  bounty: { n: "斬妖得寶", tag: "跑酷", d: "打碎封印、全滅妖群、斬殺妖將的獎勵 +50%", max: 2 },
+  thunder: { n: "引雷訣", tag: "打王", d: "普攻有 25% 機率引下天雷（+35 傷害）", max: 3 },
+  vamp: { n: "吸星大法", tag: "打王", d: "普攻命中回 2 點生命", max: 2 },
   // 進化：同時擁有 need 裡的功法才會出現，一出現必定在三張之中
   river: { n: "天河劍陣", tag: "進化", d: "劍雨＋劍氣分化融合：飛劍齊射傷害 ×1.8", max: 1, need: ["rain", "split"] },
   aegis: { n: "不滅金身", tag: "進化", d: "金鐘罩＋護體靈光融合：再擋 2 次、生命 +60", max: 1, need: ["gold", "body"] },
+  storm: { n: "九霄雷域", tag: "進化", d: "引雷訣＋劍道精進融合：每輪飛劍齊射都落下天雷", max: 1, need: ["thunder", "edge"] },
+  myriad: { n: "萬劍歸宗", tag: "進化", d: "倍化神通＋破陣劍意融合：渡劫時飛劍數量 ×1.5", max: 1, need: ["mult", "pierce"] },
 };
 const P = (k) => (run && run.perks[k]) || 0;
 

@@ -13,7 +13,7 @@ function start(m = "normal") {
 function startBoss(swords) {
   if (!B) B = bonus();
   reset();
-  player.swords = swords;
+  player.swords = P("myriad") ? Math.round(swords * 1.5) : swords;
   state = "intro";
   introT = 2.8;
   screenEl.classList.add("hidden");

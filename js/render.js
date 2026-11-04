@@ -17,16 +17,16 @@ function drawArena() {
   for (let y = 0; y < ARENA.h; y += 32) for (let x = 0; x < ARENA.w; x += 32) ctx.drawImage(floorTile, x, y);
   // 熔岩裂縫
   for (const c of cracks) {
-    const glow = 0.45 + Math.sin(time * 2.2 + c.phase) * 0.3 + (boss.phase === 2 ? 0.2 : 0);
+    const glow = 0.45 + Math.sin(time * 2.2 + c.phase) * 0.3 + (boss.phase >= 2 ? 0.2 : 0);
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.strokeStyle = "#140c12"; ctx.lineWidth = 3.5;
     ctx.beginPath(); c.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
-    ctx.strokeStyle = `rgba(255,${boss.phase === 2 ? 70 : 120},40,${glow})`; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = `rgba(255,${boss.phase >= 2 ? 70 : 120},40,${glow})`; ctx.lineWidth = 1.5;
     ctx.stroke();
   }
   // 中央魔法陣
   const cx = ARENA.w / 2, cy = ARENA.h / 2 + 10;
-  const runeCol = boss.phase === 2 ? "255,70,50" : "170,110,255";
+  const runeCol = boss.phase >= 2 ? "255,70,50" : "170,110,255";
   ctx.strokeStyle = `rgba(${runeCol},${0.25 + Math.sin(time * 1.5) * 0.08})`; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(cx, cy, 78, 0, Math.PI * 2); ctx.stroke();
   ctx.beginPath(); ctx.arc(cx, cy, 64, 0, Math.PI * 2); ctx.stroke();
@@ -92,9 +92,9 @@ function drawBoss() {
   // 影子
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.beginPath(); ctx.ellipse(b.x, b.y + b.r - 2, b.r * 0.95, 6, 0, 0, Math.PI * 2); ctx.fill();
-  const rock = b.flash > 0 ? "#ffffff" : b.phase === 2 ? "#5a3a3a" : "#4b4250";
-  const rockHi = b.flash > 0 ? "#ffffff" : b.phase === 2 ? "#7a4a42" : "#625868";
-  const lava = b.phase === 2 ? "#ff4a1e" : "#ff8a2e";
+  const rock = b.flash > 0 ? "#ffffff" : b.phase >= 2 ? "#5a3a3a" : "#4b4250";
+  const rockHi = b.flash > 0 ? "#ffffff" : b.phase >= 2 ? "#7a4a42" : "#625868";
+  const lava = b.phase >= 2 ? "#ff4a1e" : "#ff8a2e";
   // 手臂
   const armSwing = b.state === "cast" ? Math.sin(time * 14) * 4 : Math.sin(time * 3) * 2;
   ctx.fillStyle = rock;
@@ -113,14 +113,14 @@ function drawBoss() {
   ctx.fillRect(x - 16, y - 28, 32, 3);
   ctx.fillRect(x - 20, y - 22, 3, 40);
   // 熔岩裂縫
-  const pulse = 0.6 + Math.sin(time * (b.phase === 2 ? 9 : 5)) * 0.4;
+  const pulse = 0.6 + Math.sin(time * (b.phase >= 2 ? 9 : 5)) * 0.4;
   ctx.globalAlpha = b.flash > 0 ? 0 : pulse;
   ctx.fillStyle = lava;
   ctx.fillRect(x - 6, y - 4, 2, 14); ctx.fillRect(x - 4, y + 8, 8, 2); ctx.fillRect(x + 6, y - 10, 2, 10);
   ctx.fillRect(x - 14, y + 2, 6, 2); ctx.fillRect(x + 10, y + 6, 6, 2);
   ctx.globalAlpha = 1;
   // 眼睛
-  ctx.fillStyle = b.state === "stun" ? "#9fd0ff" : b.phase === 2 ? "#ff2a1a" : "#ffd23a";
+  ctx.fillStyle = b.state === "stun" ? "#9fd0ff" : b.phase >= 2 ? "#ff2a1a" : "#ffd23a";
   if (b.state === "stun") { ctx.fillRect(x - 11, y - 16, 6, 2); ctx.fillRect(x + 5, y - 16, 6, 2); }
   else { ctx.fillRect(x - 11, y - 18, 6, 5); ctx.fillRect(x + 5, y - 18, 6, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(x - 9, y - 17, 2, 2); ctx.fillRect(x + 7, y - 17, 2, 2); }
   // 頭上的火焰
@@ -260,6 +260,14 @@ function drawUlt() {
   ctx.restore();
 }
 function drawFx() {
+  for (const t of bolts) { // 天雷
+    ctx.globalAlpha = Math.min(1, t.life * 6);
+    ctx.strokeStyle = "#eef3ff"; ctx.lineWidth = 2.5; ctx.beginPath();
+    let lx = t.x, ly = t.y - 140; ctx.moveTo(lx, ly);
+    for (let i = 0; i < 7; i++) { lx += rand(-9, 9); ly += 20; ctx.lineTo(lx, Math.min(ly, t.y)); }
+    ctx.stroke(); ctx.strokeStyle = "rgba(150,180,255,0.5)"; ctx.lineWidth = 6; ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.max);
     ctx.fillStyle = p.color;
@@ -286,8 +294,8 @@ function drawLights(k, ox, oy) {
   const L = (x, y, r, a = 1, color = null) => lights.push({ x, y, r, a, color });
   for (const [x, y] of [[40, 40], [ARENA.w - 40, 40], [40, ARENA.h - 30], [ARENA.w - 40, ARENA.h - 30]]) L(x, y - 26, 85 + Math.sin(time * 7 + x) * 4, 1, "255,140,50");
   L(player.x, player.y, 75, 0.95, "120,160,255");
-  L(boss.x, boss.y, boss.phase === 2 ? 110 : 90, 0.85, boss.phase === 2 ? "255,60,30" : "255,120,40");
-  L(ARENA.w / 2, ARENA.h / 2 + 10, 95, 0.35, boss.phase === 2 ? "255,60,40" : "160,100,255");
+  L(boss.x, boss.y, boss.phase >= 2 ? 110 : 90, 0.85, boss.phase >= 2 ? "255,60,30" : "255,120,40");
+  L(ARENA.w / 2, ARENA.h / 2 + 10, 95, 0.35, boss.phase >= 2 ? "255,60,40" : "160,100,255");
   for (const c of cracks) { const [x, y] = c.pts[Math.floor(c.pts.length / 2)]; L(x, y, 28, 0.45, "255,110,40"); }
   for (const sh of shots) if (sh.delay <= 0) L(sh.x, sh.y, 30, 0.9, "255,120,30");
   for (const sh of pshots) if (sh.delay <= 0) L(sh.x, sh.y, 18, 0.7, "140,220,255");
@@ -296,7 +304,7 @@ function drawLights(k, ox, oy) {
 
   lctx.globalCompositeOperation = "source-over";
   lctx.clearRect(0, 0, lightCvs.width, lightCvs.height);
-  lctx.fillStyle = boss.phase === 2 ? "rgba(22,4,6,0.8)" : "rgba(6,3,16,0.8)";
+  lctx.fillStyle = boss.phase >= 2 ? "rgba(22,4,6,0.8)" : "rgba(6,3,16,0.8)";
   lctx.fillRect(0, 0, lightCvs.width, lightCvs.height);
   lctx.globalCompositeOperation = "destination-out";
   for (const l of lights) {
