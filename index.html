@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#14111c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>暗焰魔像討伐戰</title>
+<title>御劍渡劫</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,22 +14,23 @@
 
 <!-- 手機操作：左半邊拖曳＝搖桿（畫在 canvas 上），右下角是技能按鈕 -->
 <div id="pad" class="hidden">
-  <button class="btn btn-atk" data-act="attack" aria-label="攻擊">攻擊<small>J</small></button>
-  <button class="btn btn-skill" data-act="spin" aria-label="旋風斬">旋風<small>K</small><i class="cd"></i></button>
-  <button class="btn btn-roll" data-act="roll" aria-label="翻滾">翻滾<small>空白</small><i class="cd"></i></button>
-  <button class="btn btn-ult" data-act="ult" aria-label="必殺技">必殺<small>U</small></button>
-  <button class="btn btn-pot" data-act="potion" aria-label="藥水">藥水<b class="count">3</b><small>H</small><i class="cd"></i></button>
+  <button class="btn btn-atk" data-act="attack" aria-label="劍擊">劍擊<small>J</small></button>
+  <button class="btn btn-skill" data-act="spin" aria-label="劍陣">劍陣<small>K</small><i class="cd"></i></button>
+  <button class="btn btn-roll" data-act="roll" aria-label="閃身">閃身<small>空白</small><i class="cd"></i></button>
+  <button class="btn btn-ult" data-act="ult" aria-label="天罰">天罰<small>U</small></button>
+  <button class="btn btn-pot" data-act="potion" aria-label="丹藥">丹藥<b class="count">3</b><small>H</small><i class="cd"></i></button>
 </div>
 
 <div id="screen" class="screen">
   <div class="panel">
-    <h1>暗焰魔像<br>討伐戰</h1>
-    <p class="sub">PIXEL RAID · 原型 v0.1</p>
-    <button id="start" class="big">開始討伐</button>
+    <h1>御劍<br>渡劫</h1>
+    <p class="sub">PIXEL RAID · 原型 v0.3</p>
+    <button id="start" class="big">踏上仙途</button>
     <div class="howto">
-      <p><b>電腦</b>　WASD／方向鍵 移動　J 攻擊　K 旋風斬　空白鍵 翻滾　H 藥水　U 必殺（集滿能量）</p>
+      <p><b>第一關 御劍</b>　左右拖曳／A、D 選門，<span class="blue">藍門</span>加飛劍、<span class="red">紅門</span>扣飛劍，閃開紫色妖群</p>
+      <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
       <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
-      <p>地上出現<span class="red">紅色警示</span>就快閃開！翻滾時無敵。</p>
+      <p>飛劍越多，渡劫時自動齊射的傷害越高。地上出現<span class="red">紅色警示</span>就快閃開！</p>
     </div>
   </div>
 </div>

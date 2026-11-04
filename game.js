@@ -1,5 +1,6 @@
-// 暗焰魔像討伐戰（原型 v0.1）
-// 俯視像素風單人打王：玩家（藍披風劍士）對上暗焰魔像。魔王攻擊前地上會出現紅色警示，躲開後趁空檔輸出。
+// 御劍渡劫（原型 v0.3，名稱暫定）
+// 前半段「御劍跑酷」：修士往前飛，左右選門（+N、×2、−N、÷2）累積飛劍，閃開妖群。
+// 後半段打王：俯視像素風，修士對上焚天石魔；累積的飛劍會自動射向魔王。魔王攻擊前地上會出現紅色警示。
 // 全部用 canvas 畫，不需要任何外部檔案；之後換成正式美術只要替換 drawHero / drawBoss。
 "use strict";
 
@@ -37,39 +38,23 @@ function sprite(rows, pal) {
   }));
   return c;
 }
-const HERO_PAL = { k: "#1b1424", H: "#6b3f22", h: "#8f5a32", S: "#f4c9a0", e: "#1b1424", B: "#3c6fd1", b: "#2a4f9c", R: "#e8433a", L: "#3a2f4a", W: "#ffffff" };
-const HERO = sprite([
+const HERO_PAL = { k: "#1b1424", H: "#2b2433", h: "#4a3f5c", S: "#f4c9a0", e: "#1b1424", W: "#eef2fa", w: "#a9bcd8", B: "#3c8fd1", L: "#3a2f4a" };
+const HERO_TOP = [
   "....kkkk....",
   "...kHhhHk...",
-  "..kHhHHhHk..",
+  "....kHHk....",
+  "..kHHhhHHk..",
   "..kHSSSSHk..",
   "..kSeSSeSk..",
   "..kSSSSSSk..",
-  "...kRRRRk...",
-  "..kBRRBBBk..",
-  ".kSkBBBBkSk.",
-  ".kkkbBBbkkk.",
-  "...kBBBBk...",
-  "...kLk.kLk..",
-  "...kLk.kLk..",
-  "...kk...kk..",
-], HERO_PAL);
-const HERO_WALK = sprite([
-  "....kkkk....",
-  "...kHhhHk...",
-  "..kHhHHhHk..",
-  "..kHSSSSHk..",
-  "..kSeSSeSk..",
-  "..kSSSSSSk..",
-  "...kRRRRk...",
-  "..kBRRBBBk..",
-  ".kSkBBBBkSk.",
-  ".kkkbBBbkkk.",
-  "...kBBBBk...",
-  "..kLk..kLk..",
-  "..kLk...kk..",
-  "..kk........",
-], HERO_PAL);
+  "..kWWBBWWk..",
+  ".kWWWBBWWWk.",
+  ".kSkwWWwkSk.",
+  ".kkkBBBBkkk.",
+  "...kWWWWk...",
+];
+const HERO = sprite([...HERO_TOP, "...kwk.kwk..", "...kk...kk.."], HERO_PAL);
+const HERO_WALK = sprite([...HERO_TOP, "..kwk..kwk..", "..kk.....k.."], HERO_PAL);
 
 // ───────── 輸入 ─────────
 const keys = new Set();
@@ -116,8 +101,8 @@ pad.querySelectorAll(".btn").forEach((b) => {
 const act = (name, ...ks) => padAct.has(name) || ks.some((k) => pressed.has(k));
 
 // ───────── 遊戲狀態 ─────────
-let state = "title"; // title / play / win / lose
-let player, boss, hazards, shots, particles, floaters, shake, time, stats, cam, slowmo;
+let state = "title"; // title / run / runEnd / runFail / intro / play / win / lose
+let player, boss, hazards, shots, pshots, particles, floaters, shake, time, stats, cam, slowmo;
 let hitstop = 0, combo = 0, comboT = 0, comboPop = 0, flashT = 0, flashColor = "255,255,255", introT = 0, ultFx = 0, ultA = 0, embers = [], cracks = [];
 
 const SKILLS = {
@@ -130,10 +115,12 @@ const ULT_MAX = 100;
 
 function reset() {
   player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: 120, maxHp: 120, speed: 95, face: -Math.PI / 2, flip: false,
-    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: 3, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0 };
+    cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: 3, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0,
+    swords: 0, volT: 1.5 };
   boss = { x: ARENA.w / 2, y: 120, r: 22, hp: 1600, maxHp: 1600, phase: 1, state: "idle", t: 1.6, flash: 0, dashV: null, pattern: 0, rage: false, stagger: 0 };
   hazards = [];
   shots = [];
+  pshots = [];
   particles = [];
   floaters = [];
   shake = 0;
@@ -184,14 +171,21 @@ function hurtPlayer(dmg, from) {
   }
   if (player.hp <= 0) end(false);
 }
-function hitBoss(base, x, y) {
+function hitBoss(base, x, y, quiet = false) {
   if (state !== "play") return;
-  const crit = Math.random() < 0.15;
-  const dmg = Math.round(base * rand(0.9, 1.15) * (crit ? 2 : 1));
+  const crit = !quiet && Math.random() < 0.15;
+  const dmg = Math.max(1, Math.round(base * rand(0.9, 1.15) * (crit ? 2 : 1)));
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.flash = 0.1;
   stats.dealt += dmg;
   if (crit) stats.crits++;
+  if (quiet) {
+    player.ult = Math.min(ULT_MAX, player.ult + dmg / 16);
+    burst(x, y, "#9fe8ff", 4, 50);
+    if (boss.phase === 1 && boss.hp <= boss.maxHp * 0.5) enterPhase2();
+    if (boss.hp <= 0) end(true);
+    return;
+  }
   floatText(x, y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
   hitstop = Math.max(hitstop, crit ? 0.07 : 0.035);
   combo++; comboT = 2.2; comboPop = 1;
@@ -210,7 +204,7 @@ function enterPhase2() {
   shake = 12;
   flashT = 0.3; flashColor = "255,90,40";
   slowmo = 0.6;
-  floatText(boss.x, boss.y - 40, "魔像暴走了！", "#ff8a3d", true);
+  floatText(boss.x, boss.y - 40, "石魔暴走了！", "#ff8a3d", true);
 }
 
 // ───────── 玩家 ─────────
@@ -288,7 +282,7 @@ function updatePlayer(dt) {
     shake = 16;
     burst(boss.x, boss.y, "#fff6c0", 40, 180, 0.8);
     burst(boss.x, boss.y, "#ffd84a", 30, 140, 0.8);
-    floatText(p.x, p.y - 24, "光刃・斷罪！", "#fff6c0", true);
+    floatText(p.x, p.y - 24, "御劍・天罰！", "#fff6c0", true);
     hitBoss(260, boss.x, boss.y);
   }
   if (act("potion", "h", "c") && p.cds.potion <= 0 && p.potions > 0 && p.hp < p.maxHp) {
@@ -299,6 +293,36 @@ function updatePlayer(dt) {
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a");
     burst(p.x, p.y, "#7dff8a", 12, 40);
   }
+
+  // 跑酷累積的飛劍：每隔一段時間自動齊射魔王，飛劍越多傷害越高
+  if (p.swords > 0) {
+    p.volT -= dt;
+    if (p.volT <= 0) {
+      p.volT = 2.2;
+      const n = Math.min(p.swords, 12);
+      const total = 8 + Math.min(p.swords, 400) * 0.6;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + time * 2;
+        pshots.push({ x: p.x + Math.cos(a) * 14, y: p.y + Math.sin(a) * 10 - 4, delay: i * 0.05, dmg: total / n, vx: 0, vy: 0, last: i === n - 1 ? Math.round(total) : 0 });
+      }
+    }
+  }
+}
+
+function updateSwords(dt) {
+  for (const s of pshots) {
+    if (s.delay > 0) { s.delay -= dt; continue; }
+    const a = angTo(s, boss), sp = 300;
+    s.vx += (Math.cos(a) * sp - s.vx) * Math.min(1, dt * 10);
+    s.vy += (Math.sin(a) * sp - s.vy) * Math.min(1, dt * 10);
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    if (dist(s, boss) < boss.r) {
+      s.done = true;
+      if (s.last) floatText(boss.x, boss.y - 30, `飛劍 ${s.last}`, "#9fe8ff", true); // 一輪齊射只顯示一次總傷害
+      hitBoss(s.dmg, s.x, s.y, true);
+    }
+  }
+  pshots = pshots.filter((s) => !s.done);
 }
 
 // ───────── 魔王 ─────────
@@ -454,18 +478,25 @@ function showEnd(win) {
     rank = score < 60 ? "S" : score < 110 ? "A" : score < 170 ? "B" : "C";
   }
   screenEl.innerHTML = `<div class="panel">
-    <h1>${win ? "討伐成功！" : "討伐失敗…"}</h1>
+    <h1>${win ? "渡劫成功！" : "渡劫失敗…"}</h1>
     <div class="result">
-      ${win ? `評價<br><span class="rank">${rank}</span><br>` : `魔像剩下 ${Math.ceil((boss.hp / boss.maxHp) * 100)}% 血量<br>`}
-      時間 ${t} 秒　受到傷害 ${stats.taken}　造成傷害 ${stats.dealt}　爆擊 ${stats.crits} 次
+      ${win ? `評價<br><span class="rank">${rank}</span><br>` : `石魔剩下 ${Math.ceil((boss.hp / boss.maxHp) * 100)}% 血量<br>`}
+      飛劍 ${player.swords} 把　時間 ${t} 秒<br>受到傷害 ${stats.taken}　造成傷害 ${stats.dealt}　爆擊 ${stats.crits} 次
     </div>
-    <button id="again" class="big">${win ? "再打一次" : "再挑戰"}</button>
+    <button id="again" class="big">${win ? "再修一次" : "再挑戰"}</button>
   </div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("again").onclick = start;
 }
 function start() {
+  resetRun();
+  state = "run";
+  screenEl.classList.add("hidden");
+  pad.classList.add("hidden");
+}
+function startBoss(swords) {
   reset();
+  player.swords = swords;
   state = "intro";
   introT = 2.8;
   screenEl.classList.add("hidden");
@@ -615,6 +646,7 @@ function drawBoss() {
 
 function drawPlayer() {
   const p = player;
+  if (p.swords > 0) drawOrbit(p.x, p.y, p.swords);
   // 影子
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2.5, 0, 0, Math.PI * 2); ctx.fill();
@@ -654,7 +686,27 @@ function drawPlayer() {
   }
 }
 
+// 一把小飛劍（劍尖朝 a 方向）
+function drawSword(x, y, a, len = 7) {
+  ctx.save();
+  ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = "#3c8fd1"; ctx.fillRect(-len / 2 - 1, -1, 2, 2);
+  ctx.fillStyle = "#cfefff"; ctx.fillRect(-len / 2 + 1, -0.5, len, 1);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(len / 2 + 1, -0.5, 1, 1);
+  ctx.restore();
+}
+// 修士身邊環繞的飛劍
+function drawOrbit(x, y, count) {
+  const n = Math.min(count, 40);
+  for (let i = 0; i < n; i++) {
+    const ring = Math.floor(i / 12), inRing = Math.min(12, n - ring * 12);
+    const a = ((i % 12) / inRing) * Math.PI * 2 + time * (1.6 - ring * 0.4) * (ring % 2 ? -1 : 1);
+    const r = 13 + ring * 6;
+    drawSword(x + Math.cos(a) * r, y + Math.sin(a) * r * 0.55 - 3, -Math.PI / 2, 6);
+  }
+}
 function drawShots() {
+  for (const s of pshots) if (s.delay <= 0) drawSword(s.x, s.y, Math.atan2(s.vy, s.vx), 8);
   for (const s of shots) {
     if (s.delay > 0) continue;
     ctx.fillStyle = "#ff5a1e"; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
@@ -711,6 +763,7 @@ function drawLights(k, ox, oy) {
   L(ARENA.w / 2, ARENA.h / 2 + 10, 95, 0.35, boss.phase === 2 ? "255,60,40" : "160,100,255");
   for (const c of cracks) { const [x, y] = c.pts[Math.floor(c.pts.length / 2)]; L(x, y, 28, 0.45, "255,110,40"); }
   for (const sh of shots) if (sh.delay <= 0) L(sh.x, sh.y, 30, 0.9, "255,120,30");
+  for (const sh of pshots) if (sh.delay <= 0) L(sh.x, sh.y, 18, 0.7, "140,220,255");
   for (const h of hazards) if (h.delay <= 0 && h.type === "circle") L(h.x, h.y, h.r * 1.5, h.warn > 0 ? 0.5 : 1, h.warn > 0 ? "255,40,40" : "255,170,60");
   if (ultFx > 0) L(boss.x, boss.y, 260, ultFx, "255,240,180");
 
@@ -750,8 +803,9 @@ function drawHud() {
   ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(bx, by, bw * (boss.hp / boss.maxHp), 4);
   ctx.fillStyle = "#fff"; ctx.fillRect(bx + bw / 2 - 1, by, 2, 14); // 50% 標記（第二階段）
   ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  ctx.fillStyle = "#1b1424"; ctx.fillText(`暗焰魔像 ${boss.phase === 2 ? "【暴走】" : ""}  ${boss.hp} / ${boss.maxHp}`, W / 2 + 1, by + 32);
-  ctx.fillStyle = "#ffe0b0"; ctx.fillText(`暗焰魔像 ${boss.phase === 2 ? "【暴走】" : ""}  ${boss.hp} / ${boss.maxHp}`, W / 2, by + 31);
+  const bname = `焚天石魔 ${boss.phase === 2 ? "【暴走】" : ""}  ${boss.hp} / ${boss.maxHp}`;
+  ctx.fillStyle = "#1b1424"; ctx.fillText(bname, W / 2 + 1, by + 32);
+  ctx.fillStyle = "#ffe0b0"; ctx.fillText(bname, W / 2, by + 31);
 
   // 玩家血條（左上）
   const px = 14, py = H - 46;
@@ -761,13 +815,13 @@ function drawHud() {
   ctx.fillStyle = "#1e3a22"; ctx.fillRect(px, py, pw, 12);
   ctx.fillStyle = player.hp / player.maxHp < 0.3 ? "#ff5a4a" : "#5fdc6a"; ctx.fillRect(px, py, pw * (player.hp / player.maxHp), 12);
   ctx.font = "bold 12px 'Noto Sans TC', sans-serif";
-  ctx.fillStyle = "#fff"; ctx.fillText(`劍士 HP ${player.hp}/${player.maxHp}　藥水 ×${player.potions}`, px, py - 8);
+  ctx.fillStyle = "#fff"; ctx.fillText(`修士 HP ${player.hp}/${player.maxHp}　丹藥 ×${player.potions}　飛劍 ×${player.swords}`, px, py - 8);
   // 必殺能量
   const full = player.ult >= ULT_MAX;
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(px - 3, py + 15, pw + 6, 10);
   ctx.fillStyle = full ? `rgba(255,${200 + Math.sin(time * 12) * 55},80,1)` : "#c9a2ff"; ctx.fillRect(px, py + 17, pw * (player.ult / ULT_MAX), 6);
   ctx.fillStyle = full ? "#ffe066" : "rgba(255,255,255,0.6)";
-  ctx.fillText(full ? "必殺技準備好了！按 U／必殺" : `${time.toFixed(1)} 秒`, px, py + 40);
+  ctx.fillText(full ? "天罰準備好了！按 U／天罰" : `${time.toFixed(1)} 秒`, px, py + 40);
   // 連擊
   if (combo >= 3) {
     const sc = 1 + comboPop * 0.5;
@@ -802,9 +856,9 @@ function drawHud() {
       ctx.globalAlpha = a;
       ctx.textAlign = "center";
       ctx.font = "bold 14px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffcf6b";
-      ctx.fillText("— 熔岩深淵的守門者 —", W / 2, H * 0.7);
-      ctx.font = "900 44px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#1b1424"; ctx.fillText("暗焰魔像", W / 2 + 3, H * 0.7 + 49);
-      ctx.fillStyle = "#ffb347"; ctx.fillText("暗焰魔像", W / 2, H * 0.7 + 46);
+      ctx.fillText("— 渡劫台的守關妖魔 —", W / 2, H * 0.7);
+      ctx.font = "900 44px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#1b1424"; ctx.fillText("焚天石魔", W / 2 + 3, H * 0.7 + 49);
+      ctx.fillStyle = "#ffb347"; ctx.fillText("焚天石魔", W / 2, H * 0.7 + 46);
       ctx.globalAlpha = 1;
     }
   }
@@ -824,6 +878,7 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "#120d18";
   ctx.fillRect(0, 0, cvs.width, cvs.height);
+  if (state === "run" || state === "runEnd" || state === "runFail") { renderRun(); return; }
   if (!player) return;
   // 鏡頭跟著玩家，稍微往魔王方向偏
   const intro = state === "intro";
@@ -850,6 +905,231 @@ function render() {
   drawHud();
 }
 
+// ───────── 御劍跑酷：左右選門累積飛劍，閃開妖群，終點是渡劫台 ─────────
+const ROAD = 80; // 路的一半寬（世界單位）
+const RUN_SPEED = 115;
+let run = null;
+const runDrag = { id: null, lastX: 0, dx: 0 };
+cvs.addEventListener("pointerdown", (e) => {
+  if (state === "run" && runDrag.id === null) { runDrag.id = e.pointerId; runDrag.lastX = e.clientX; }
+});
+cvs.addEventListener("pointermove", (e) => {
+  if (e.pointerId === runDrag.id) { runDrag.dx += e.clientX - runDrag.lastX; runDrag.lastX = e.clientX; }
+});
+const endDrag = (e) => { if (e.pointerId === runDrag.id) runDrag.id = null; };
+cvs.addEventListener("pointerup", endDrag);
+cvs.addEventListener("pointercancel", endDrag);
+
+function pairGates(tier) {
+  const good = () => (Math.random() < 0.2 + tier * 0.15
+    ? { op: "×", v: Math.random() < 0.25 ? 3 : 2 }
+    : { op: "+", v: Math.round(rand(5, 12) + tier * 40) });
+  const bad = () => (Math.random() < 0.35 ? { op: "÷", v: 2 } : { op: "−", v: Math.round(rand(4, 10) + tier * 35) });
+  const pair = Math.random() < 0.3 ? [good(), good()] : [good(), bad()];
+  return Math.random() < 0.5 ? pair : pair.reverse();
+}
+function resetRun() {
+  run = { x: 0, y: 0, swords: 5, shown: 5, rows: [], endY: 0, endT: 0 };
+  const N = 14;
+  let y = -240;
+  for (let i = 0; i < N; i++) {
+    const tier = i / N; // 越後面數字越大
+    if (i % 4 === 3) run.rows.push({ y, type: "mob", x: rand(-40, 40), n: Math.round(rand(6, 14) + tier * 50), w: 50, hit: false });
+    else run.rows.push({ y, type: "gate", gates: pairGates(tier), pick: -1 });
+    y -= 190;
+  }
+  run.endY = y - 40;
+  particles = []; floaters = []; embers = []; shake = 0; time = 0; flashT = 0; hitstop = 0;
+  cam = { x: 0, y: -45, zoom: Math.min(0.85, (W * 0.96) / ((ROAD + 14) * 2) / SCALE) };
+}
+const isGood = (g) => g.op === "+" || g.op === "×";
+function applyGate(g) {
+  let s = run.swords;
+  if (g.op === "+") s += g.v; else if (g.op === "−") s -= g.v; else if (g.op === "×") s *= g.v; else s = Math.ceil(s / 2);
+  run.swords = clamp(Math.round(s), 1, 999);
+}
+function updateRun(dt) {
+  let mx = 0;
+  if (keys.has("a") || keys.has("arrowleft")) mx -= 1;
+  if (keys.has("d") || keys.has("arrowright")) mx += 1;
+  run.x += mx * 150 * dt;
+  run.x += (runDrag.dx / (SCALE * cam.zoom)) * 1.2; runDrag.dx = 0;
+  run.x = clamp(run.x, -ROAD + 10, ROAD - 10);
+  const prevY = run.y;
+  run.y -= RUN_SPEED * dt;
+  for (const r of run.rows) {
+    if (!(prevY > r.y && run.y <= r.y)) continue;
+    if (r.type === "gate") {
+      r.pick = run.x < 0 ? 0 : 1;
+      const g = r.gates[r.pick], good = isGood(g);
+      applyGate(g);
+      floatText(run.x, run.y - 18, `${g.op}${g.v}`, good ? "#9fe8ff" : "#ff6b6b", true);
+      burst(run.x, run.y, good ? "#9fe8ff" : "#ff6b6b", good ? 18 : 10, 80);
+      flashT = 0.1; flashColor = good ? "120,220,255" : "255,40,40";
+      if (!good) shake = 5;
+    } else if (!r.hit && Math.abs(run.x - r.x) < r.w / 2 + 6) {
+      r.hit = true;
+      run.swords -= r.n;
+      floatText(run.x, run.y - 18, `−${r.n}`, "#ff6b6b", true);
+      burst(r.x, r.y, "#b07dff", 30, 100, 0.7);
+      shake = 8; flashT = 0.15; flashColor = "255,40,40";
+      if (run.swords <= 0) { run.swords = 0; state = "runFail"; setTimeout(showRunFail, 900); return; }
+    }
+  }
+  run.shown += (run.swords - run.shown) * Math.min(1, dt * 8);
+  if (Math.random() < 0.7) particles.push({ x: run.x + rand(-5, 5), y: run.y + 10, vx: rand(-8, 8), vy: 40, life: 0.4, max: 0.4, color: "#9fe8ff", size: 1.5 });
+  if (prevY > run.endY && run.y <= run.endY) {
+    state = "runEnd"; run.endT = 1.8;
+    floatText(run.x, run.y - 26, `飛劍 ${run.swords} 把，開始渡劫！`, "#ffe066", true);
+    flashT = 0.3; flashColor = "255,250,220"; shake = 10;
+  }
+}
+function showRunFail() {
+  screenEl.innerHTML = `<div class="panel">
+    <h1>飛劍耗盡…</h1>
+    <div class="result">被妖群吃光了飛劍，到不了渡劫台。<br>下次記得閃開紫色妖群，或先多穿幾道加乘門。</div>
+    <button id="again" class="big">再挑戰</button>
+  </div>`;
+  screenEl.classList.remove("hidden");
+  document.getElementById("again").onclick = start;
+}
+
+const hash = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+const MOB_PAL = { k: "#1b1424", P: "#7a3fb8", p: "#a96be0", E: "#ffe066" };
+const MOB = sprite([
+  "..k....k..",
+  ".kPk..kPk.",
+  ".kPPkkPPk.",
+  "kPpPPPPpPk",
+  "kPEkPPkEPk",
+  "kPPPPPPPPk",
+  "kPPkkkkPPk",
+  ".kPPPPPPk.",
+  "..kk..kk..",
+], MOB_PAL);
+
+function renderRun() {
+  // 路固定置中；手機直放時自動縮小，確保整條路（兩道門）都看得到
+  const fit = Math.min(0.85, (W * 0.96) / ((ROAD + 14) * 2) / SCALE);
+  cam.x += (0 - cam.x) * 0.15; cam.y += (run.y - 45 - cam.y) * 0.3;
+  cam.zoom += ((state === "runEnd" ? fit * 1.3 : fit) - cam.zoom) * 0.06;
+  const k = SCALE * DPR * cam.zoom;
+  // 夜空與星星（螢幕座標）
+  const sky = ctx.createLinearGradient(0, 0, 0, cvs.height);
+  sky.addColorStop(0, "#070a1e"); sky.addColorStop(1, "#1a1438");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, cvs.width, cvs.height);
+  for (let i = 0; i < 70; i++) {
+    const sx = hash(i) * cvs.width, sy = ((hash(i + 99) * cvs.height + -cam.y * 0.15 * k) % cvs.height + cvs.height) % cvs.height;
+    ctx.fillStyle = `rgba(220,230,255,${0.3 + 0.5 * Math.abs(Math.sin(time * 2 + i))})`;
+    ctx.fillRect(sx, sy, 2 * DPR, 2 * DPR);
+  }
+  const sx = shake > 0 ? rand(-shake, shake) * DPR : 0, sy = shake > 0 ? rand(-shake, shake) * DPR : 0;
+  const ox = Math.round(W * DPR / 2 - cam.x * k + sx), oy = Math.round(H * DPR / 2 - cam.y * k + sy);
+  ctx.setTransform(k, 0, 0, k, ox, oy);
+  ctx.imageSmoothingEnabled = false;
+  const halfH = H / (2 * SCALE * cam.zoom) + 40, top = cam.y - halfH, bot = cam.y + halfH;
+
+  // 兩側雲海
+  for (let j = Math.floor(top / 30); j <= Math.ceil(bot / 30); j++) {
+    for (const side of [-1, 1]) {
+      const x = side * (ROAD + 20 + hash(j * 2 + (side > 0 ? 1 : 0)) * 90) + Math.sin(time * 0.5 + j) * 6;
+      ctx.fillStyle = "rgba(150,160,220,0.12)";
+      ctx.beginPath(); ctx.ellipse(x, j * 30, 40, 12, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // 石板仙路
+  for (let j = Math.floor(top / 16); j <= Math.ceil(bot / 16); j++) {
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = (i + j) % 2 ? "#3b3550" : "#353048";
+      ctx.fillRect(-ROAD + i * 16, j * 16, 16, 16);
+    }
+  }
+  ctx.fillStyle = "#6d6390"; ctx.fillRect(-ROAD - 3, top, 3, bot - top); ctx.fillRect(ROAD, top, 3, bot - top);
+  // 路邊燈籠
+  for (let j = Math.floor(top / 120); j <= Math.ceil(bot / 120); j++) {
+    for (const side of [-1, 1]) {
+      const x = side * (ROAD + 8), y = j * 120;
+      ctx.fillStyle = "#2a2233"; ctx.fillRect(x - 1, y - 12, 2, 12);
+      ctx.fillStyle = `rgba(255,170,80,${0.75 + Math.sin(time * 5 + j) * 0.2})`; ctx.fillRect(x - 3, y - 18, 6, 7);
+      ctx.fillStyle = "rgba(255,170,80,0.12)"; ctx.beginPath(); ctx.arc(x, y - 14, 14, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // 渡劫台
+  const ey = run.endY;
+  if (ey > top - 80) {
+    ctx.fillStyle = "#4a4168"; ctx.beginPath(); ctx.ellipse(0, ey - 30, ROAD + 10, 40, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,220,120,${0.5 + Math.sin(time * 3) * 0.2})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, ey - 30, ROAD - 10, 30, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, ey - 30, ROAD - 30, 20, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "rgba(40,30,60,0.8)"; ctx.beginPath(); ctx.ellipse(0, ey - 110, 110, 26, 0, 0, Math.PI * 2); ctx.fill();
+    if (Math.sin(time * 3.7) > 0.85) { // 劫雷
+      ctx.strokeStyle = "#e9e2ff"; ctx.lineWidth = 2; ctx.beginPath();
+      let lx = rand(-50, 50), ly = ey - 100; ctx.moveTo(lx, ly);
+      for (let i = 0; i < 5; i++) { lx += rand(-12, 12); ly += 14; ctx.lineTo(lx, ly); }
+      ctx.stroke();
+    }
+    ctx.font = "bold 12px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#ffe066"; ctx.fillText("渡 劫 台", 0, ey - 26);
+  }
+  // 門與妖群
+  for (const r of run.rows) {
+    if (r.y < top - 30 || r.y > bot + 30) continue;
+    if (r.type === "gate") {
+      r.gates.forEach((g, i) => {
+        const x0 = i === 0 ? -ROAD : 0, good = isGood(g), picked = r.pick === i, faded = r.pick >= 0 && !picked;
+        const col = good ? "95,208,255" : "255,80,70";
+        ctx.globalAlpha = faded ? 0.25 : 1;
+        ctx.fillStyle = `rgba(${col},${picked ? 0.15 : 0.32})`; ctx.fillRect(x0 + 3, r.y - 22, ROAD - 6, 22);
+        ctx.fillStyle = `rgb(${col})`; ctx.fillRect(x0 + 3, r.y - 24, ROAD - 6, 2);
+        ctx.fillStyle = "#5c5478"; ctx.fillRect(x0 + 1, r.y - 26, 4, 28); ctx.fillRect(x0 + ROAD - 5, r.y - 26, 4, 28);
+        ctx.font = "900 15px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+        ctx.fillStyle = "#1b1424"; ctx.fillText(`${g.op}${g.v}`, x0 + ROAD / 2 + 1, r.y - 6);
+        ctx.fillStyle = good ? "#e6f8ff" : "#ffd0cc"; ctx.fillText(`${g.op}${g.v}`, x0 + ROAD / 2, r.y - 7);
+        ctx.globalAlpha = 1;
+      });
+    } else if (!r.hit) {
+      const m = Math.min(r.n, 14);
+      for (let i = 0; i < m; i++) {
+        const mx = r.x + ((i % 5) - 2) * 10 + (Math.floor(i / 5) % 2) * 5, my = r.y - 8 - Math.floor(i / 5) * 8 + Math.sin(time * 6 + i) * 1;
+        ctx.drawImage(MOB, Math.round(mx - 5), Math.round(my - 4));
+      }
+      ctx.font = "900 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+      ctx.fillStyle = "#1b1424"; ctx.fillText(`妖 ${r.n}`, r.x + 1, r.y - 32);
+      ctx.fillStyle = "#e0b8ff"; ctx.fillText(`妖 ${r.n}`, r.x, r.y - 33);
+    }
+  }
+  // 修士踩在飛劍上
+  if (state !== "runFail") {
+    const bob = Math.sin(time * 6) * 1;
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(run.x, run.y + 10, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    drawOrbit(run.x, run.y + bob, Math.round(run.shown));
+    ctx.fillStyle = "#3c8fd1"; ctx.fillRect(run.x - 8, run.y + 5 + bob, 3, 2);
+    ctx.fillStyle = "#cfefff"; ctx.fillRect(run.x - 5, run.y + 5 + bob, 12, 2);
+    ctx.drawImage(HERO, Math.round(run.x - 6), Math.round(run.y - 9 + bob));
+    ctx.font = "900 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+    ctx.fillStyle = "#1b1424"; ctx.fillText(`${Math.round(run.shown)}`, run.x + 1, run.y - 26 + bob);
+    ctx.fillStyle = "#9fe8ff"; ctx.fillText(`${Math.round(run.shown)}`, run.x, run.y - 27 + bob);
+  }
+  drawFx();
+
+  // 介面
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bw = Math.min(W * 0.6, 360), bx = (W - bw) / 2;
+  const prog = clamp(run.y / run.endY, 0, 1);
+  ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(bx - 3, 11, bw + 6, 12);
+  ctx.fillStyle = "#ffd27a"; ctx.fillRect(bx, 14, bw * prog, 6);
+  ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+  ctx.fillStyle = "#ffe0b0"; ctx.fillText(`飛劍 ×${run.swords}　前往渡劫台`, W / 2, 42);
+  if (time < 3.5 && state === "run") {
+    ctx.globalAlpha = Math.min(1, (3.5 - time) * 2);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 14px 'Noto Sans TC', sans-serif";
+    ctx.fillText("左右拖曳（或 A／D）選門", W / 2, H * 0.74);
+    ctx.fillText("藍門加劍、紅門扣劍，閃開紫色妖群", W / 2, H * 0.74 + 22);
+    ctx.globalAlpha = 1;
+  }
+  if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.5, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }
+}
+
 // ───────── 主迴圈 ─────────
 let last = performance.now();
 function frame(now) {
@@ -865,6 +1145,17 @@ function frame(now) {
     updatePlayer(dt);
     updateBoss(dt);
     updateHazards(dt);
+    updateSwords(dt);
+  } else if (state === "run") {
+    time += dt;
+    updateRun(dt);
+  } else if (state === "runEnd") {
+    time += dt;
+    run.y -= RUN_SPEED * 0.35 * dt;
+    run.endT -= dt;
+    if (run.endT <= 0) startBoss(run.swords);
+  } else if (state === "runFail") {
+    time += dt;
   } else if (slowmo > 0) {
     slowmo -= dt;
     dt *= 0.3;
@@ -879,8 +1170,20 @@ function frame(now) {
 // 標題畫面背景先放一場示範
 reset();
 const params = new URLSearchParams(location.search);
-if (params.has("demo")) {
+if (params.has("run")) {
+  // 測試用：?run&sim=秒數 先快轉跑酷（自動左右亂飄）
   start();
+  const sim = Number(params.get("sim") || 0);
+  for (let t = 0; t < sim && state === "run"; t += 1 / 60) {
+    keys.clear();
+    keys.add(Math.sin(t * 1.3) > 0 ? "d" : "a");
+    time += 1 / 60;
+    updateRun(1 / 60); updateFx(1 / 60);
+  }
+  keys.clear();
+  cam.x = 0; cam.y = run.y - 45;
+} else if (params.has("demo")) {
+  startBoss(Number(params.get("swords") || 60));
   if (params.has("sim")) { state = "play"; cam.zoom = 1; }
   // 測試用：?demo&sim=秒數 先快轉（玩家會自動繞著魔王走、偶爾攻擊）
   const sim = Number(params.get("sim") || 0);
@@ -893,7 +1196,7 @@ if (params.has("demo")) {
     time += 1 / 60;
     if (Math.random() < 0.01) pressed.add("u");
     hitstop = 0;
-    updatePlayer(1 / 60); updateBoss(1 / 60); updateHazards(1 / 60); updateFx(1 / 60);
+    updatePlayer(1 / 60); updateBoss(1 / 60); updateHazards(1 / 60); updateSwords(1 / 60); updateFx(1 / 60);
     pressed.clear();
   }
   keys.clear();

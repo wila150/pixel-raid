@@ -34,3 +34,4 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
   /* 電腦：按鈕縮小放旁邊，主要用鍵盤 */
   #pad { opacity: 0.85; transform: scale(0.85); transform-origin: bottom right; }
 }
+.blue { color: #5fd0ff; font-weight: 700; }
