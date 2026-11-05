@@ -35,6 +35,13 @@ const AFFIX = {
   ult: { n: "天罰充能", lo: 4, hi: 10, w: 3, pct: true },
   magnet: { n: "撿取範圍", lo: 10, hi: 25, w: 2, pct: true },
 };
+// 詞綴名字：前綴放在名字前面、後綴放在後面（靈品一個、玄品兩個）
+const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", def: "堅石", spd: "迅捷", crit: "致命", critD: "破軍", leech: "嗜血", thorns: "荊棘", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
+function nameItem(it) {
+  if (it.u) { it.name = UNIQUES[it.u].n; return; }
+  const base = SLOTS[it.slot].names[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
+  it.name = it.q === 0 || !ks.length ? base : `${AFF_WORD[ks[0]]}${base}${it.q >= 2 && ks[1] ? `・${AFF_WORD[ks[1]]}` : ""}`;
+}
 const BASE_VAL = { atk: [8, 4], hp: [30, 15], def: [6, 3], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
 const RARITY = [
   { n: "凡品", c: "#d8d2e0", aff: [0, 0], sell: 2 },
@@ -59,8 +66,8 @@ function rollAffixes(it, n) {
   for (let i = 0; i < n && pool.length; i++) { const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; it.aff[k] = rollAffVal(k, it.il); }
 }
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
-function rollItem(boost = 0) {
-  const il = realmIdx() + Math.floor(Math.random() * 2);
+function rollItem(boost = 0, ilv = null) {
+  const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
   const r = Math.random() * 100, w = boost ? [30, 42, 22, 6] : [58, 30, 10, 2];
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
@@ -72,6 +79,7 @@ function rollItem(boost = 0) {
   if (s.base !== "crit") it.base = Math.round(it.base);
   const [a0, a1] = RARITY[q].aff;
   rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1)));
+  nameItem(it);
   return it;
 }
 // 戰力
@@ -232,7 +240,7 @@ function renderEquip(msg = "") {
     save.stone -= c;
     const [a0, a1] = RARITY[selItem.q].aff;
     rollAffixes(selItem, Math.max(Object.keys(selItem.aff).length, a0 + Math.floor(Math.random() * (a1 - a0 + 1))));
-    writeSave(); sfx("good"); renderEquip("洗練完成！");
+    nameItem(selItem); writeSave(); sfx("good"); renderEquip(`洗練完成：${selItem.name}`);
   });
   on("upq", () => {
     const c = upCost(selItem);
@@ -242,7 +250,7 @@ function renderEquip(msg = "") {
     selItem.base = SLOTS[selItem.slot].base === "crit" ? Math.round(selItem.base * 1.12 * 10) / 10 : Math.round(selItem.base * 1.12);
     const [a0] = RARITY[selItem.q].aff;
     rollAffixes(selItem, Math.max(a0, Object.keys(selItem.aff).length + 1));
-    writeSave(); sfx("arrive"); renderEquip(`點金成功，升為${RARITY[selItem.q].n}！`);
+    nameItem(selItem); writeSave(); sfx("arrive"); renderEquip(`點金成功：${selItem.name}`);
   });
   on("autoEq", () => {
     let n = 0;

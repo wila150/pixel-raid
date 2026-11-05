@@ -19,7 +19,7 @@ const PETS = {
   crane: { n: "白羽鶴", d: "每 5 秒幫你回血" },
 };
 const PET_MAX = 5;
-const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {}, school: "ti", eq: {}, bag: [], stone: 0 });
+const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {}, school: "ti", eq: {}, bag: [], stone: 0, keys: [], maxTier: 0 });
 function loadSave() {
   try { return Object.assign(blankSave(), JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch { return blankSave(); }
 }

@@ -33,6 +33,7 @@ const BEASTS = {
   wolf: { img: () => WOLF, hp: 14, spd: 58, dmg: 7, r: 6, exp: 2 },
   golem: { img: () => GOLEM, hp: 50, spd: 20, dmg: 12, r: 8, exp: 5 },
   elite: { img: () => ELITE, hp: 420, spd: 26, dmg: 18, r: 14, exp: 30, big: true },
+  lord: { img: () => ELITE, hp: 500, spd: 40, dmg: 15, r: 20, exp: 60, big: true, lord: true }, // 秘境之主
 };
 
 // ───────── 升級三選一（只在斬妖試煉有效）─────────
@@ -50,7 +51,8 @@ const HUPS = {
 };
 const HL = (k) => (hunt && hunt.ups[k]) || 0;
 
-function startHunt() {
+// map：秘境鑰（null＝斬妖試煉，撐 3 分鐘去渡劫）
+function startHunt(map = null) {
   mode = "normal";
   B = bonus();
   loot = [];
@@ -60,7 +62,10 @@ function startHunt() {
     x: HUNT.w / 2, y: HUNT.h / 2, hp: B.maxHp, maxHp: B.maxHp, face: 0, flip: false, walk: 0, iframe: 0, hurt: 0,
     lv: 1, exp: 0, next: 4, kills: 0, ups: {}, enemies: [], orbs: [], bolts: [], spawnT: 0, shotT: 0, thunderT: 2.5,
     regenT: 1, eliteT: 55, elites: 0, petT: 2, petX: HUNT.w / 2 - 16, petY: HUNT.h / 2, endT: 0, bossCall: false,
+    map, goal: map ? 90 + map.tier * 15 : 0, lordUp: false, cleared: false, eshots: [], stoneGot: 0, keysGot: [],
+    tierMul: map ? 1 + 0.35 * (map.tier - 1) : 1, quant: map ? 1 + keyQuant(map) / 100 : 1,
   };
+  if (map && map.mods.includes("elites")) hunt.eliteT = 25;
   particles = []; floaters = []; embers = []; shake = 0; time = 0; flashT = 0; hitstop = 0;
   cam = { x: hunt.x, y: hunt.y, zoom: 1 };
   state = "hunt";
@@ -71,7 +76,7 @@ const huntDmg = () => 10 * (B ? B.atk : 1) * (1 + 0.25 * HL("edge")) * zenMul() 
 
 function spawnBeast(type) {
   const t = BEASTS[type], a = rand(0, Math.PI * 2), d = rand(150, 190);
-  const scale = 1 + time / 90; // 越晚出來的妖獸越硬
+  const scale = (type === "lord" ? (1 + time / 240) * (hasMod("lord") ? 1.6 : 1) : 1 + time / 90) * hunt.tierMul * (hasMod("hp") ? 1.4 : 1); // 越晚越硬；秘境越深越硬
   hunt.enemies.push({
     type, x: clamp(hunt.x + Math.cos(a) * d, 10, HUNT.w - 10), y: clamp(hunt.y + Math.sin(a) * d, 10, HUNT.h - 10),
     hp: t.hp * scale, max: t.hp * scale, flash: 0, hitT: {}, kb: 0, ka: 0,
@@ -98,7 +103,8 @@ function hurtBeast(e, dmg, kb = 0, from = null) {
   const n = t.big ? 10 : 1;
   for (let i = 0; i < n; i++) hunt.orbs.push({ x: e.x + rand(-8, 8) * (n > 1), y: e.y + rand(-8, 8) * (n > 1), v: t.big ? 3 : t.exp, kind: "exp", pull: false });
   if (t.big || Math.random() < 0.025) hunt.orbs.push({ x: e.x, y: e.y + 4, v: t.big ? 40 : 15, kind: "fruit", pull: false });
-  if (t.big) grantLoot(rollItem(1), e.x, e.y - 10);
+  if (hunt.map) mapDrops(e, t);
+  else if (t.big) grantLoot(rollItem(1), e.x, e.y - 10);
   else if (Math.random() < 0.006) grantLoot(rollItem(), e.x, e.y);
   if (t.big) {
     floatText(e.x, e.y - 24, "斬殺妖將！", "#ffe066", true);
@@ -106,6 +112,31 @@ function hurtBeast(e, dmg, kb = 0, from = null) {
   }
 }
 
+// 秘境掉寶：裝備掉在地上（有光柱），走過去撿；掉寶加成影響數量
+const mapIl = () => hunt.map.tier - 1 + realmIdx() + Math.floor(Math.random() * 2);
+function dropItem(it, x, y) { hunt.orbs.push({ x: x + rand(-14, 14), y: y + rand(-10, 10), kind: "item", it, pull: false }); }
+function mapDrops(e, t) {
+  const q = hunt.quant;
+  if (t.lord) {
+    const n = Math.round(4 * q + Math.random() * 2);
+    for (let i = 0; i < n; i++) dropItem(rollItem(1, mapIl()), e.x, e.y);
+    hunt.orbs.push({ x: e.x, y: e.y, kind: "stone", v: Math.round((20 + hunt.map.tier * 8) * q), pull: false });
+    const k1 = makeKey(hunt.map.tier + 1); addKey(k1); hunt.keysGot.push(k1);
+    if (Math.random() < 0.5 * q) { const k2 = makeKey(hunt.map.tier); addKey(k2); hunt.keysGot.push(k2); }
+    floatText(e.x, e.y - 40, "秘境之主伏誅！", "#ffe066", true);
+    hunt.cleared = true; hunt.endT = 5;
+    for (const o of hunt.enemies) { o.dead = true; burst(o.x, o.y, "#b07dff", 6, 60); }
+    hunt.eshots = [];
+    sfx("win"); shake = 16; flashT = 0.35; flashColor = "255,230,150";
+    return;
+  }
+  if (t.big) {
+    dropItem(rollItem(1, mapIl()), e.x, e.y);
+    if (Math.random() < 0.5 * q) dropItem(rollItem(0, mapIl()), e.x, e.y);
+    if (Math.random() < 0.2 * q) { const k = makeKey(hunt.map.tier); addKey(k); hunt.keysGot.push(k); floatText(e.x, e.y - 30, `秘境鑰 第 ${k.tier} 層`, "#9fe8ff", true); }
+  } else if (Math.random() < 0.015 * q) dropItem(rollItem(0, mapIl()), e.x, e.y);
+  if (Math.random() < 0.05 * q) hunt.orbs.push({ x: e.x, y: e.y, kind: "stone", v: 1 + Math.floor(hunt.map.tier / 2), pull: false });
+}
 function huntLevelUp() {
   hunt.lv++;
   hunt.exp -= hunt.next;
@@ -163,19 +194,28 @@ function updateHunt(dt) {
   h.hurt = Math.max(0, h.hurt - dt);
 
   // 出怪：越後面越多、越強
-  if (!h.bossCall) {
+  if (!h.bossCall && !h.cleared) {
     h.spawnT -= dt;
     if (h.spawnT <= 0 && h.enemies.length < 160) {
-      h.spawnT = Math.max(0.22, 1.0 - time / 200);
-      const n = 1 + Math.floor(time / 60);
+      h.spawnT = Math.max(0.22, 1.0 - time / 200) / (hasMod("swarm") ? 1.4 : 1) * (h.lordUp ? 2.5 : 1); // 秘境之主出現後小怪變少
+      const n = 1 + Math.floor(time / 60) + (h.map ? Math.floor(h.map.tier / 4) : 0);
+      const tg = h.map ? 15 : 40, tw = h.map ? 8 : 20; // 秘境一開始就有狼和石甲
       for (let i = 0; i < n; i++) {
         const r = Math.random();
-        spawnBeast(time > 40 && r < 0.12 + time / 1500 ? "golem" : time > 20 && r < 0.45 ? "wolf" : "imp");
+        const golemP = 0.12 + time / 1500 + (hasMod("golem") ? 0.2 : 0), wolfP = 0.45 + (hasMod("wolf") ? 0.25 : 0);
+        spawnBeast(time > tg && r < golemP ? "golem" : time > tw && r < wolfP ? "wolf" : "imp");
       }
+    }
+    // 秘境：斬妖到門檻，秘境之主現身
+    if (h.map && !h.lordUp && h.kills >= h.goal) {
+      h.lordUp = true;
+      spawnBeast("lord");
+      floatText(h.x, h.y - 40, "秘境之主現身！", "#ff4a2a", true);
+      sfx("roar"); shake = 14; flashT = 0.3; flashColor = "255,60,30";
     }
     h.eliteT -= dt;
     if (h.eliteT <= 0) {
-      h.eliteT = 55; h.elites++;
+      h.eliteT = hasMod("elites") ? 25 : 55; h.elites++;
       spawnBeast("elite");
       floatText(h.x, h.y - 40, "妖將來了！", "#ff8a3d", true);
       sfx("roar"); shake = 8;
@@ -194,7 +234,8 @@ function updateHunt(dt) {
   const alive = h.enemies.filter((e) => !e.dead);
   const nearest = (from, max = 1e9) => { let best = null, bd = max; for (const e of alive) { const d = dist(from, e); if (d < bd) { bd = d; best = e; } } return best; };
   if (h.shotT <= 0) {
-    const tgt = nearest(h, 170);
+    const lordE = alive.find((e) => BEASTS[e.type].lord && dist(e, h) < 170); // 劍氣優先打秘境之主
+    const tgt = lordE || nearest(h, 170);
     if (tgt) {
       h.shotT = 0.6 * Math.pow(0.8, HL("haste"));
       const n = 1 + HL("bolt"), base = angTo(h, tgt);
@@ -220,7 +261,7 @@ function updateHunt(dt) {
     }
   }
   // 回春
-  const rg = HL("regen") + B.regen; // 回春＋道修
+  const rg = (HL("regen") + B.regen) * (hasMod("noregen") ? 0.4 : 1); // 回春＋道修
   if (rg) { h.regenT -= dt; if (h.regenT <= 0) { h.regenT = 1; h.hp = Math.min(h.maxHp, h.hp + rg); } }
   // 靈獸
   if (B.pet) {
@@ -257,7 +298,15 @@ function updateHunt(dt) {
     const t = BEASTS[e.type];
     e.flash = Math.max(0, e.flash - dt);
     if (e.kb > 0) { e.x += Math.cos(e.ka) * e.kb * dt * 3; e.y += Math.sin(e.ka) * e.kb * dt * 3; e.kb = Math.max(0, e.kb - dt * 400); }
-    else { const a = angTo(e, h); e.x += Math.cos(a) * t.spd * B.slow * dt; e.y += Math.sin(a) * t.spd * B.slow * dt; }
+    else { const a = angTo(e, h), sp = t.spd * B.slow * (hasMod("fast") ? 1.25 : 1); e.x += Math.cos(a) * sp * dt; e.y += Math.sin(a) * sp * dt; }
+    if (t.lord) { // 秘境之主：每 2.6 秒放一圈火球
+      e.fireT = (e.fireT === undefined ? 2 : e.fireT) - dt * B.slow;
+      if (e.fireT <= 0) {
+        e.fireT = 2.6; const n = 14, off = Math.random() * 6;
+        for (let i = 0; i < n; i++) { const a = off + (i / n) * Math.PI * 2; h.eshots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 70, vy: Math.sin(a) * 70, life: 4 }); }
+        sfx("bad");
+      }
+    }
     for (const k in e.hitT) e.hitT[k] -= dt;
     h.orbitPts.forEach((o, i) => {
       if ((e.hitT[i] || 0) > 0 || Math.hypot(e.x - o.x, e.y - o.y) > t.r + 4) return;
@@ -266,7 +315,7 @@ function updateHunt(dt) {
       burst(o.x, o.y, "#cfefff", 3, 40);
     });
     if (!e.dead && h.iframe <= 0 && dist(e, h) < t.r + 5) {
-      const dmg = Math.max(1, Math.round(t.dmg * (1 + time / 200) * B.dmgTaken * (B.uq.vajra && h.hp < h.maxHp * 0.3 ? 0.5 : 1)));
+      const dmg = huntHurtDmg(t.dmg);
       if (B.thorns > 0) hurtBeast(e, dmg * B.thorns * 3 * B.atk); // 反震
       h.hp -= dmg; h.iframe = 0.5; h.hurt = 0.2;
       floatText(h.x, h.y - 14, `-${dmg}`, "#ff6b6b");
@@ -283,22 +332,43 @@ function updateHunt(dt) {
   }
   h.enemies = h.enemies.filter((e) => !e.dead);
 
+  // 秘境之主的火球
+  for (const s of h.eshots) {
+    s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
+    if (h.iframe <= 0 && Math.hypot(s.x - h.x, s.y - h.y) < 6) {
+      s.life = 0; const dmg = huntHurtDmg(9);
+      h.hp -= dmg; h.iframe = 0.5; h.hurt = 0.2; floatText(h.x, h.y - 14, `-${dmg}`, "#ff6b6b"); sfx("hurt"); shake = Math.max(shake, 4);
+      if (h.hp <= 0) { h.hp = 0; state = "huntFail"; sfx("lose"); setTimeout(showHuntFail, 1000); return; }
+    }
+  }
+  h.eshots = h.eshots.filter((s) => s.life > 0);
   // 妖丹：進入吸取範圍就飛過來
   const mag = 30 * (1 + 0.5 * HL("magnet")) * (1 + B.magnet);
   for (const o of h.orbs) {
     const d = dist(o, h);
-    if (d < mag) o.pull = true;
+    if (o.kind === "item") { // 裝備不會自己飛過來，要走過去（通關後自動收）
+      if (d < 12 || (h.cleared && h.endT < 1.5)) { o.got = true; grantLoot(o.it, h.x, h.y - 6); }
+      continue;
+    }
+    if (d < mag || h.cleared) o.pull = true;
     if (o.pull) { const a = angTo(o, h), s = 160 + (mag - Math.min(d, mag)) * 4; o.x += Math.cos(a) * s * dt; o.y += Math.sin(a) * s * dt; }
     if (d < 8) {
       o.got = true;
       if (o.kind === "fruit") {
         const heal = Math.min(o.v, h.maxHp - h.hp); h.hp += heal;
         floatText(h.x, h.y - 16, `靈果 +${heal}`, "#7dff8a"); sfx("heal");
+      } else if (o.kind === "stone") {
+        save.stone += o.v; h.stoneGot += o.v; writeSave();
+        floatText(h.x, h.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good");
       } else { h.exp += o.v; if (Math.random() < 0.4) sfx("tick"); }
     }
   }
   h.orbs = h.orbs.filter((o) => !o.got);
   if (h.exp >= h.next) { huntLevelUp(); return; }
+  if (h.map) { // 秘境：打倒秘境之主後收寶，然後結算
+    if (h.cleared) { h.endT -= dt; if (h.endT <= 0) { state = "huntEnd"; showMapDone(); } }
+    return;
+  }
 
   // 時間到：妖王現身 → 前往渡劫
   if (!h.bossCall && time >= HUNT.time) {
@@ -320,9 +390,28 @@ function updateHunt(dt) {
   }
 }
 
+function huntHurtDmg(base) {
+  const h = hunt;
+  return Math.max(1, Math.round(base * (1 + time / 200) * (h.map ? 1 + 0.2 * (h.map.tier - 1) : 1) * (hasMod("dmg") ? 1.3 : 1) * B.dmgTaken * (B.uq.vajra && h.hp < h.maxHp * 0.3 ? 0.5 : 1)));
+}
 function showHuntFail() {
   player.swords = 0;
   stats.dealt = hunt.kills * 20; // 結算修為：斬越多拿越多
+  if (hunt.map) {
+    const gain = Math.round(hunt.kills / 3); save.xiuwei += gain; writeSave();
+    screenEl.innerHTML = `<div class="panel">
+      <h1>葬身秘境…</h1>
+      <div class="result">${keyName(hunt.map)}：斬妖 ${hunt.kills} / ${hunt.goal}　${hunt.lv} 級<br>鑰匙沒了，但撿到的裝備都還在。<br>換上更好的裝備、或挑詞綴比較少的鑰匙再來。</div>
+      <div class="gain">修為 +${gain}　靈石 +${hunt.stoneGot}</div>
+      ${lootHtml()}
+      <div class="btns"><button id="maps" class="big">回秘境</button><button id="equipBtn3" class="big alt">裝備</button><button id="home" class="big alt">回主畫面</button></div>
+    </div>`;
+    screenEl.classList.remove("hidden");
+    document.getElementById("maps").onclick = () => renderMaps();
+    document.getElementById("equipBtn3").onclick = () => { eqSel = null; renderEquip(); };
+    document.getElementById("home").onclick = renderTitle;
+    return;
+  }
   const reward = settle(false, "C");
   screenEl.innerHTML = `<div class="panel">
     <h1>被妖獸圍攻…</h1>
@@ -331,7 +420,7 @@ function showHuntFail() {
     <div class="btns"><button id="again" class="big">再挑戰</button><button id="home" class="big alt">回主畫面</button></div>
   </div>`;
   screenEl.classList.remove("hidden");
-  document.getElementById("again").onclick = startHunt;
+  document.getElementById("again").onclick = () => startHunt();
   document.getElementById("home").onclick = renderTitle;
 }
 
@@ -362,7 +451,20 @@ function renderHunt() {
   // 妖丹與靈果
   for (const o of h.orbs) {
     if (o.x < l || o.x > r || o.y < t || o.y > b) continue;
-    if (o.kind === "fruit") {
+    if (o.kind === "item") { // 光柱＋名字
+      const c = RARITY[o.it.q].c, hgt = 14 + o.it.q * 10;
+      ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4 + o.x);
+      ctx.fillStyle = c; ctx.fillRect(o.x - 1.5, o.y - hgt, 3, hgt);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6);
+      ctx.fillStyle = c; ctx.fillRect(o.x - 2, o.y - 2, 4, 4);
+      ctx.font = `bold ${o.it.q >= 2 ? 7 : 6}px 'Noto Sans TC', sans-serif`; ctx.textAlign = "center";
+      const label = o.it.name, tw = ctx.measureText(label).width;
+      ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(o.x - tw / 2 - 2, o.y - hgt - 8, tw + 4, 8);
+      ctx.fillStyle = c; ctx.fillText(label, o.x, o.y - hgt - 2);
+    } else if (o.kind === "stone") {
+      ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); ctx.fillStyle = "#e6f8ff"; ctx.fillRect(o.x - 1, o.y - 2, 1, 1);
+    } else if (o.kind === "fruit") {
       ctx.fillStyle = "#ff6b8a"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6);
       ctx.fillStyle = "#7dff8a"; ctx.fillRect(o.x - 1, o.y - 5, 2, 2);
     } else {
@@ -374,7 +476,7 @@ function renderHunt() {
   // 妖獸
   for (const e of h.enemies) {
     if (e.x < l - 20 || e.x > r + 20 || e.y < t - 20 || e.y > b + 20) continue;
-    const bt = BEASTS[e.type], img = bt.img(), sc = bt.big ? 2 : 1;
+    const bt = BEASTS[e.type], img = bt.img(), sc = bt.lord ? 3 : bt.big ? 2 : 1;
     ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(e.x, e.y + bt.r * 0.8, bt.r, bt.r * 0.3, 0, 0, Math.PI * 2); ctx.fill();
     ctx.save();
     ctx.translate(Math.round(e.x), Math.round(e.y + Math.sin(time * 8 + e.x) * 0.6));
@@ -398,6 +500,7 @@ function renderHunt() {
     for (const o of h.orbitPts || []) drawSword(o.x, o.y, o.a, 8);
     if (B.pet) ctx.drawImage(B.pet === "fox" ? FOX : CRANE, Math.round(h.petX - 4), Math.round(h.petY - 4));
   }
+  for (const s of h.eshots) { ctx.fillStyle = "#ff7a2e"; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#ffe066"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
   for (const bo of h.bolts) {
     if (bo.fox) { ctx.fillStyle = "#ff9d2e"; ctx.fillRect(bo.x - 2, bo.y - 2, 4, 4); }
     else drawSword(bo.x, bo.y, bo.a, 9);
@@ -412,7 +515,8 @@ function renderHunt() {
   ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const left = Math.max(0, Math.ceil(HUNT.time - time));
   ctx.fillStyle = "#ffe0b0";
-  ctx.fillText(`Lv.${h.lv}　斬妖 ${h.kills}　${h.bossCall ? "妖王現身！" : `妖王現身倒數 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}`, W / 2, 40);
+  if (h.map) ctx.fillText(`${keyName(h.map)}　Lv.${h.lv}　${h.cleared ? "通關！收寶中…" : h.lordUp ? "打倒秘境之主！" : `斬妖 ${h.kills} / ${h.goal}`}`, W / 2, 40);
+  else ctx.fillText(`Lv.${h.lv}　斬妖 ${h.kills}　${h.bossCall ? "妖王現身！" : `妖王現身倒數 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}`, W / 2, 40);
   // 生命
   const hw2 = Math.min(W * 0.5, 220), hx = (W - hw2) / 2, hy = H - 34;
   ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(hx - 3, hy - 3, hw2 + 6, 14);
@@ -425,6 +529,22 @@ function renderHunt() {
     ctx.fillText("拖曳畫面（或 WASD）移動，飛劍會自動攻擊", W / 2, H * 0.7);
     ctx.fillText("撿紫色妖丹升級，撐到妖王現身！", W / 2, H * 0.7 + 22);
     ctx.globalAlpha = 1;
+  }
+  // 秘境之主在畫面外：邊緣畫箭頭指過去
+  const L = h.enemies.find((e) => BEASTS[e.type].lord);
+  if (L) {
+    const kk2 = SCALE * 1.35, sxL = W / 2 + (L.x - cam.x) * kk2, syL = H / 2 + (L.y - cam.y) * kk2;
+    if (sxL < 0 || sxL > W || syL < 0 || syL > H) {
+      const a = Math.atan2(syL - H / 2, sxL - W / 2), rx = W / 2 - 30, ry = H / 2 - 60;
+      const t2 = Math.min(rx / Math.abs(Math.cos(a) || 1e-6), ry / Math.abs(Math.sin(a) || 1e-6));
+      const ax = W / 2 + Math.cos(a) * t2, ay = H / 2 + Math.sin(a) * t2;
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+      ctx.fillStyle = `rgba(255,80,40,${0.7 + Math.sin(time * 8) * 0.3})`;
+      ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -10); ctx.lineTo(-8, 10); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#ffb08a"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("秘境之主", ax - Math.cos(a) * 26, ay - Math.sin(a) * 18);
+    }
   }
   if (stick.id !== null) {
     ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 3;

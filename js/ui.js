@@ -100,7 +100,7 @@ function renderTitle() {
   const best = save.daily[todayKey()];
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v0.8</p>
+    <p class="sub">PIXEL RAID · 原型 v0.9</p>
     <div class="profile">
       <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
       <div class="xwbar"><i style="width:${pct}%"></i></div>
@@ -114,6 +114,7 @@ function renderTitle() {
     </div>
     <div class="btns">
       <button id="start" class="big">踏上仙途</button>
+      <button id="maps" class="big">秘境${save.maxTier ? `<small>最深 ${save.maxTier} 層</small>` : "<small>刷寶</small>"}</button>
       <button id="hunt" class="big">斬妖試煉</button>
       <button id="daily" class="big alt">每日渡劫${best ? `<small>今日最佳 ${best}</small>` : ""}</button>
     </div>
@@ -122,6 +123,7 @@ function renderTitle() {
       <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
       <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
       <p><b>斬妖試煉</b>　在山林裡移動，飛劍自動斬妖；撿妖丹升級、每級三選一變強，撐過 3 分鐘再去渡劫</p>
+      <p><b>秘境</b>　用秘境鑰進去刷寶：斬妖到門檻後打秘境之主，噴一地裝備和更深一層的鑰匙。鑰匙詞綴越危險，寶越多</p>
       <p><b>裝備</b>　斬妖、跑酷、渡劫會掉裝備，詞綴隨機；靈石可以洗練詞綴、點金升品質</p>
       <p><b>每日渡劫</b>　每天一張固定地圖，大家同樣起點、不吃境界加成，比分數</p>
     </div>
@@ -129,7 +131,8 @@ function renderTitle() {
   screenEl.classList.remove("hidden");
   document.getElementById("start").onclick = () => start("normal");
   document.getElementById("daily").onclick = () => start("daily");
-  document.getElementById("hunt").onclick = startHunt;
+  document.getElementById("hunt").onclick = () => startHunt();
+  document.getElementById("maps").onclick = () => { keySel = null; renderMaps(); };
   document.getElementById("school").onclick = renderSchools;
   document.getElementById("equipBtn").onclick = () => { eqSel = null; renderEquip(); };
 }
