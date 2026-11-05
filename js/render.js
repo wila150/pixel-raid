@@ -332,6 +332,7 @@ function render() {
   ctx.fillRect(0, 0, cvs.width, cvs.height);
   const vs = viewState();
   if (vs === "run" || vs === "runEnd" || vs === "runFail") { renderRun(); return; }
+  if (vs === "hunt" || vs === "huntEnd" || vs === "huntFail") { renderHunt(); return; }
   if (!player) return;
   // 鏡頭跟著玩家，稍微往魔王方向偏
   const intro = vs === "intro";

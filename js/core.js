@@ -69,7 +69,7 @@ window.addEventListener("blur", () => keys.clear());
 // 虛擬搖桿：左半邊螢幕按住拖曳
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 cvs.addEventListener("pointerdown", (e) => {
-  if (e.clientX < W * 0.55 && stick.id === null) {
+  if ((e.clientX < W * 0.55 || state === "hunt") && stick.id === null) { // 斬妖試煉整個畫面都能當搖桿
     stick.id = e.pointerId;
     stick.ox = stick.x = e.clientX;
     stick.oy = stick.y = e.clientY;
@@ -99,6 +99,6 @@ pad.querySelectorAll(".btn").forEach((b) => {
 const act = (name, ...ks) => padAct.has(name) || ks.some((k) => pressed.has(k));
 
 // ───────── 遊戲狀態 ─────────
-let state = "title"; // title / run / runEnd / runFail / intro / play / win / lose
+let state = "title"; // title / run / runEnd / runFail / hunt / huntEnd / huntFail / intro / play / win / lose
 let player, boss, hazards, shots, pshots, particles, floaters, shake, time, stats, cam, slowmo;
 let hitstop = 0, combo = 0, comboT = 0, comboPop = 0, flashT = 0, flashColor = "255,255,255", introT = 0, ultFx = 0, ultA = 0, embers = [], cracks = [];

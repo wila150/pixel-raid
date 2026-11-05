@@ -37,7 +37,7 @@ function applyPerk(k) {
 }
 function rollPerks() {
   const evo = Object.keys(PERKS).filter((k) => PERKS[k].need && !P(k) && PERKS[k].need.every((n) => P(n)));
-  const pool = Object.keys(PERKS).filter((k) => !PERKS[k].need && P(k) < PERKS[k].max);
+  const pool = Object.keys(PERKS).filter((k) => !PERKS[k].need && P(k) < PERKS[k].max && !(run.fromHunt && PERKS[k].tag === "跑酷"));
   const out = evo.slice(0, 1);
   while (out.length < 3 && pool.length) out.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
   return out;

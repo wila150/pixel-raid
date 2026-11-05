@@ -46,6 +46,11 @@ function frame(now) {
     run.y -= RUN_SPEED * 0.35 * dt;
     run.endT -= dt;
     if (run.endT <= 0) { run.endT = 99; openPick("渡劫前的最後機緣", () => startBoss(run.swords)); }
+  } else if (state === "hunt") {
+    time += dt;
+    updateHunt(dt);
+  } else if (state === "huntFail" || state === "huntEnd") {
+    time += dt;
   } else if (state === "runFail") {
     time += dt;
   } else if (slowmo > 0) {
