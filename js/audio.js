@@ -78,7 +78,7 @@ function updateBgm() {
   if (!actx || muted || actx.state !== "running") return;
   const vs = viewState();
   const tense = vs === "play" || vs === "intro" || vs === "hunt";
-  const calm = vs === "run" || vs === "runEnd" || vs === "title";
+  const calm = vs === "run" || vs === "runEnd" || vs === "title" || vs === "world";
   if (!tense && !calm) return;
   if (state === "paused") return;
   const beat = tense ? 0.2 : 0.26;

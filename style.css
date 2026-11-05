@@ -94,3 +94,7 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 .hint { display: block; margin-top: 6px; font-size: 11px; }
 @media (max-width: 520px) { .slots { grid-template-columns: repeat(5, 1fr); } .slot b { font-size: 10px; } .compare { flex-direction: column; } }
 .screen:has(.panel.equip) { background: rgba(12, 9, 18, 0.96); } .panel.equip { padding-top: 22px; }
+.big.hero { padding: 16px 54px; font-size: 24px; background: linear-gradient(#ffe39a, #ff8a2e); box-shadow: 0 6px 0 #8a3d0b, 0 0 24px rgba(255,160,60,0.5); }
+details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; color: #a99bb8; font-size: 14px; }
+.card.ap[disabled] { opacity: 0.5; cursor: default; }
+.cpline.small { font-size: 13px; margin-top: 10px; color: #cfc4dc; }

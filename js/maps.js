@@ -64,12 +64,12 @@ function renderMaps(msg = "") {
     <div class="baghead">秘境鑰 ${save.keys.length} / ${KEY_MAX}</div>
     <div class="bag">${keys.map((k) => `<button class="bitem${keySel === k.id ? " sel" : ""}" data-id="${k.id}" style="border-color:${KEY_RARITY[k.q].c}"><small>${KEY_RARITY[k.q].n}・${k.mods.length} 詞綴</small><b style="color:${KEY_RARITY[k.q].c}">第 ${k.tier} 層</b><i>寶 +${keyQuant(k)}%</i></button>`).join("")}</div>
     ${save.keys.some((k) => k.tier === 1) ? "" : `<div class="btns"><button id="freeKey" class="big">領取第 1 層秘境鑰（免費）</button></div>`}
-    <div class="btns"><button id="equipBtn2" class="big alt">裝備</button><button id="back" class="big alt">返回</button></div>
+    <div class="btns"><button id="equipBtn2" class="big alt">裝備</button><button id="back" class="big alt">${inWorld ? "回到仙界" : "返回"}</button></div>
   </div>`;
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".bitem").forEach((b) => b.addEventListener("click", () => { keySel = keySel === b.dataset.id ? null : b.dataset.id; renderMaps(); }));
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-  on("back", () => { keySel = null; renderTitle(); });
+  on("back", () => { keySel = null; inWorld ? worldReturn() : renderTitle(); });
   on("equipBtn2", () => { eqSel = null; renderEquip(); });
   on("freeKey", () => { const k = makeKey(1, 0); addKey(k); keySel = k.id; renderMaps("領到一把第 1 層秘境鑰"); });
   on("enter", () => { save.keys = save.keys.filter((k) => k !== sel); writeSave(); keySel = null; startHunt(sel); });
@@ -103,10 +103,10 @@ function showMapDone() {
     <div class="gain">修為 +${gain}　靈石 +${h.stoneGot}</div>
     ${h.keysGot.length ? `<div class="drop">得到秘境鑰：${h.keysGot.map((k) => `<b style="color:${KEY_RARITY[k.q].c}">第 ${k.tier} 層</b>`).join("、")}</div>` : ""}
     ${lootHtml()}
-    <div class="btns"><button id="maps" class="big">繼續刷秘境</button><button id="equipBtn3" class="big alt">裝備</button><button id="home" class="big alt">回主畫面</button></div>
+    <div class="btns"><button id="maps" class="big">繼續刷秘境</button><button id="equipBtn3" class="big alt">裝備</button><button id="home" class="big alt">${inWorld ? "回到仙界" : "回主畫面"}</button></div>
   </div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("maps").onclick = () => renderMaps();
   document.getElementById("equipBtn3").onclick = () => { eqSel = null; renderEquip(); };
-  document.getElementById("home").onclick = renderTitle;
+  document.getElementById("home").onclick = () => (inWorld ? enterWorld() : renderTitle());
 }

@@ -171,8 +171,9 @@ function renderSchools() {
     }).join("")}</div>
     <div class="btns"><button id="back" class="big alt">返回</button></div>
   </div>`;
-  screenEl.querySelectorAll(".card").forEach((b) => b.addEventListener("click", () => { save.school = b.dataset.k; writeSave(); renderTitle(); }));
-  document.getElementById("back").onclick = renderTitle;
+  const back = () => (inWorld ? renderAP() : renderTitle());
+  screenEl.querySelectorAll(".card").forEach((b) => b.addEventListener("click", () => { save.school = b.dataset.k; writeSave(); back(); }));
+  document.getElementById("back").onclick = back;
 }
 
 // ───────── 裝備畫面 ─────────
@@ -220,14 +221,14 @@ function renderEquip(msg = "") {
     <div class="btns">
       <button id="autoEq" class="big">一鍵換最強</button>
       <button id="sellJunk" class="big alt">賣掉凡品、靈品</button>
-      <button id="back" class="big alt">返回</button>
+      <button id="back" class="big alt">${inWorld ? "回到仙界" : "返回"}</button>
     </div>
   </div>`;
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".bitem").forEach((b) => b.addEventListener("click", () => { eqSel = eqSel === b.dataset.id ? null : b.dataset.id; renderEquip(); }));
   screenEl.querySelectorAll(".slot").forEach((b) => b.addEventListener("click", () => { eqSel = save.eq[b.dataset.eq] ? (eqSel === "eq:" + b.dataset.eq ? null : "eq:" + b.dataset.eq) : null; renderEquip(); }));
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-  on("back", () => { eqSel = null; renderTitle(); });
+  on("back", () => { eqSel = null; inWorld ? worldReturn() : renderTitle(); });
   on("equip", () => { equipItem(selItem); eqSel = null; renderEquip(`換上了 ${selItem.name}`); });
   on("unequip", () => {
     if (save.bag.length >= BAG_MAX) { renderEquip("背包滿了，先賣掉一些"); return; }

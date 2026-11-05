@@ -34,6 +34,10 @@ function settle(win, rank, ranFail = false) {
       html += `<div class="drop">靈獸成長：<b>${PETS[save.pet].n}</b> Lv.${save.petLv}</div>`;
     }
   }
+  if (win && run && run.fromWorld) { // 世界王：多掉高級裝備
+    const il = Math.floor(save.w.lv / 3) + 1;
+    for (let i = 0; i < 3; i++) grantLoot(rollItem(1, il));
+  }
   if (win && mode === "normal") {
     grantLoot(rollItem(rank === "S" || rank === "A" ? 1 : 0));
     if (Math.random() < 0.4) grantLoot(rollItem());
@@ -55,11 +59,11 @@ let lastShare = "";
 function endButtons() {
   return `<div class="btns"><button id="again" class="big">再挑戰</button>
     ${mode === "daily" ? `<button id="share" class="big alt">分享成績</button>` : ""}
-    <button id="home" class="big alt">回主畫面</button></div>`;
+    <button id="home" class="big alt">${run && run.fromWorld ? "回到仙界" : "回主畫面"}</button></div>`;
 }
 function bindEndButtons() {
-  document.getElementById("again").onclick = () => (run && run.fromHunt ? startHunt() : start(mode));
-  document.getElementById("home").onclick = renderTitle;
+  document.getElementById("again").onclick = () => (run && run.fromWorld ? startWorldBoss() : run && run.fromHunt ? startHunt() : start(mode));
+  document.getElementById("home").onclick = () => (run && run.fromWorld ? enterWorld() : renderTitle());
   const sh = document.getElementById("share");
   if (sh) sh.onclick = async () => {
     try {
@@ -92,6 +96,9 @@ function showEnd(win) {
 }
 // 主畫面：境界、修為、法寶、靈獸、兩種模式
 function renderTitle() {
+  if (inWorld && W0 && save.w) { save.w.x = Math.round(W0.x); save.w.y = Math.round(W0.y); writeSave(); }
+  inWorld = false;
+  setPadLabels(false);
   pad.classList.add("hidden");
   state = "title";
   const r = realmIdx(), next = REALMS[r + 1];
@@ -100,7 +107,7 @@ function renderTitle() {
   const best = save.daily[todayKey()];
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v0.9</p>
+    <p class="sub">PIXEL RAID · 原型 v1.0</p>
     <div class="profile">
       <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
       <div class="xwbar"><i style="width:${pct}%"></i></div>
@@ -108,17 +115,23 @@ function renderTitle() {
       <div class="cprow">戰力 <b>${totalCP()}</b>　流派 <b>${SCHOOLS[save.school || "ti"].n}</b><small>（${SCHOOLS[save.school || "ti"].tag}）</small></div>
       <div class="small">靈獸：${save.pet ? `${PETS[save.pet].n} Lv.${save.petLv}（${PETS[save.pet].d}）` : "還沒有"}</div>
     </div>
+    <div class="btns">
+      <button id="world" class="big hero">進入仙界${save.w ? `<small>Lv.${save.w.lv}</small>` : "<small>大世界冒險</small>"}</button>
+    </div>
     <div class="btns small2">
       <button id="school" class="big alt">流派</button>
       <button id="equipBtn" class="big alt">裝備${save.bag.some((b) => itemCP(b) > itemCP(save.eq[b.slot])) ? " <span class=\"dot\">●</span>" : ""}<small>背包 ${save.bag.length}・靈石 ${save.stone}</small></button>
     </div>
-    <div class="btns">
-      <button id="start" class="big">踏上仙途</button>
+    <details class="minis"><summary>小遊戲</summary>
+    <div class="btns small2">
+      <button id="start" class="big">御劍跑酷</button>
       <button id="maps" class="big">秘境${save.maxTier ? `<small>最深 ${save.maxTier} 層</small>` : "<small>刷寶</small>"}</button>
       <button id="hunt" class="big">斬妖試煉</button>
       <button id="daily" class="big alt">每日渡劫${best ? `<small>今日最佳 ${best}</small>` : ""}</button>
-    </div>
+    </div></details>
     <div class="howto">
+      <p><b>進入仙界</b>　自由探索的大世界：青雲城找 NPC 換裝、補給、配點；出城往北走，越北邊妖獸越強；傳送陣快速移動；火山祭壇挑戰世界王焚天石魔</p>
+      <p><b>操作</b>　WASD 移動　J 劍擊　K 劍氣斬　U 掌心雷　空白鍵 閃身　H 丹藥；手機左邊拖曳移動、右下按鈕出招</p>
       <p><b>第一關 御劍</b>　左右拖曳／A、D 選門，<span class="blue">藍門</span>加飛劍、<span class="red">紅門</span>扣飛劍；靠近封印石會自動用飛劍打，打碎有獎勵；閃開紫色妖群</p>
       <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
       <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
@@ -130,6 +143,7 @@ function renderTitle() {
   </div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("start").onclick = () => start("normal");
+  document.getElementById("world").onclick = enterWorld;
   document.getElementById("daily").onclick = () => start("daily");
   document.getElementById("hunt").onclick = () => startHunt();
   document.getElementById("maps").onclick = () => { keySel = null; renderMaps(); };
@@ -226,7 +240,7 @@ const pauseBtn = document.getElementById("pauseBtn");
 const muteBtn = document.getElementById("muteBtn");
 let pausedFrom = null;
 const viewState = () => (state === "paused" || state === "pick" ? pausedFrom : state);
-const canPause = () => ["run", "hunt", "intro", "play"].includes(state);
+const canPause = () => ["run", "hunt", "world", "intro", "play"].includes(state);
 function pauseGame() {
   if (!canPause()) return;
   pausedFrom = state;
@@ -246,7 +260,7 @@ function resumeGame() {
   if (state !== "paused") return;
   state = pausedFrom;
   screenEl.classList.add("hidden");
-  if (state === "intro" || state === "play") pad.classList.remove("hidden");
+  if (state === "intro" || state === "play" || state === "world") pad.classList.remove("hidden");
   last = performance.now();
 }
 window.addEventListener("keydown", (e) => {

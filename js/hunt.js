@@ -404,12 +404,12 @@ function showHuntFail() {
       <div class="result">${keyName(hunt.map)}：斬妖 ${hunt.kills} / ${hunt.goal}　${hunt.lv} 級<br>鑰匙沒了，但撿到的裝備都還在。<br>換上更好的裝備、或挑詞綴比較少的鑰匙再來。</div>
       <div class="gain">修為 +${gain}　靈石 +${hunt.stoneGot}</div>
       ${lootHtml()}
-      <div class="btns"><button id="maps" class="big">回秘境</button><button id="equipBtn3" class="big alt">裝備</button><button id="home" class="big alt">回主畫面</button></div>
+      <div class="btns"><button id="maps" class="big">回秘境</button><button id="equipBtn3" class="big alt">裝備</button><button id="home" class="big alt">${inWorld ? "回到仙界" : "回主畫面"}</button></div>
     </div>`;
     screenEl.classList.remove("hidden");
     document.getElementById("maps").onclick = () => renderMaps();
     document.getElementById("equipBtn3").onclick = () => { eqSel = null; renderEquip(); };
-    document.getElementById("home").onclick = renderTitle;
+    document.getElementById("home").onclick = () => (inWorld ? enterWorld() : renderTitle());
     return;
   }
   const reward = settle(false, "C");
