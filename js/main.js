@@ -5,6 +5,7 @@
 function start(m = "normal") {
   mode = m;
   B = bonus();
+  loot = [];
   resetRun();
   state = "run";
   screenEl.classList.add("hidden");
@@ -13,7 +14,7 @@ function start(m = "normal") {
 function startBoss(swords) {
   if (!B) B = bonus();
   reset();
-  player.swords = P("myriad") ? Math.round(swords * 1.5) : swords;
+  player.swords = Math.round(swords * (P("myriad") ? 1.5 : 1) * (B.uq.heart ? 1.3 : 1));
   state = "intro";
   introT = 2.8;
   screenEl.classList.add("hidden");

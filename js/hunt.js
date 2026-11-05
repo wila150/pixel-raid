@@ -53,6 +53,7 @@ const HL = (k) => (hunt && hunt.ups[k]) || 0;
 function startHunt() {
   mode = "normal";
   B = bonus();
+  loot = [];
   rng = Math.random;
   run = { x: 0, y: 0, swords: 0, perks: {}, shield: 0, rows: [], fromHunt: true }; // 最後渡劫前的功法要用
   hunt = {
@@ -66,7 +67,7 @@ function startHunt() {
   screenEl.classList.add("hidden");
   pad.classList.add("hidden");
 }
-const huntDmg = () => 10 * (B ? B.atk : 1) * (1 + 0.25 * HL("edge"));
+const huntDmg = () => 10 * (B ? B.atk : 1) * (1 + 0.25 * HL("edge")) * zenMul() * (B && B.uq.devour ? 1 + 0.03 * Math.floor(hunt.kills / 30) : 1);
 
 function spawnBeast(type) {
   const t = BEASTS[type], a = rand(0, Math.PI * 2), d = rand(150, 190);
@@ -77,9 +78,16 @@ function spawnBeast(type) {
   });
 }
 function hurtBeast(e, dmg, kb = 0, from = null) {
+  const crit = Math.random() < B.crit;
+  if (crit) dmg *= B.critDmg;
+  if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += huntDmg() * 2; bolts.push({ x: e.x, y: e.y, life: 0.25 }); } // 九霄引雷劍
+  const arm = e.type === "golem" ? 0.3 : e.type === "elite" ? 0.4 : 0; // 防禦（氣修無視）
+  if (!B.ignoreDef) dmg *= 1 - arm;
   e.hp -= dmg; e.flash = 0.08;
+  if (B.leech > 0) hunt.hp = Math.min(hunt.maxHp, hunt.hp + dmg * B.leech);
   if (kb && from) { e.kb = kb; e.ka = angTo(from, e); }
-  if (Math.random() < 0.25) floatText(e.x, e.y - 10, `${Math.round(dmg)}`, "#ffffff");
+  if (crit) floatText(e.x, e.y - 10, `${Math.round(dmg)}!`, "#ffd84a");
+  else if (Math.random() < 0.25) floatText(e.x, e.y - 10, `${Math.round(dmg)}`, "#ffffff");
   if (e.hp > 0) return;
   const t = BEASTS[e.type];
   e.dead = true;
@@ -90,6 +98,8 @@ function hurtBeast(e, dmg, kb = 0, from = null) {
   const n = t.big ? 10 : 1;
   for (let i = 0; i < n; i++) hunt.orbs.push({ x: e.x + rand(-8, 8) * (n > 1), y: e.y + rand(-8, 8) * (n > 1), v: t.big ? 3 : t.exp, kind: "exp", pull: false });
   if (t.big || Math.random() < 0.025) hunt.orbs.push({ x: e.x, y: e.y + 4, v: t.big ? 40 : 15, kind: "fruit", pull: false });
+  if (t.big) grantLoot(rollItem(1), e.x, e.y - 10);
+  else if (Math.random() < 0.006) grantLoot(rollItem(), e.x, e.y);
   if (t.big) {
     floatText(e.x, e.y - 24, "斬殺妖將！", "#ffe066", true);
     sfx("break"); shake = 10; flashT = 0.15; flashColor = "255,200,120";
@@ -145,7 +155,7 @@ function updateHunt(dt) {
   }
   const ml = Math.hypot(mx, my);
   if (ml > 1) { mx /= ml; my /= ml; }
-  const spd = 80 * (1 + 0.12 * HL("step"));
+  const spd = 80 * (1 + 0.12 * HL("step")) * B.spdMul * (B.uq.cloud ? 1.25 : 1);
   h.x = clamp(h.x + mx * spd * dt, 12, HUNT.w - 12);
   h.y = clamp(h.y + my * spd * dt, 12, HUNT.h - 12);
   if (ml > 0.1) { h.walk += dt * 10; h.face = Math.atan2(my, mx); if (mx < -0.2) h.flip = true; else if (mx > 0.2) h.flip = false; }
@@ -210,7 +220,8 @@ function updateHunt(dt) {
     }
   }
   // 回春
-  if (HL("regen")) { h.regenT -= dt; if (h.regenT <= 0) { h.regenT = 1; h.hp = Math.min(h.maxHp, h.hp + HL("regen")); } }
+  const rg = HL("regen") + B.regen; // 回春＋道修
+  if (rg) { h.regenT -= dt; if (h.regenT <= 0) { h.regenT = 1; h.hp = Math.min(h.maxHp, h.hp + rg); } }
   // 靈獸
   if (B.pet) {
     h.petX += (h.x - 16 - h.petX) * Math.min(1, dt * 5);
@@ -246,7 +257,7 @@ function updateHunt(dt) {
     const t = BEASTS[e.type];
     e.flash = Math.max(0, e.flash - dt);
     if (e.kb > 0) { e.x += Math.cos(e.ka) * e.kb * dt * 3; e.y += Math.sin(e.ka) * e.kb * dt * 3; e.kb = Math.max(0, e.kb - dt * 400); }
-    else { const a = angTo(e, h); e.x += Math.cos(a) * t.spd * dt; e.y += Math.sin(a) * t.spd * dt; }
+    else { const a = angTo(e, h); e.x += Math.cos(a) * t.spd * B.slow * dt; e.y += Math.sin(a) * t.spd * B.slow * dt; }
     for (const k in e.hitT) e.hitT[k] -= dt;
     h.orbitPts.forEach((o, i) => {
       if ((e.hitT[i] || 0) > 0 || Math.hypot(e.x - o.x, e.y - o.y) > t.r + 4) return;
@@ -255,7 +266,8 @@ function updateHunt(dt) {
       burst(o.x, o.y, "#cfefff", 3, 40);
     });
     if (!e.dead && h.iframe <= 0 && dist(e, h) < t.r + 5) {
-      const dmg = Math.round(t.dmg * (1 + time / 200));
+      const dmg = Math.max(1, Math.round(t.dmg * (1 + time / 200) * B.dmgTaken * (B.uq.vajra && h.hp < h.maxHp * 0.3 ? 0.5 : 1)));
+      if (B.thorns > 0) hurtBeast(e, dmg * B.thorns * 3 * B.atk); // 反震
       h.hp -= dmg; h.iframe = 0.5; h.hurt = 0.2;
       floatText(h.x, h.y - 14, `-${dmg}`, "#ff6b6b");
       sfx("hurt"); shake = Math.max(shake, 4); flashT = 0.1; flashColor = "255,40,40";
@@ -272,7 +284,7 @@ function updateHunt(dt) {
   h.enemies = h.enemies.filter((e) => !e.dead);
 
   // 妖丹：進入吸取範圍就飛過來
-  const mag = 30 * (1 + 0.5 * HL("magnet"));
+  const mag = 30 * (1 + 0.5 * HL("magnet")) * (1 + B.magnet);
   for (const o of h.orbs) {
     const d = dist(o, h);
     if (d < mag) o.pull = true;
@@ -302,7 +314,7 @@ function updateHunt(dt) {
     if (h.endT <= 0 && !h.orbs.length) {
       state = "huntEnd";
       // 等級和斬妖數換成渡劫時自動齊射的飛劍
-      run.swords = Math.round(10 + h.lv * 6 + h.kills / 5 + HL("orbit") * 6 + HL("bolt") * 6);
+      run.swords = Math.round(10 + h.lv * 6 + h.kills / 5 + HL("orbit") * 6 + HL("bolt") * 6 + B.swordsAff);
       openPick(`斬妖完成！換得飛劍 ${run.swords} 把`, () => startBoss(run.swords));
     }
   }

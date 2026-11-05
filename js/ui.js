@@ -34,6 +34,13 @@ function settle(win, rank, ranFail = false) {
       html += `<div class="drop">靈獸成長：<b>${PETS[save.pet].n}</b> Lv.${save.petLv}</div>`;
     }
   }
+  if (win && mode === "normal") {
+    grantLoot(rollItem(rank === "S" || rank === "A" ? 1 : 0));
+    if (Math.random() < 0.4) grantLoot(rollItem());
+    const st = 10 + realmIdx() * 5; save.stone += st;
+    html += `<div class="drop">靈石 +${st}</div>`;
+  }
+  html += lootHtml();
   if (mode === "daily") {
     const score = ranFail ? 0 : win ? Math.max(0, Math.round(3000 - time * 20 - stats.taken * 3)) + player.swords * 2 : Math.round(stats.dealt / 2);
     const k = todayKey(), old = save.daily[k] || 0;
@@ -93,12 +100,17 @@ function renderTitle() {
   const best = save.daily[todayKey()];
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v0.7</p>
+    <p class="sub">PIXEL RAID · 原型 v0.8</p>
     <div class="profile">
       <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
       <div class="xwbar"><i style="width:${pct}%"></i></div>
       <div class="small">法寶：${trs.length ? trs.join("、") : "還沒有，渡劫成功會掉落"}</div>
+      <div class="cprow">戰力 <b>${totalCP()}</b>　流派 <b>${SCHOOLS[save.school || "ti"].n}</b><small>（${SCHOOLS[save.school || "ti"].tag}）</small></div>
       <div class="small">靈獸：${save.pet ? `${PETS[save.pet].n} Lv.${save.petLv}（${PETS[save.pet].d}）` : "還沒有"}</div>
+    </div>
+    <div class="btns small2">
+      <button id="school" class="big alt">流派</button>
+      <button id="equipBtn" class="big alt">裝備${save.bag.some((b) => itemCP(b) > itemCP(save.eq[b.slot])) ? " <span class=\"dot\">●</span>" : ""}<small>背包 ${save.bag.length}・靈石 ${save.stone}</small></button>
     </div>
     <div class="btns">
       <button id="start" class="big">踏上仙途</button>
@@ -110,6 +122,7 @@ function renderTitle() {
       <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
       <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
       <p><b>斬妖試煉</b>　在山林裡移動，飛劍自動斬妖；撿妖丹升級、每級三選一變強，撐過 3 分鐘再去渡劫</p>
+      <p><b>裝備</b>　斬妖、跑酷、渡劫會掉裝備，詞綴隨機；靈石可以洗練詞綴、點金升品質</p>
       <p><b>每日渡劫</b>　每天一張固定地圖，大家同樣起點、不吃境界加成，比分數</p>
     </div>
   </div>`;
@@ -117,6 +130,8 @@ function renderTitle() {
   document.getElementById("start").onclick = () => start("normal");
   document.getElementById("daily").onclick = () => start("daily");
   document.getElementById("hunt").onclick = startHunt;
+  document.getElementById("school").onclick = renderSchools;
+  document.getElementById("equipBtn").onclick = () => { eqSel = null; renderEquip(); };
 }
 
 

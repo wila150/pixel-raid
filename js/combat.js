@@ -4,7 +4,7 @@
 // ───────── 打王初始化 ─────────
 function reset() {
   const b = B || bonus();
-  player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: b.maxHp, maxHp: b.maxHp, speed: 95, face: -Math.PI / 2, flip: false,
+  player = { x: ARENA.w / 2, y: ARENA.h - 70, r: 6, hp: b.maxHp, maxHp: b.maxHp, speed: 95 * (b.spdMul || 1), regenAcc: 0, face: -Math.PI / 2, flip: false,
     cds: { attack: 0, spin: 0, roll: 0, potion: 0 }, potions: b.potions, ult: 0, roll: 0, rollDir: 0, iframe: 0, hurt: 0, swing: 0, spinT: 0, walk: 0,
     swords: 0, volT: 1.5, pet: b.pet, petLv: b.petLv, petT: 2, petX: ARENA.w / 2 - 16, petY: ARENA.h - 76 };
   boss = { x: ARENA.w / 2, y: 120, r: 22, hp: b.bossHp, maxHp: b.bossHp, phase: 1, state: "idle", t: 1.6, flash: 0, dashV: null, pattern: 0, rage: false, stagger: 0 };
@@ -47,7 +47,15 @@ function floatText(x, y, text, color, big = false) {
 }
 function hurtPlayer(dmg, from) {
   if (player.iframe > 0 || state !== "play") return;
-  dmg = Math.round(dmg * (B ? B.bossDmg : 1)); // 境界越高，魔王也越強
+  dmg = dmg * (B ? B.bossDmg * B.dmgTaken : 1); // 境界越高，魔王也越強；防禦減傷
+  if (B && B.uq.vajra && player.hp < player.maxHp * 0.3) dmg *= 0.5; // 不壞金冠
+  dmg = Math.max(1, Math.round(dmg));
+  if (B && B.thorns > 0) { // 反震
+    const back = dmg * B.thorns * 3;
+    floatText(boss.x, boss.y - 20, `反震 ${Math.round(back * B.atk)}`, "#ffb08a");
+    hitBoss(back, boss.x, boss.y, true);
+    if (state !== "play") return;
+  }
   player.hp = Math.max(0, player.hp - dmg);
   stats.taken += dmg;
   player.iframe = 0.7;
@@ -67,9 +75,12 @@ function hurtPlayer(dmg, from) {
 }
 function hitBoss(base, x, y, quiet = false) {
   if (state !== "play") return;
-  const crit = !quiet && Math.random() < 0.15;
-  base *= B ? B.atk : 1;
-  const dmg = Math.max(1, Math.round(base * rand(0.9, 1.15) * (crit ? 2 : 1)));
+  const crit = !quiet && Math.random() < (B ? B.crit : 0.15);
+  base *= (B ? B.atk : 1) * zenMul();
+  if (boss.phase >= 2 && !(B && B.ignoreDef)) base *= 0.8; // 暴走後石皮變硬（氣修無視）
+  const dmg = Math.max(1, Math.round(base * rand(0.9, 1.15) * (crit ? (B ? B.critDmg : 2) : 1)));
+  if (B && B.leech > 0 && player.hp < player.maxHp) { player.regenAcc += dmg * B.leech; }
+  if (crit && B && B.uq.thunder) setTimeout(() => { if (state === "play") thunderStrike(30); }, 120);
   boss.hp = Math.max(0, boss.hp - dmg);
   boss.flash = 0.1;
   stats.dealt += dmg;
@@ -135,6 +146,9 @@ function updatePlayer(dt) {
   p.hurt = Math.max(0, p.hurt - dt);
   p.swing = Math.max(0, p.swing - dt);
   p.spinT = Math.max(0, p.spinT - dt);
+  // 道修回血、吸血（累積到 1 點再加）
+  if (B) p.regenAcc += B.regen * dt;
+  if (p.regenAcc >= 1) { const h = Math.min(Math.floor(p.regenAcc), p.maxHp - p.hp); p.hp += h; p.regenAcc -= Math.floor(p.regenAcc); }
 
   // 移動方向
   let mx = 0, my = 0;
@@ -191,7 +205,7 @@ function updatePlayer(dt) {
     shots = shots.filter((s) => dist(s, p) > 50); // 旋風斬可以掃掉附近的火球
   }
   if (act("roll", " ", "l", "shift") && p.cds.roll <= 0 && p.roll <= 0) {
-    p.cds.roll = SKILLS.roll.cd;
+    p.cds.roll = SKILLS.roll.cd * (B ? B.rollCd : 1);
     p.roll = 0.26;
     p.rollDir = mlen > 0.1 ? Math.atan2(my, mx) : p.face;
     p.iframe = Math.max(p.iframe, 0.32);
@@ -214,7 +228,7 @@ function updatePlayer(dt) {
   if (act("potion", "h", "c") && p.cds.potion <= 0 && p.potions > 0 && p.hp < p.maxHp) {
     p.cds.potion = SKILLS.potion.cd;
     p.potions--;
-    const heal = Math.min(45, p.maxHp - p.hp);
+    const heal = Math.min(Math.round(45 * (B ? B.potionMul : 1)), p.maxHp - p.hp);
     p.hp += heal;
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a");
     burst(p.x, p.y, "#7dff8a", 12, 40);
@@ -330,6 +344,7 @@ function nextAttack() {
 }
 
 function updateBoss(dt) {
+  if (B) dt *= B.slow; // 妖修：魔王變慢
   const b = boss;
   b.flash = Math.max(0, b.flash - dt);
   b.t -= dt;
@@ -373,6 +388,7 @@ function updateBoss(dt) {
 }
 
 function updateHazards(dt) {
+  if (B) dt *= B.slow;
   for (const h of hazards) {
     if (h.delay > 0) { h.delay -= dt; continue; }
     if (h.warn > 0) {

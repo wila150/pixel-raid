@@ -19,7 +19,7 @@ const PETS = {
   crane: { n: "白羽鶴", d: "每 5 秒幫你回血" },
 };
 const PET_MAX = 5;
-const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {} });
+const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {}, school: "ti", eq: {}, bag: [], stone: 0 });
 function loadSave() {
   try { return Object.assign(blankSave(), JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch { return blankSave(); }
 }
@@ -31,11 +31,11 @@ let mode = "normal"; // normal：一般修行（吃境界、法寶加成）／ d
 let B = null; // 這一場的加成
 function bonus() {
   const daily = mode === "daily", r = daily ? 0 : realmIdx(), lv = (k) => (daily ? 0 : save.tr[k] || 0);
-  return {
+  return applyBuild({
     realm: r, startSwords: 5 + r * 5 + lv("box") * 8, maxHp: 120 + r * 20 + lv("shell") * 15, atk: 1 + 0.15 * r,
     vol: 2.2 * Math.pow(0.92, lv("wind")), ult: 1 + 0.15 * lv("pearl"), potions: 3 + lv("furnace"),
     bossHp: Math.round(1600 * (1 + 0.35 * r)), bossDmg: 1 + 0.12 * r, pet: daily ? null : save.pet, petLv: save.petLv,
-  };
+  }, daily);
 }
 // 可以指定種子的亂數（每日渡劫用日期當種子，大家的門和妖群都一樣）
 function mulberry32(a) {

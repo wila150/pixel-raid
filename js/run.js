@@ -30,7 +30,7 @@ function resetRun() {
   const k = todayKey();
   rng = mode === "daily" ? mulberry32(Number(k.replace(/-/g, ""))) : Math.random;
   const start0 = B ? B.startSwords : 5;
-  run = { x: 0, y: 0, swords: start0, shown: start0, rows: [], endY: 0, endT: 0, fireT: 0, perks: {}, shield: 0 };
+  run = { x: 0, y: 0, swords: start0, shown: start0, rows: [], endY: 0, endT: 0, fireT: 0, perks: {}, shield: B ? B.runShield : 0 };
   const N = 16;
   let y = -240;
   for (let i = 0; i < N; i++) {
@@ -41,7 +41,7 @@ function resetRun() {
       const hp = Math.round(R(55, 70) + tier * 300);
       run.rows.push({ y, type: "elite", hp, max: hp, reward: Math.round(R(15, 25) + tier * 90), hit: false });
     } else if (i % 4 === 3) {
-      if (i % 8 === 3) run.rows.push({ y, type: "mob", x: R(-40, 40), n: Math.round(R(6, 14) + tier * 50), w: 50, hit: false });
+      if (i % 8 === 3) run.rows.push({ y, type: "mob", x: R(-40, 40), n: Math.round((R(6, 14) + tier * 50) * (B ? B.mobMul : 1)), w: 50, hit: false });
       else {
         // 封印石：在一邊擋路，靠近時飛劍會自動打它，打碎有獎勵；沒打碎撞上去會損失飛劍
         const hp = Math.round(R(25, 45) + tier * 250);
@@ -57,7 +57,7 @@ function resetRun() {
 const isGood = (g) => g.op === "+" || g.op === "×";
 function applyGate(g) {
   let s = run.swords;
-  if (g.op === "+") s += g.v + 5 * P("split"); else if (g.op === "−") s -= g.v; else if (g.op === "×") s *= g.v + 0.5 * P("mult"); else s = Math.ceil(s / 2);
+  if (g.op === "+") s += g.v + 5 * P("split") + (B ? B.gatePlus : 0); else if (g.op === "−") s -= g.v; else if (g.op === "×") s *= g.v + 0.5 * P("mult"); else s = Math.ceil(s / 2);
   run.swords = clamp(Math.round(s), 1, 999);
 }
 const bountyOf = (n) => Math.round(n * (1 + 0.5 * P("bounty")));
@@ -81,7 +81,7 @@ function updateRun(dt) {
   for (const r of run.rows) {
     // 封印石：在前方 130 以內、同一邊時，飛劍自動攻擊
     if (r.type === "seal" && r.hp > 0 && r.y < run.y && run.y - r.y < 130 && Math.abs(run.x - r.x) < 36) {
-      r.hp -= run.swords * 1.5 * (1 + 0.5 * P("pierce")) * dt;
+      r.hp -= run.swords * 1.5 * (1 + 0.5 * P("pierce")) * (B ? B.runPierce : 1) * dt;
       run.fireT -= dt;
       if (run.fireT <= 0) {
         run.fireT = 0.06;
@@ -92,6 +92,7 @@ function updateRun(dt) {
         const rw = bountyOf(r.reward);
         run.swords = clamp(run.swords + rw, 1, 999);
         floatText(r.x, r.y - 30, `封印破！+${rw}`, "#ffe066", true);
+        if (mode === "normal" && Math.random() < 0.08) grantLoot(rollItem(), r.x, r.y - 10);
         sfx("break");
         burst(r.x, r.y - 12, "#ffe066", 30, 120, 0.7);
         shake = 6; flashT = 0.12; flashColor = "255,230,120";
@@ -100,7 +101,7 @@ function updateRun(dt) {
     // 妖群：靠近時飛劍也會自動攻擊，全滅可以收服一部分
     if (r.type === "mob" && !r.hit && r.y < run.y && run.y - r.y < 130 && Math.abs(run.x - r.x) < r.w / 2 + 24) {
       if (r.nf === undefined) { r.nf = r.n; r.orig = r.n; }
-      r.nf -= run.swords * 0.8 * (1 + 0.5 * P("pierce")) * dt;
+      r.nf -= run.swords * 0.8 * (1 + 0.5 * P("pierce")) * (B ? B.runPierce : 1) * dt;
       r.n = Math.max(0, Math.ceil(r.nf));
       run.fireT -= dt;
       if (run.fireT <= 0) {
@@ -120,7 +121,7 @@ function updateRun(dt) {
     // 守關妖將：前方 230 以內就開始打（整條路都打得到）
     if (r.type === "elite" && r.hp > 0 && r.y < run.y && run.y - r.y < 250) {
       if (!r.warned) { r.warned = true; floatText(0, run.y - 70, "守關妖將擋路！", "#ff8a3d", true); sfx("roar"); shake = 6; }
-      r.hp -= run.swords * 1.2 * (1 + 0.5 * P("pierce")) * dt;
+      r.hp -= run.swords * 1.2 * (1 + 0.5 * P("pierce")) * (B ? B.runPierce : 1) * dt;
       swordFx(rand(-20, 20), r.y - 16);
       if (Math.random() < 0.25) burst(rand(-20, 20), r.y - 20, "#ff8a3d", 3, 50);
       if (r.hp <= 0) {
@@ -128,6 +129,7 @@ function updateRun(dt) {
         const rw = bountyOf(r.reward);
         run.swords = clamp(run.swords + rw, 1, 999);
         floatText(0, r.y - 40, `斬殺妖將！+${rw}`, "#ffe066", true);
+        if (mode === "normal") grantLoot(rollItem(1), 0, r.y - 20);
         sfx("break"); burst(0, r.y - 16, "#ff8a3d", 50, 160, 0.9); burst(0, r.y - 16, "#ffe066", 30, 120, 0.8);
         shake = 10; flashT = 0.2; flashColor = "255,200,120";
         openPick("斬殺妖將，掉落機緣！", () => {});
@@ -149,7 +151,7 @@ function updateRun(dt) {
     };
     if (r.type === "elite") {
       if (r.hp > 0 && !blocked()) {
-        const lose = Math.ceil(r.hp / 2);
+        const lose = Math.ceil(r.hp / 2 * (B ? B.runLose : 1));
         run.swords -= lose; r.hp = 0;
         floatText(run.x, run.y - 18, `被妖將重擊 −${lose}`, "#ff6b6b", true);
         sfx("bad"); burst(run.x, run.y, "#ff8a3d", 30, 110);
@@ -160,7 +162,7 @@ function updateRun(dt) {
     }
     if (r.type === "seal") {
       if (r.hp > 0 && Math.abs(run.x - r.x) < 36 && !blocked()) {
-        const lose = Math.ceil(r.hp / 3);
+        const lose = Math.ceil(r.hp / 3 * (B ? B.runLose : 1));
         run.swords -= lose;
         floatText(run.x, run.y - 18, `−${lose}`, "#ff6b6b", true);
         sfx("bad");
@@ -182,7 +184,7 @@ function updateRun(dt) {
       sfx(good ? "good" : "bad");
     } else if (!r.hit && Math.abs(run.x - r.x) < r.w / 2 + 6 && (r.hit = blocked()) === false) {
       r.hit = true;
-      const lose = P("devour") ? Math.ceil(r.n / 2) : r.n;
+      const lose = Math.ceil((P("devour") ? r.n / 2 : r.n) * (B ? B.runLose : 1));
       run.swords -= lose;
       floatText(run.x, run.y - 18, `−${lose}`, "#ff6b6b", true);
       sfx("bad");
