@@ -209,7 +209,7 @@ function enterWorld() {
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
   setPadLabels(true);
-  if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 50, "得到 2 顆技能寶石！打開背包鑲到武器上", "#ffb347", true); }
+  if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 56, "得到 2 顆技能寶石！", "#ffb347", true); floatText(W0.x, W0.y - 40, "打開背包鑲到武器上", "#ffb347"); }
   last = performance.now();
 }
 let W0gift = false;
@@ -278,6 +278,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   floatText(m.x, m.y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
   burst(m.x, m.y, crit ? "#ffd84a" : "#ffb070", crit ? 10 : 5, 60);
+  fxHit(m.x + rand(-2, 2), m.y - 2 + rand(-2, 2), crit, WPN_FX[curWeapon()]);
   if (m.hp <= 0) killMob(m);
 }
 function killMob(m) {
@@ -285,6 +286,7 @@ function killMob(m) {
   const gb = gemLv("burst"); if (gb) { W0.fires.push({ x: m.x, y: m.y, t: 0.08, r: 26 + gb * 2, dmg: 6 + gb * 4, c: "#ff8a3d" }); }
   const d = WMOBS[m.type], w = save.w;
   burst(m.x, m.y, m.elite ? "#6fb8ff" : "#b07dff", m.elite ? 30 : 12, 90);
+  fxPuff(m.x, m.y, m.elite || m.hunter);
   // 經驗：打比自己弱很多的怪，經驗變少
   let exp = d.exp * (1 + 0.3 * (m.lv - 1)) * (m.elite ? 3 : 1);
   if (m.lv < w.lv - 5) exp *= 0.3;
@@ -346,6 +348,7 @@ function showWorldDead() {
 
 // ───────── 每幀更新 ─────────
 function updateWorld(dt) {
+  updateWFx(dt);
   const p = W0, w = save.w;
   for (const k in p.cds) p.cds[k] = Math.max(0, p.cds[k] - dt);
   p.iframe = Math.max(0, p.iframe - dt); p.hurt = Math.max(0, p.hurt - dt); p.swing = Math.max(0, p.swing - dt);
@@ -392,7 +395,7 @@ function updateWorld(dt) {
   if ((act("attack", "j", "z") || (keys.has("j") && p.cds.attack <= 0)) && useSkill("attack")) {
     if (wt === "sword") { // 劍擊：前方扇形
       const t = near(50); if (t) p.face = angTo(p, t);
-      p.swing = 0.18; p.swingR = 22; sfx("dash");
+      p.swing = p.swingMax = 0.18; p.swingR = 22; sfx("dash");
       for (const m of W0.mobs) {
         if (m.dead) continue;
         const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -406,11 +409,11 @@ function updateWorld(dt) {
       shoot(p.face + rand(-0.05, 0.05), { v: 300, life: 0.6, dmg: 6, kind: "arrow", pierce: false, kb: 15 }); sfx("dash");
     } else if (wt === "blade") { // 重斬：慢但很寬
       const t = near(55); if (t) p.face = angTo(p, t);
-      p.swing = 0.25; p.swingR = 34; sfx("break"); shake = Math.max(shake, 2);
+      p.swing = p.swingMax = 0.25; p.swingR = 34; sfx("break"); shake = Math.max(shake, 2);
       arcHit(38, 1.5, 18, 110);
     } else if (wt === "fist") { // 連拳：超快、超近
       const t = near(40); if (t) p.face = angTo(p, t);
-      p.swing = 0.08; p.swingR = 14; sfx("hit");
+      p.swing = p.swingMax = 0.08; p.swingR = 14; sfx("hit");
       arcHit(22, 0.8, 5, 30);
     } else { // 風刃：飛出去再飛回來，穿透
       const t = near(150); if (t) p.face = angTo(p, t);
@@ -437,7 +440,7 @@ function updateWorld(dt) {
     }
   };
   if (act("spin", "k", "x") && useSkill("spin")) {
-    doSpin();
+    doSpin(); fxCast(WPN_FX[wt]);
     const gm = gemLv("multi"); if (gm && Math.random() < 0.25 + gm * 0.1) W0.recastT = 0.2; // 連發寶石
   }
   if (W0.recastT > 0 && (W0.recastT -= dt) <= 0) { W0.recastT = 0; doSpin(); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
@@ -498,6 +501,7 @@ function updateWorld(dt) {
     f.t -= dt;
     if (f.t <= 0) {
       for (const m of W0.mobs) if (!m.dead && dist(m, f) < f.r + WMOBS[m.type].r) hitMob(m, wDmg(f.dmg), 40, f, true);
+      fxBoom(f.x, f.y, f.r * 1.1, f.c === "#ff8a3d" || !f.c ? "255,150,60" : f.c === "#d8c8a0" ? "230,200,150" : "255,235,170");
       if (f.c) { burst(f.x, f.y, f.c, 14, 90, 0.4); shake = Math.max(shake, 3); if (Math.random() < 0.4) sfx("break"); }
       else { burst(f.x, f.y, "#ff8a2e", 36, 130, 0.6); burst(f.x, f.y, "#ffd84a", 16, 80, 0.4); shake = Math.max(shake, 5); sfx("break"); }
     }
@@ -721,11 +725,11 @@ function renderWorld() {
   for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
     const x = tx * TS, y = ty * TS, z = zoneAt(x + 8, y + 8), t = wmap[ty * TW + tx], v = hash(tx * 3.1 + ty * 17.3);
     ctx.fillStyle = ZONES[z].g[(tx + ty) % 2]; ctx.fillRect(x, y, TS, TS);
-    if (t === 0 && v < 0.2 && z !== "town") { ctx.fillStyle = "rgba(255,255,255,0.06)"; ctx.fillRect(x + v * 60, y + 5, 2, 3); }
+    if (t === 0) drawDeco(x, y, z, v);
     if (t === 3) { ctx.fillStyle = `rgba(255,${100 + Math.sin(time * 3 + tx) * 40},30,0.85)`; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,230,120,0.5)"; ctx.fillRect(x + v * 10, y + 4, 3, 2); }
     else if (t === 4) { ctx.fillStyle = "#2a4a7a"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(160,200,255,0.3)"; ctx.fillRect(x + ((time * 6 + v * 16) % 14), y + 6, 3, 1); }
-    else if (t === 5) { ctx.fillStyle = "#6d6390"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "#8a83a6"; ctx.fillRect(x, y, TS, 4); }
-    else if (t === 6) { ctx.fillStyle = "#5a3a3a"; ctx.fillRect(x, y + 4, TS, 12); ctx.fillStyle = "#8a3a2a"; ctx.fillRect(x - 1, y, TS + 2, 6); }
+    else if (t === 5) drawWallTile(x, y);
+    else if (t === 6) drawHouseTile(x, y, tx, ty);
   }
   // 傳送陣、祭壇
   for (const wp of WAYPOINTS) {
@@ -736,6 +740,7 @@ function renderWorld() {
   }
   ctx.fillStyle = "#4a2a2a"; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 26, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = `rgba(255,80,40,${0.5 + Math.sin(time * 4) * 0.3})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 20, 10, 0, 0, Math.PI * 2); ctx.stroke();
+  drawFxUnder();
   // 掉落物
   for (const o of W0.drops) {
     if (Math.abs(o.x - cam.x) > hw || Math.abs(o.y - cam.y) > hh) continue;
@@ -766,14 +771,12 @@ function renderWorld() {
   objs.sort((a, b) => a.y - b.y);
   for (const o of objs) {
     if (o.t === 1) {
-      const x = o.tx * TS, y = o.ty * TS, z = zoneAt(x, y);
-      ctx.fillStyle = "#3a2a1a"; ctx.fillRect(x + 6, y + 8, 4, 8);
-      ctx.fillStyle = z === "forest" ? "#1f5a32" : "#2f7a3a"; ctx.beginPath(); ctx.arc(x + 8, y + 4, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = z === "forest" ? "#2a6e3e" : "#3f9a4a"; ctx.beginPath(); ctx.arc(x + 6, y + 1, 5, 0, Math.PI * 2); ctx.fill();
+      const x = o.tx * TS, y = o.ty * TS, z = zoneAt(x, y), img = TREE_IMG[z] || TREE_IMG.grass;
+      ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(x + 8, y + 15, 7, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.drawImage(img, x - 1, y - 1);
     } else if (o.t === 2) {
-      const x = o.tx * TS, y = o.ty * TS;
-      ctx.fillStyle = "#1b1424"; ctx.fillRect(x + 1, y + 3, 14, 13);
-      ctx.fillStyle = "#6f6888"; ctx.fillRect(x + 2, y + 4, 12, 11); ctx.fillStyle = "#8a83a6"; ctx.fillRect(x + 2, y + 4, 12, 3);
+      const x = o.tx * TS, y = o.ty * TS, z = zoneAt(x, y);
+      ctx.drawImage(z === "volcano" || z === "waste" ? ROCK_RED : ROCK_IMG, x, y + 3);
     } else if (o.m) drawWMob(o.m);
     else if (o.n) {
       const n = o.n;
@@ -784,30 +787,59 @@ function renderWorld() {
     } else if (o.me && state !== "worldDead") {
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
+        const wt = curWeapon(), behind = Math.sin(p.face) < -0.3;
+        if (behind) drawHeldWeapon(p, wt);
         ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y)); if (p.flip) ctx.scale(-1, 1);
         ctx.drawImage(Math.floor(p.walk) % 2 ? HERO_WALK : HERO, -6, -9); ctx.restore();
-        if (p.swing > 0) { // 劍光
-          ctx.strokeStyle = `rgba(220,240,255,${p.swing * 5})`; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.swingR || 22, p.face - 1, p.face + 1); ctx.stroke();
-        }
+        if (!behind) drawHeldWeapon(p, wt);
+        drawSlash(p, wt);
       }
     }
   }
   for (const s of W0.pshots) {
-    if (s.kind === "sword") drawSword(s.x, s.y, s.a, 10);
-    else if (s.kind === "orb") { ctx.fillStyle = "rgba(201,162,255,0.4)"; ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#f0e0ff"; ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3); }
-    else if (s.kind === "wind") { ctx.strokeStyle = "#c8f0e0"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s.x, s.y, 5, s.a, s.a + 4); ctx.stroke(); }
-    else if (s.kind === "fireball") { ctx.fillStyle = "rgba(255,120,40,0.5)"; ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffe066"; ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3); }
+    if (s.kind === "sword") { // 劍氣：月牙＋拖尾
+      drawTrail(s, "160,210,255", 5);
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(s.x, s.y); ctx.rotate(s.a);
+      ctx.strokeStyle = "rgba(160,210,255,0.6)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(-4, 0, 8, -1.1, 1.1); ctx.stroke();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(-4, 0, 8, -1, 1); ctx.stroke(); ctx.restore();
+    }
+    else if (s.kind === "orb") { drawTrail(s, "201,162,255", 4); glow(s.x, s.y, 9, "201,162,255", 0.7); ctx.fillStyle = "#f0e0ff"; ctx.beginPath(); ctx.arc(s.x, s.y, 2.2, 0, Math.PI * 2); ctx.fill(); }
+    else if (s.kind === "wind") { drawTrail(s, "160,255,200", 3); ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(s.x, s.y); ctx.rotate(s.a); ctx.strokeStyle = "rgba(160,255,200,0.9)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI * 2 / 3); ctx.beginPath(); ctx.arc(0, 0, 6, 0, 1.4); ctx.stroke(); } ctx.restore(); }
+    else if (s.kind === "fireball") { drawTrail(s, "255,130,40", 6); glow(s.x, s.y, 10, "255,140,50", 0.8); ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.arc(s.x, s.y, 2.5, 0, Math.PI * 2); ctx.fill(); }
+    else if (s.kind === "big") { drawTrail(s, "255,230,120", 6); glow(s.x, s.y, 12, "255,230,120", 0.6); drawArrow(s, 1.8); }
+    else if (s.kind === "arrow") { drawTrail(s, "255,240,200", 1.5); drawArrow(s, 1); }
     else { const L = s.kind === "big" ? 14 : 7; ctx.strokeStyle = s.kind === "big" ? "#ffe066" : "#f3eada"; ctx.lineWidth = s.kind === "big" ? 3 : 1.2;
       ctx.beginPath(); ctx.moveTo(s.x - Math.cos(s.a) * L, s.y - Math.sin(s.a) * L); ctx.lineTo(s.x, s.y); ctx.stroke(); }
   }
-  for (const f of W0.fires) { if (f.c) continue; ctx.strokeStyle = `rgba(255,120,40,${0.4 + 0.4 * Math.sin(time * 30)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "#ffb347"; ctx.fillRect(f.x - 2, f.y - 4 - f.t * 160, 4, 8); }
-  if (W0.spinT > 0) { ctx.strokeStyle = "rgba(230,220,200,0.7)"; ctx.lineWidth = 3; const a0 = time * 25; ctx.beginPath(); ctx.arc(p.x, p.y, 36, a0, a0 + 4); ctx.stroke(); }
-  for (const t of W0.tornados) { ctx.strokeStyle = "rgba(200,240,224,0.7)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(t.x, t.y - i * 5, 8 - i * 2, 3, 0, time * 10 + i, time * 10 + i + 4.5); ctx.stroke(); } }
-  for (const r of W0.rings) { ctx.strokeStyle = `rgba(${r.c || "191,239,255"},${1 - r.t / r.max})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (r.t / r.max), 0, Math.PI * 2); ctx.stroke(); }
+  for (const f of W0.fires) {
+    if (f.c === "#ffe9a0") { const fy = f.y - f.t * 300; ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,235,170,0.9)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(f.x - 3, fy - 14); ctx.lineTo(f.x, fy); ctx.stroke(); ctx.restore(); continue; }
+    if (f.c) continue;
+    ctx.strokeStyle = `rgba(255,120,40,${0.4 + 0.4 * Math.sin(time * 30)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r, f.r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+    const my = f.y - f.t * 160, mx = f.x + f.t * 40; // 隕火從右上斜斜落下
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,140,40,0.5)"; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(mx + 10, my - 30); ctx.lineTo(mx, my); ctx.stroke(); ctx.restore();
+    glow(mx, my, 9, "255,150,50", 0.9); ctx.fillStyle = "#fff0a0"; ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  if (W0.spinT > 0) { // 旋風斬：兩圈刀光
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; const a0 = time * 25;
+    for (let i = 0; i < 2; i++) { ctx.strokeStyle = i ? "rgba(255,255,255,0.9)" : "rgba(255,220,170,0.45)"; ctx.lineWidth = i ? 1.5 : 8; ctx.beginPath(); ctx.arc(p.x, p.y - 2, 34, a0, a0 + 2.6); ctx.stroke(); ctx.beginPath(); ctx.arc(p.x, p.y - 2, 34, a0 + Math.PI, a0 + Math.PI + 2.6); ctx.stroke(); }
+    ctx.restore();
+  }
+  for (const t of W0.tornados) { // 旋風：五層由寬到窄＋捲起的葉子
+    glow(t.x, t.y - 8, 16, "160,255,200", 0.25);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 5; i++) { ctx.strokeStyle = `rgba(190,255,220,${0.8 - i * 0.1})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(t.x + Math.sin(time * 8 + i) * 1.5, t.y - i * 4, 4 + i * 2.2, 1.5 + i * 0.6, 0, time * 12 + i, time * 12 + i + 4.5); ctx.stroke(); }
+    ctx.restore();
+    for (let i = 0; i < 3; i++) { const a = time * 9 + i * 2.1; ctx.fillStyle = "#6fd08a"; ctx.fillRect(t.x + Math.cos(a) * (6 + i * 3), t.y - 4 - i * 5 + Math.sin(a) * 2, 2, 1); }
+  }
+  for (const r of W0.rings) { // 衝擊波：光環＋地面的扁圈
+    const q = r.t / r.max, c = r.c || "191,239,255";
+    glow(r.x, r.y, r.r * q, c, 0.35 * (1 - q));
+    ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = `rgba(${c},${1 - q})`; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * q, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, r.r * q * 1.1, r.r * q * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
   for (const m of W0.mobs) if (!m.dead && m.slowT > 0) { ctx.fillStyle = "rgba(160,220,255,0.35)"; ctx.fillRect(m.x - 5, m.y - 2, 10, 3); }
   for (const s of W0.eshots) { ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
+  drawFxOver();
   drawFx();
   drawWorldHud();
 }
