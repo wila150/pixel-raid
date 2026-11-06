@@ -127,7 +127,7 @@ function drawOrbs() {
     const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"], ["H", `丹藥×${save.w.potions}`, "potion"]];
     let x = ex - R - 16 - sk.length * 50;
     for (const [k, n, id] of sk) {
-      const cdm = id === "roll" ? B.rollCd : 1, f = p.cds[id] / (WSKILL[id].cd * cdm), lack = p.mp < (WSKILL[id].mp || 0);
+      const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = p.mp < (WSKILL[id].mp || 0);
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
       ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
@@ -590,9 +590,9 @@ function drawStarMap(cv) {
 }
 
 // ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
-const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"]];
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

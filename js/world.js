@@ -364,7 +364,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
 }
 function killMob(m) {
   m.dead = true; tutEvent("kill");
-  W0.en = Math.min(EN_FULL, (W0.en || 0) + (m.boss ? 100 : m.elite || m.hunter ? 25 : 6)); // 吸取魂屑
+  W0.en = Math.min(EN_FULL, (W0.en || 0) + (m.boss ? 100 : m.elite || m.hunter ? 25 : 6) * (B.enMul || 1)); // 吸取魂屑
   if (W0.en >= EN_FULL && !W0.enFullFx) { W0.enFullFx = true; floatText(W0.x, W0.y - 36, "天罰能量已滿！按 E", "#ffd84a", true); sfx("arrive"); }
   W0.kc = (W0.kcT > 0 ? W0.kc || 0 : 0) + 1; W0.kcT = KC_WIN; W0.kcPop = 0.25;
   if (W0.kc > (W0.kcBest || 0)) W0.kcBest = W0.kc;
@@ -523,7 +523,7 @@ function updateWorld(dt) {
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "ele"); } }
 
   const near = (max) => { if (mouseAim()) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1); p.mp -= WSKILL[k].mp; if (k === "attack") W0.justAtk = true; skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); p.mp -= WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (k === "attack") W0.justAtk = true; skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -1292,7 +1292,7 @@ function drawWorldHud() {
   // 按鈕冷卻
   for (const k of ["spin", "ult", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
-    if (el) el.style.transform = `scaleY(${p.cds[k] / (WSKILL[k].cd * (k === "roll" ? B.rollCd : 1))})`;
+    if (el) el.style.transform = `scaleY(${p.cds[k] / (WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1))})`;
     const btn = pad.querySelector(`[data-act="${k}"]`);
     if (btn) btn.style.opacity = p.mp < WSKILL[k].mp ? 0.45 : 1;
   }
@@ -1467,7 +1467,7 @@ hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =
 // 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
-  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", n: "skill", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
   if (k === "tab") e.preventDefault();
   if (state !== "world" || e.repeat) return;
   if (map[k]) openHud(map[k]);
@@ -1480,6 +1480,7 @@ function openHud(h) {
   if (h === "bag") { eqSel = null; renderEquip(); }
   else if (h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
   else if (h === "swap") quickSwap();
+  else if (h === "skill") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderSkills(); }
   else if (h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
   else if (h === "menu") openMenu();
   else openStarMap();

@@ -457,3 +457,20 @@ body.inworld #quick { display: flex; }
 .menu .acts.row { justify-content: flex-start; }
 .menu p.dim { text-align: left; }
 @media (max-width: 640px) { .menu .setrow > span { flex-basis: 100%; } }
+
+/* 技能頁 */
+.qglyph { font-size: 16px; color: #ffcf6b; line-height: 1; }
+.skwin { max-width: min(100%, 620px); width: 100%; text-align: left; box-sizing: border-box; }
+.skjob { display: flex; align-items: baseline; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: linear-gradient(90deg, rgba(90, 60, 30, 0.6), rgba(30, 24, 18, 0.4)); color: #ffe9b0; font-weight: 700; }
+.skjob small { color: #ff9a7a; font-weight: 400; font-size: 12px; }
+.sklist { display: grid; gap: 5px; max-height: 50vh; overflow-y: auto; }
+.sklist.locked { opacity: 0.45; }
+.skrow { display: grid; grid-template-columns: 40px 1fr auto auto; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: rgba(20, 24, 22, 0.6); }
+.skrow.has { border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+.skico { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; font-size: 20px; font-weight: 700; color: var(--c); background: radial-gradient(circle, color-mix(in srgb, var(--c) 25%, transparent), rgba(0,0,0,0.5) 70%); border: 1px solid color-mix(in srgb, var(--c) 50%, transparent); text-shadow: 0 0 6px var(--c); }
+.skmain { min-width: 0; } .skmain b { display: block; color: #f0e2c4; font-size: 14px; } .skmain small { display: block; color: var(--dim); font-size: 11px; }
+.sklv { color: #ffcf6b; font-weight: 700; font-size: 15px; } .sklv small { color: var(--dim); font-size: 11px; }
+.skup { width: 34px; height: 34px; font: inherit; font-size: 16px; border-radius: 6px; border: 1px solid #8a6a46; background: #2a2016; color: #ffcf6b; cursor: pointer; }
+.skup:disabled { opacity: 0.3; cursor: default; }
+.skwin .apfoot .sbtn { flex: none; }
+.skwin .sub, .charwin .sub { letter-spacing: normal; text-align: left; }
