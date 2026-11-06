@@ -423,3 +423,28 @@ body.inworld #quick { display: flex; }
 .eqc .en { position: absolute; left: 3px; bottom: 1px; font-size: 10px; color: #ffcf6b; font-weight: 700; text-shadow: 0 1px 1px #000; }
 .eqc.sel { box-shadow: 0 0 0 2px var(--c), 0 0 10px var(--c); }
 .eqc.lock { cursor: default; opacity: 0.35; border-style: dashed; }
+
+/* 角色資料：左基本＋配點、右戰鬥數值（表格式） */
+.charwin { max-width: 860px; text-align: left; }
+.charwin .winhead { font-size: 16px; }
+.cw2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 10px; align-items: start; }
+@media (max-width: 640px) { .cw2 { grid-template-columns: 1fr; } }
+.stbox { border: 1px solid var(--line); border-radius: 10px; background: rgba(14, 18, 17, 0.55); padding: 6px; }
+.stl { display: grid; gap: 3px; }
+.stl.aps { margin-top: 8px; }
+.sr { display: grid; grid-template-columns: 76px 1fr auto auto; align-items: center; gap: 6px; font-size: 13px; }
+.sr span { padding: 3px 6px; border-radius: 4px; background: linear-gradient(#7a3a32, #5a2a24); color: #fff0dc; font-size: 12px; text-align: center; white-space: nowrap; }
+.stbox:last-child .sr span { background: linear-gradient(#2e4a66, #223a52); }
+.sr.hp span { background: linear-gradient(#b03a3a, #802424); } .sr.mp span { background: linear-gradient(#3a5ab0, #243a80); }
+.sr.ap span { background: linear-gradient(#6a6a2a, #4a4a1e); }
+.sr b { color: #f0e2c4; font-weight: 600; padding: 3px 6px; background: rgba(255, 255, 255, 0.04); border-radius: 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr small { grid-column: 1 / -1; color: var(--dim); font-size: 11px; margin: -1px 0 3px 82px; }
+.apb { font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 4px; border: 1px solid #8a6a46; background: #2a2016; color: #ffcf6b; cursor: pointer; }
+.apb:disabled { opacity: 0.35; cursor: default; }
+.apfoot { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 5px 6px; border-top: 1px solid var(--line); font-size: 13px; }
+.apfoot b { color: #ffcf6b; font-size: 16px; flex: 1; }
+.apfoot .sbtn { font-size: 12px; }
+.screen > .panel.charwin { max-width: min(100%, 860px); width: 100%; box-sizing: border-box; }
+.cw2 > *, .stl, .sr { min-width: 0; }
+@media (max-width: 640px) { .sr { grid-template-columns: 64px 1fr auto auto; } .sr small { margin-left: 70px; } .apfoot .sbtn { flex: none; } }
+.charwin .nickrow .sbtn { flex: none; min-width: 80px; }

@@ -908,15 +908,22 @@ function worldReturnTo() { /* renderEquip／renderMaps 的「返回」會看 inW
 function renderAP() {
   const w = save.w;
   B = worldStats();
-  screenEl.innerHTML = `<div class="panel wide equip"><h1 class="pick-title">角色</h1>
-    <div class="cpline">Lv.${w.lv}　能力點 <b>${w.free}</b>　戰力 <b>${totalCP()}</b></div>
-    <div class="cpline small">招式跟著武器走：現在拿${WEAPONS[curWeapon()].n}（${WEAPONS[curWeapon()].d}）</div>
-    <div class="cards">${Object.keys(AP).map((k) => `<button class="card ap" data-k="${k}" ${w.free ? "" : "disabled"}><b>${AP[k].n} ${w.ap[k]}</b><span class="desc">每點 ${AP[k].d}</span><i>＋1</i></button>`).join("")}</div>
-    <div class="cpline small">生命 ${B.maxHp}　攻擊 ×${B.atk.toFixed(2)}　真氣 ${B.maxMp}　爆擊 ${Math.round(B.crit * 100)}%</div>
+  const pc = (v) => Math.round(v * 100) + "%", en = expNext(w.lv), j = typeof jobLv === "function" ? jobLv() : 0;
+  const row = (k, v, c = "") => `<div class="sr${c}"><span>${k}</span><b>${v}</b></div>`;
+  const left = row("名稱", w.nick || myName()) + row("招式", `${WEAPONS[curWeapon()].job}（${WEAPONS[curWeapon()].n}）`)
+    + row("英雄", typeof HEROES !== "undefined" && HEROES[w.hero] ? HEROES[w.hero].n : "時空浪人") + row("轉職", j && typeof JOBS !== "undefined" ? JOBS[j - 1].n : "未轉職")
+    + row("等級", w.lv) + row("生命", B.maxHp, " hp") + row("真氣", B.maxMp, " mp") + row("經驗", `${w.exp} / ${en}（${Math.floor(w.exp / en * 100)}%）`) + row("戰力", totalCP());
+  const aps = Object.keys(AP).map((k) => `<div class="sr ap"><span title="每點 ${AP[k].d}">${AP[k].n.split(" ")[0]}</span><b>${w.ap[k]}</b><button class="apb" data-k="${k}" data-n="1" ${w.free ? "" : "disabled"}>＋</button><button class="apb" data-k="${k}" data-n="5" ${w.free >= 5 ? "" : "disabled"}>＋5</button><small>${AP[k].d}</small></div>`).join("");
+  const right = row("攻擊", "×" + B.atk.toFixed(2)) + row("爆擊率", pc(B.crit || 0)) + row("爆擊傷害", pc(B.critDmg || 2)) + row("攻擊速度", pc(B.aspd || 1)) + row("移動速度", pc(B.spdMul || 1))
+    + row("護甲", Math.round(B.armor || 0)) + row("閃避", pc(B.dodge || 0)) + row("法術壓制", pc(B.supp || 0)) + row("元素抗性", pc(B.res || 0)) + row("能量護盾", B.maxEs || 0) + row("吸血", pc(B.leech || 0)) + row("真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒");
+  screenEl.innerHTML = `<div class="panel wide equip charwin"><div class="winhead">角色資料</div>
+    <div class="cw2"><div class="stbox"><div class="stl">${left}</div><div class="stl aps">${aps}</div>
+      <div class="apfoot"><span>能力點</span><b>${w.free}</b><button id="apReset" class="sbtn">重新配點 −${20 * w.lv} 靈石</button></div></div>
+      <div class="stbox"><div class="stl">${right}</div><p class="sub">招式跟著武器走：${WEAPONS[curWeapon()].d}</p></div></div>
     ${fashionHtml()}
-    <div class="btns"><button id="apReset" class="big alt">重新配點（−${20 * w.lv} 靈石）</button><button id="close" class="big">離開</button></div></div>`;
+    <div class="btns"><button id="close" class="big">離開</button></div></div>`;
   screenEl.classList.remove("hidden");
-  screenEl.querySelectorAll(".ap").forEach((b) => b.addEventListener("click", () => { if (!w.free) return; w.free--; w.ap[b.dataset.k]++; writeSave(); sfx("good"); renderAP(); }));
+  screenEl.querySelectorAll(".apb").forEach((b) => b.addEventListener("click", () => { const n = Math.min(+b.dataset.n, w.free); if (!n) return; w.free -= n; w.ap[b.dataset.k] += n; writeSave(); sfx("good"); renderAP(); }));
   document.getElementById("apReset").onclick = () => {
     const c = 20 * w.lv; if (save.stone < c) { sfx("bad"); return; }
     save.stone -= c; for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); renderAP();
