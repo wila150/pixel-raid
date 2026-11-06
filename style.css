@@ -448,3 +448,12 @@ body.inworld #quick { display: flex; }
 .cw2 > *, .stl, .sr { min-width: 0; }
 @media (max-width: 640px) { .sr { grid-template-columns: 64px 1fr auto auto; } .sr small { margin-left: 70px; } .apfoot .sbtn { flex: none; } }
 .charwin .nickrow .sbtn { flex: none; min-width: 80px; }
+#updBar { position: fixed; left: 50%; top: max(8px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 60; padding: 6px 14px; border-radius: 999px; border: 1px solid #c8a060; background: rgba(30, 22, 12, 0.92); color: #ffe9b0; font: inherit; font-size: 12px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+/* 設定（齒輪）：全部靠左，標籤固定寬、按鈕排在後面 */
+.ov .col.c.menu { text-align: left; }
+.menu h2, .menu h3 { text-align: left; margin-left: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.menu .setrow { justify-content: flex-start; flex-wrap: wrap; }
+.menu .setrow > span { flex: 0 0 12em; text-align: left; }
+.menu .acts.row { justify-content: flex-start; }
+.menu p.dim { text-align: left; }
+@media (max-width: 640px) { .menu .setrow > span { flex-basis: 100%; } }
