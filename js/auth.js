@@ -75,6 +75,7 @@ function logout() {
   if (inWorld && W0 && save.w) { save.w.x = Math.round(W0.x); save.w.y = Math.round(W0.y); writeSave(); }
   cloudFlush();
   inWorld = false; setPadLabels(false);
+  if (typeof netStop === "function") netStop();
   loggingOut = true;
   firebase.auth().signOut();
 }

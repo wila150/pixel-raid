@@ -4,6 +4,7 @@ const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBDj-eOnrAQwV4zbWlcUu35gnGUxUev4pU",
   authDomain: "pixel-raid.firebaseapp.com",
   projectId: "pixel-raid",
+  databaseURL: "https://pixel-raid-default-rtdb.asia-southeast1.firebasedatabase.app",
   storageBucket: "pixel-raid.firebasestorage.app",
   messagingSenderId: "335631978907",
   appId: "1:335631978907:web:2f44ccc984c517e765d13e",

@@ -361,6 +361,7 @@ function showWorldDead() {
 // ───────── 每幀更新 ─────────
 function updateWorld(dt) {
   updateWFx(dt);
+  if (typeof netTick === "function") netTick(dt);
   const p = W0, w = save.w;
   for (const k in p.cds) p.cds[k] = Math.max(0, p.cds[k] - dt);
   p.iframe = Math.max(0, p.iframe - dt); p.hurt = Math.max(0, p.hurt - dt); p.swing = Math.max(0, p.swing - dt);
@@ -801,6 +802,7 @@ function renderWorld() {
   for (const m of W0.mobs) if (Math.abs(m.x - cam.x) < hw && Math.abs(m.y - cam.y) < hh) objs.push({ y: m.y, m });
   for (const n of NPCS) if (Math.abs(n.x - cam.x) < hw && Math.abs(n.y - cam.y) < hh) objs.push({ y: n.y, n });
   objs.push({ y: p.y, me: true });
+  if (typeof othersList === "function") for (const o of othersList()) if (Math.abs(o.x - cam.x) < hw && Math.abs(o.y - cam.y) < hh) objs.push({ y: o.y, op: o });
   objs.sort((a, b) => a.y - b.y);
   for (const o of objs) {
     if (o.t === 1) {
@@ -811,6 +813,7 @@ function renderWorld() {
       const x = o.tx * TS, y = o.ty * TS, z = zoneAt(x, y);
       ctx.drawImage(z === "volcano" || z === "waste" ? ROCK_RED : ROCK_IMG, x, y + 3);
     } else if (o.m) drawWMob(o.m);
+    else if (o.op) drawOther(o.op);
     else if (o.n) {
       const n = o.n;
       ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(n.x, n.y + 6, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
@@ -918,9 +921,12 @@ function drawWorldHud() {
   ctx.fillStyle = "#ff4a2a"; ctx.fillRect(mx0 + ALTAR.x * sc - 2, my0 + ALTAR.y * sc - 2, 4, 4);
   const qt = questTarget();
   if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 1; ctx.strokeRect(mx0 + qt.x * sc - 3, my0 + qt.y * sc - 3, 6, 6); }
+  const ol = typeof othersList === "function" ? othersList() : [];
+  ctx.fillStyle = "#7dff8a"; for (const o of ol) ctx.fillRect(mx0 + o.x * sc - 1, my0 + o.y * sc - 1, 2.5, 2.5);
   ctx.fillStyle = "#fff"; ctx.fillRect(mx0 + p.x * sc - 1.5, my0 + p.y * sc - 1.5, 3, 3);
   ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "right"; ctx.fillStyle = "#cfc4dc";
   ctx.fillText(ZONES[W0.zone || "town"].n, mx0 + mw, my0 + mh + 13);
+  if (typeof NET_ON !== "undefined" && NET_ON) { ctx.textAlign = "left"; ctx.fillStyle = "#7dff8a"; ctx.fillText(`● 線上 ${ol.length + 1} 人`, mx0, my0 + mh + 13); }
   // 左上：頭像、等級、生命、真氣
   const x0 = 10, y0 = 10;
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x0, y0, 40, 40);

@@ -358,8 +358,10 @@ const ROBE_C = [["#eef2fa", "#a9bcd8", "#3c8fd1"], ["#cfe4ff", "#6fa0e0", "#2a5a
 const CROWN_C = ["#9a8a70", "#6fb8ff", "#ffd84a", "#ff8a3d"];
 const BOOT_C = ["#a9bcd8", "#5a8ad8", "#d8a040", "#ff6a3a"];
 const heroCache = {};
-function heroImg(walk) {
-  const e = save.eq, rq = e.robe ? e.robe.q : -1, cq = e.crown ? e.crown.q : -1, bq = e.boots ? e.boots.q : -1, key = `${rq}${cq}${bq}${walk}`;
+const gearKey = () => { const e = save.eq; return `${e.robe ? e.robe.q : -1},${e.crown ? e.crown.q : -1},${e.boots ? e.boots.q : -1}`; };
+function heroImg(walk) { const [r, c, b] = gearKey().split(",").map(Number); return heroImgFor(r, c, b, walk); }
+function heroImgFor(rq, cq, bq, walk) {
+  const key = `${rq}${cq}${bq}${walk}`;
   if (heroCache[key]) return heroCache[key];
   const rc = rq < 0 ? ["#c8bca8", "#8a8070", "#6a5a4a"] : ROBE_C[rq];
   const pal = Object.assign({}, HERO_PAL, { W: rc[0], w: rc[1], B: rc[2], C: CROWN_C[Math.max(0, cq)], b: bq < 0 ? "#3a2f4a" : BOOT_C[bq] });
