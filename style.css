@@ -128,3 +128,29 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
 .skin img { width: 42px; height: 48px; image-rendering: pixelated; }
 .skin b { font-size: 11px; } .skin small { font-size: 10px; color: #a99bb8; }
 .skin.sel { border-color: #ffd84a; background: rgba(80,60,130,0.8); }
+/* 排行榜 */
+.tabs { display: flex; gap: 6px; justify-content: center; margin: 6px 0 8px; }
+.tab { flex: 1; max-width: 140px; padding: 8px; border-radius: 8px; border: 2px solid #4a4060; background: rgba(20,14,34,0.8); color: #cfc4dc; font-family: inherit; font-weight: 700; cursor: pointer; }
+.tab.on { border-color: #ffd84a; color: #ffe066; background: rgba(80,60,130,0.8); }
+.rlist { display: flex; flex-direction: column; gap: 4px; max-height: 52vh; overflow-y: auto; margin-top: 6px; }
+.rrow { display: grid; grid-template-columns: 34px 28px 1fr auto auto; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: rgba(20,14,34,0.8); border: 1px solid #3a3050; font-size: 13px; text-align: left; }
+.rrow img { width: 24px; height: 28px; image-rendering: pixelated; }
+.rrow .rk { font-weight: 700; color: #ffe066; text-align: center; }
+.rrow .cp { color: #a99bb8; font-size: 12px; }
+.rrow.me { border-color: #ffd84a; background: rgba(90,70,30,0.6); }
+/* 建立角色 */
+.cname { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border-radius: 8px; border: 2px solid #4a4060; background: rgba(20,14,34,0.9); color: #f3eada; font-family: inherit; font-size: 16px; }
+.cwrap { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.card.cw { padding: 8px 4px; min-height: 0; }
+.card.cw .icon { width: 32px; height: 32px; }
+.card.cw .desc { font-size: 10px; }
+/* App 內建瀏覽器提示 */
+#inapp { position: fixed; inset: 0; z-index: 999; background: rgba(10,8,16,0.96); display: flex; align-items: center; justify-content: center; padding: 24px; }
+.inapp-box { max-width: 340px; text-align: center; color: #f3eada; }
+.inapp-box h2 { color: #ffcf6b; font-size: 24px; margin: 0 0 12px; }
+.inapp-box p { font-size: 15px; line-height: 1.6; color: #cfc4dc; }
+.inapp-step { font-size: 18px !important; color: #fff !important; background: rgba(80,60,130,0.6); border-radius: 12px; padding: 14px; }
+.inapp-box button { margin-top: 10px; padding: 12px 28px; border-radius: 10px; border: 2px solid #fff1c7; background: linear-gradient(#ffcf6b, #ff9d2e); color: #241307; font-weight: 700; font-size: 16px; font-family: inherit; }
+.inapp-box small { display: block; margin-top: 8px; color: #9fe8ff; word-break: break-all; }
+.inapp-arrow { position: fixed; top: 8px; right: 18px; font-size: 44px; color: #ffcf6b; animation: inappBob 1s ease-in-out infinite alternate; }
+@keyframes inappBob { from { transform: translate(0, 0); } to { transform: translate(4px, -6px); } }

@@ -187,7 +187,9 @@ function setPadLabels(world) {
 
 function enterWorld() {
   if (!wmap) buildWorld();
-  if (!save.w) save.w = blankW();
+  // 第一次進來：先建立角色（取名、選初始武器）；舊存檔已經練過的直接當作建好了
+  if (save.w && !save.w.created && (save.w.lv > 1 || save.w.exp > 0 || save.w.q)) save.w.created = 1;
+  if (!save.w || !save.w.created) { renderCreate(); return; }
   if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; nameItem(it); save.eq.sword = it; writeSave(); }
   if (!save.gems) { save.gems = {}; addGem("multi:1"); addGem("power:1"); writeSave(); W0gift = true; }
   mode = "normal";
@@ -334,7 +336,7 @@ function gainExp(n) {
 }
 function hurtW(dmg, from) {
   const p = W0;
-  if (p.iframe > 0 || state !== "world") return;
+  if (p.iframe > 0 || !(state === "world" || ((state === "paused" || state === "pick") && pausedFrom === "world"))) return;
   dmg = dmg * B.dmgTaken * (B.uq.vajra && p.hp < p.maxHp * 0.3 ? 0.5 : 1);
   dmg = Math.max(1, Math.round(dmg));
   p.hp -= dmg; p.iframe = 0.45; p.hurt = 0.2;
@@ -342,7 +344,7 @@ function hurtW(dmg, from) {
   sfx("hurt"); shake = Math.max(shake, 5); flashT = 0.1; flashColor = "255,40,40";
   if (from && B.thorns > 0 && from.hp !== undefined) hitMob(from, dmg * B.thorns * 3, 0, null, true);
   if (from) { const a = angTo(from, p); moveBody(p, Math.cos(a) * 8, Math.sin(a) * 8, 5); }
-  if (p.hp <= 0) { p.hp = 0; state = "worldDead"; sfx("lose"); setTimeout(showWorldDead, 900); }
+  if (p.hp <= 0) { p.hp = 0; state = "worldDead"; screenEl.classList.add("hidden"); sfx("lose"); setTimeout(showWorldDead, 900); }
 }
 function showWorldDead() {
   const w = save.w, lose = Math.round(w.exp * 0.1);
@@ -361,6 +363,8 @@ function showWorldDead() {
 
 // ───────── 每幀更新 ─────────
 function updateWorld(dt) {
+  const inMenu = state !== "world"; // 連線時開著選單：世界照跑，但角色不接受操作
+  if (inMenu) { keys.clear(); pressed.clear(); padAct.clear(); stick.id = null; }
   updateWFx(dt);
   updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
   if (typeof netTick === "function") netTick(dt);
@@ -653,7 +657,7 @@ function updateWorld(dt) {
   const bossOn = W0.mobs.some((m) => m.boss);
   const hitSpot = spots.find((s) => dist(s, p) < (s.r || 16) && !(bossOn && s.kind === "altar"));
   if (!hitSpot) W0.npcCool = null;
-  else if (W0.npcCool !== hitSpot.id) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
+  else if (W0.npcCool !== hitSpot.id && !inMenu) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
 
   if (pressed.has("q")) quickSwap();
   spawnHunter(dt);
@@ -1189,5 +1193,6 @@ hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =
   if (b.dataset.h === "bag") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); eqSel = null; renderEquip(); }
   else if (b.dataset.h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
   else if (b.dataset.h === "swap") quickSwap();
+  else if (b.dataset.h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
   else openTeleport();
 }));

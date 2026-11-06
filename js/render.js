@@ -334,6 +334,7 @@ function render() {
   if (vs === "run" || vs === "runEnd" || vs === "runFail") { renderRun(); return; }
   if (vs === "hunt" || vs === "huntEnd" || vs === "huntFail") { renderHunt(); return; }
   if (vs === "world" || vs === "worldDead") { renderWorld(); return; }
+  if (vs === "title") { if (inWorld && W0 && save.w) renderWorld(); return; } // 選單背後：仙界或一片黑，不要畫舊的打王場地
   if (!player) return;
   // 鏡頭跟著玩家，稍微往魔王方向偏
   const intro = vs === "intro";

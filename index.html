@@ -7,7 +7,34 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>萬劍仙途</title>
-<link rel="stylesheet" href="style.css?v=1.9">
+<script>
+// App 內建瀏覽器（LINE、Facebook、IG…）一律跳到手機的瀏覽器開
+(function () {
+  var ua = navigator.userAgent || "", u = new URL(location.href);
+  if (/ Line\//i.test(ua)) { // LINE：加上 openExternalBrowser=1 就會自動用外部瀏覽器開
+    if (!u.searchParams.has("openExternalBrowser")) { u.searchParams.set("openExternalBrowser", "1"); location.replace(u.toString()); }
+    return;
+  }
+  if (!/FBAN|FBAV|FB_IAB|Instagram|Messenger|Threads|MicroMessenger|KAKAOTALK|TikTok|musical_ly|BytedanceWebview/i.test(ua)) return;
+  if (/Android/i.test(ua)) { // Android：用 intent 叫 Chrome 打開
+    location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=" + encodeURIComponent(location.href) + ";end";
+  }
+  window.__inApp = true; // iPhone 沒辦法自動跳，畫面上教他怎麼開
+  document.addEventListener("DOMContentLoaded", function () {
+    var d = document.createElement("div");
+    d.id = "inapp";
+    d.innerHTML = '<div class="inapp-box"><h2>請用瀏覽器開啟</h2><p>這個 App 的內建瀏覽器沒辦法正常玩（存檔、登入會出問題）。</p>' +
+      '<p class="inapp-step">' + (/iPhone|iPad/i.test(ua) ? "點右上角「⋯」或「分享」<br>選「<b>在 Safari 中開啟</b>」" : "點右上角「⋮」<br>選「<b>在瀏覽器中開啟</b>」") + '</p>' +
+      '<button id="inappCopy">複製網址</button><small id="inappMsg"></small></div><div class="inapp-arrow">↗</div>';
+    document.body.appendChild(d);
+    document.getElementById("inappCopy").onclick = function () {
+      var url = location.href.split("?")[0];
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(function () { document.getElementById("inappMsg").textContent = "已複製，貼到 Safari／Chrome 打開"; }, function () { document.getElementById("inappMsg").textContent = url; });
+    };
+  });
+})();
+</script>
+<link rel="stylesheet" href="style.css?v=2.1">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -22,7 +49,7 @@
 </div>
 
 <!-- 右上角：暫停、音效開關 -->
-<div id="hud" class="hidden"><button data-h="bag" class="hbtn">🎒<small>背包</small></button><button data-h="ap" class="hbtn">⭐<small>角色</small></button><button data-h="tp" class="hbtn">🌀<small>傳送</small></button><button data-h="swap" class="hbtn">⚔️<small>換武器</small></button></div>
+<div id="hud" class="hidden"><button data-h="bag" class="hbtn">🎒<small>背包</small></button><button data-h="ap" class="hbtn">⭐<small>角色</small></button><button data-h="tp" class="hbtn">🌀<small>傳送</small></button><button data-h="swap" class="hbtn">⚔️<small>換武器</small></button><button data-h="rank" class="hbtn">🏆<small>排行</small></button></div>
 <div id="topbar"><button id="pauseBtn" class="tbtn hidden" aria-label="暫停">⏸</button><button id="muteBtn" class="tbtn" aria-label="音效開關">🔊</button></div>
 
 <div id="screen" class="screen">
@@ -43,23 +70,23 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="js/firebase-config.js?v=1.9"></script>
-<script src="js/core.js?v=1.9"></script>
-<script src="js/save.js?v=1.9"></script>
-<script src="js/equip.js?v=1.9"></script>
-<script src="js/audio.js?v=1.9"></script>
-<script src="js/combat.js?v=1.9"></script>
-<script src="js/run.js?v=1.9"></script>
-<script src="js/perks.js?v=1.9"></script>
-<script src="js/hunt.js?v=1.9"></script>
-<script src="js/maps.js?v=1.9"></script>
-<script src="js/world.js?v=1.9"></script>
-<script src="js/art.js?v=1.9"></script>
-<script src="js/wboss.js?v=1.9"></script>
-<script src="js/render.js?v=1.9"></script>
-<script src="js/ui.js?v=1.9"></script>
-<script src="js/auth.js?v=1.9"></script>
-<script src="js/net.js?v=1.9"></script>
-<script src="js/main.js?v=1.9"></script>
+<script src="js/firebase-config.js?v=2.1"></script>
+<script src="js/core.js?v=2.1"></script>
+<script src="js/save.js?v=2.1"></script>
+<script src="js/equip.js?v=2.1"></script>
+<script src="js/audio.js?v=2.1"></script>
+<script src="js/combat.js?v=2.1"></script>
+<script src="js/run.js?v=2.1"></script>
+<script src="js/perks.js?v=2.1"></script>
+<script src="js/hunt.js?v=2.1"></script>
+<script src="js/maps.js?v=2.1"></script>
+<script src="js/world.js?v=2.1"></script>
+<script src="js/art.js?v=2.1"></script>
+<script src="js/wboss.js?v=2.1"></script>
+<script src="js/render.js?v=2.1"></script>
+<script src="js/ui.js?v=2.1"></script>
+<script src="js/auth.js?v=2.1"></script>
+<script src="js/net.js?v=2.1"></script>
+<script src="js/main.js?v=2.1"></script>
 </body>
 </html>

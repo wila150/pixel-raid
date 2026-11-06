@@ -438,3 +438,39 @@ function bindFashion() {
     w.skin = k; writeSave(); sfx("arrive"); renderAP();
   }));
 }
+
+// ───────── 建立角色：取名、選初始武器、選外觀 ─────────
+let createSel = { wt: "sword", skin: "none" };
+function renderCreate(msg = "") {
+  state = "title"; pad.classList.add("hidden");
+  const def = (typeof fbUser !== "undefined" && fbUser && fbUser.displayName) || "";
+  const prev = document.getElementById("cname"), nameVal = prev ? prev.value : def;
+  const wpn = (k) => { const w = WEAPONS[k], sk = WSKILLS[k];
+    return `<button class="card cw${createSel.wt === k ? " picked" : ""}" data-k="${k}"><img class="icon" src="${iconURL(k)}" alt=""><b>${w.job}</b><span class="tag">${w.n}</span><span class="desc">J ${sk.attack[0]}・K ${sk.spin[0]}・U ${sk.ult[0]}</span></button>`; };
+  const looks = ["none", "snow", "ink", "jade"];
+  screenEl.innerHTML = `<div class="panel wide create">
+    <h1 class="pick-title">建立角色</h1>
+    ${msg ? `<div class="emsg">${msg}</div>` : ""}
+    <div class="baghead">名字（2～10 個字，之後可以在「角色」改）</div>
+    <input id="cname" class="cname" maxlength="10" placeholder="例如：青雲劍仙" value="${nameVal.replace(/"/g, "")}">
+    <div class="baghead">初始武器（決定一開始的招式；之後撿到別的武器隨時能換）</div>
+    <div class="cards cwrap">${WT_KEYS.map(wpn).join("")}</div>
+    <div class="baghead">外觀</div>
+    <div class="skins">${looks.map((k) => `<button class="skin${createSel.skin === k ? " sel" : ""}" data-k="${k}"><img src="${skinIcon(k)}" alt=""><b>${k === "none" ? "素衣" : SKINS[k].n}</b></button>`).join("")}</div>
+    <div class="btns"><button id="cgo" class="big">踏上仙途</button></div>
+  </div>`;
+  screenEl.classList.remove("hidden");
+  screenEl.querySelectorAll(".cw").forEach((b) => b.addEventListener("click", () => { createSel.wt = b.dataset.k; sfx("click"); renderCreate(); }));
+  screenEl.querySelectorAll(".skin").forEach((b) => b.addEventListener("click", () => { createSel.skin = b.dataset.k; sfx("click"); renderCreate(); }));
+  document.getElementById("cgo").onclick = () => {
+    const n = document.getElementById("cname").value.trim().replace(/[<>&"]/g, "");
+    if (n.length < 2) { renderCreate("名字至少 2 個字"); return; }
+    save.w = blankW();
+    Object.assign(save.w, { created: 1, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
+    const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; nameItem(it);
+    if (save.eq.sword) save.bag.push(save.eq.sword);
+    save.eq.sword = it;
+    writeSave(); sfx("arrive");
+    enterWorld();
+  };
+}

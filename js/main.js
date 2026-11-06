@@ -25,7 +25,10 @@ let last = performance.now();
 function frame(now) {
   let dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (state === "paused" || state === "pick") { render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return; }
+  if (state === "paused" || state === "pick") {
+    if (pausedFrom === "world" && liveWorld() && W0) { time += dt; updateWorld(dt); updateFx(dt); } // 連線中：開選單時仙界照常進行
+    render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return;
+  }
   if (hitstop > 0) { hitstop -= dt; render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return; }
   if (state === "intro") {
     introT -= dt;
