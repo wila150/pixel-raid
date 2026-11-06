@@ -476,3 +476,24 @@ body.inworld #quick { display: flex; }
 .skwin .sub, .charwin .sub { letter-spacing: normal; text-align: left; }
 .qbtn { position: relative; }
 .qbtn.dot::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: #ff4a3a; border: 1.5px solid #fff; }
+/* 任務視窗 */
+.qwin { max-width: min(100%, 820px); width: 100%; text-align: left; box-sizing: border-box; }
+.qwin .btabs { flex-wrap: wrap; }
+.qwin .btab { flex: 1 0 auto; padding: 5px 8px; }
+.qwin .btab:disabled { opacity: 0.4; cursor: default; }
+.qcols { display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; min-height: 220px; }
+@media (max-width: 640px) { .qcols { grid-template-columns: 1fr; } }
+.qlist { display: grid; align-content: start; gap: 3px; border: 1px solid var(--line); border-radius: 8px; padding: 6px; background: rgba(14, 18, 17, 0.55); max-height: 46vh; overflow-y: auto; }
+.qrow { display: flex; gap: 8px; align-items: center; text-align: left; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 0; background: none; color: var(--txt); cursor: pointer; }
+.qrow i { font-style: normal; width: 14px; color: var(--dim); }
+.qrow.done { color: var(--dim); } .qrow.done i { color: #7fd890; }
+.qrow.now i { color: #ffcf6b; } .qrow.lock { color: #6a6458; }
+.qrow.sel { background: linear-gradient(90deg, rgba(160, 80, 62, 0.6), rgba(80, 40, 30, 0.3)); color: #fff3dc; }
+.qdet { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: rgba(14, 18, 17, 0.55); display: grid; align-content: start; gap: 5px; }
+.qdet h3 { margin: 0 0 2px; color: #ffe9b0; font-size: 15px; }
+.qdet .sr { grid-template-columns: 52px 1fr; } .qdet .sr span { background: linear-gradient(#2e4a66, #223a52); }
+.qdet .sbtn { flex: none; justify-self: start; }
+.qtag { justify-self: start; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #3a3020; color: #ffcf6b; } .qtag.done { background: #203a26; color: #7fd890; }
+.qbounty { margin-top: 8px; padding: 6px 10px; border-radius: 8px; border: 1px solid #8a6a46; background: rgba(40, 30, 16, 0.5); font-size: 13px; }
+.qbounty b { color: #ffcf6b; margin-right: 8px; } .qbounty small { display: block; color: var(--dim); font-size: 11px; }
+.qwin .sub { letter-spacing: normal; text-align: left; }

@@ -595,9 +595,9 @@ function drawStarMap(cv) {
 }
 
 // ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
-const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"]];
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

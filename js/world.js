@@ -1193,10 +1193,11 @@ function drawWMob(m) {
   ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
   ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
 }
-let miniRect = null;
+let miniRect = null, questRect = null;
 cvs.addEventListener("pointerdown", (e) => { // 點小地圖：開／關大地圖
   if (state !== "world") return;
   if (bigMap) { bigMap = false; return; }
+  const qr = questRect; if (qr && e.clientX >= qr.x && e.clientX <= qr.x + qr.w && e.clientY >= qr.y && e.clientY <= qr.y + qr.h) { openHud("quest"); return; }
   const r = miniRect; if (r && e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h + 16) openStarMap();
 });
 function drawBigMap() { // 半透明大地圖蓋在畫面中間，邊打邊看
@@ -1271,7 +1272,7 @@ function drawWorldHud() {
   const q = curQuest();
   if (q) {
     const qy = y0 + 50, qw = Math.min(190, W * 0.46);
-    ctx.fillStyle = "rgba(10,8,18,0.7)"; ctx.fillRect(x0, qy, qw, 38);
+    ctx.fillStyle = "rgba(10,8,18,0.7)"; ctx.fillRect(x0, qy, qw, 38); questRect = { x: x0, y: qy, w: qw, h: 38 };
     ctx.fillStyle = "#ffcf6b"; ctx.fillRect(x0, qy, 3, 38);
     ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffcf6b"; ctx.fillText(q.main ? "主線" : "懸賞", x0 + 8, qy + 12);
     ctx.fillStyle = "#fff"; ctx.fillText(q.t, x0 + 34, qy + 12);
@@ -1533,7 +1534,7 @@ hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =
 // 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
-  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", n: "skill", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", n: "skill", y: "quest", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
   if (k === "tab") e.preventDefault();
   if (state !== "world" || e.repeat) return;
   if (map[k]) openHud(map[k]);
@@ -1546,6 +1547,7 @@ function openHud(h) {
   if (h === "bag") { eqSel = null; renderEquip(); }
   else if (h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
   else if (h === "swap") quickSwap();
+  else if (h === "quest") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderQuests(); }
   else if (h === "skill") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderSkills(); }
   else if (h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
   else if (h === "menu") openMenu();
