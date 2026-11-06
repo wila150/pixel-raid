@@ -97,6 +97,11 @@ function showEnd(win) {
 }
 // 主畫面：只有一個按鈕，點了直接進仙界（其他東西都在遊戲畫面右上角）
 function renderTitle() {
+  if (typeof AUTH_ON !== "undefined" && AUTH_ON) { // 有登入系統：已登入就直接進仙界，不然到登入畫面
+    if (!authReady) renderLoading("連線中…");
+    else if (fbUser) { if (!inWorld) enterWorld(); else worldReturn(); } else renderLogin();
+    return;
+  }
   if (inWorld && W0 && save.w) { save.w.x = Math.round(W0.x); save.w.y = Math.round(W0.y); writeSave(); }
   inWorld = false;
   setPadLabels(false);
@@ -104,7 +109,7 @@ function renderTitle() {
   state = "title";
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v1.2</p>
+    <p class="sub">PIXEL RAID · 原型 v1.3</p>
     <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
     <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;
@@ -209,12 +214,12 @@ function pauseGame() {
   pad.classList.add("hidden");
   screenEl.innerHTML = `<div class="panel">
     <h1>暫停</h1>
-    <div class="btns"><button id="resume" class="big">繼續</button><button id="home" class="big alt">${inWorld ? "回標題（會存檔）" : "放棄，回主畫面"}</button></div>
+    <div class="btns"><button id="resume" class="big">繼續</button><button id="home" class="big alt">${typeof AUTH_ON !== "undefined" && AUTH_ON ? "登出" : inWorld ? "回標題（會存檔）" : "放棄，回主畫面"}</button></div>
     <p class="sub">按 Esc／P 也可以繼續</p>
   </div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("resume").onclick = resumeGame;
-  document.getElementById("home").onclick = renderTitle;
+  document.getElementById("home").onclick = () => (typeof AUTH_ON !== "undefined" && AUTH_ON ? logout() : renderTitle());
 }
 function resumeGame() {
   if (state !== "paused") return;

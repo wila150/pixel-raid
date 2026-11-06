@@ -10,6 +10,7 @@
 - **沒有職業，武器決定招式**（使用者：穿什麼裝就變什麼職業、自由搭配）：武器欄 `it.wt` = sword／staff／bow（`WEAPONS` 在 equip.js，`WSKILLS` 在 world.js）。劍：劍擊／劍氣斬／掌心雷；法杖：法球／火雨（`W0.fires`）／冰環（減速 `m.slowT`）；弓：連射／散射／穿雲箭。流派選擇取消（`applyBuild` 的 sc = ""），數值全靠裝備詞綴＋配點。一鍵換武器（Q 或按鈕，`quickSwap` 換成背包裡下一種武器最強那把）。主線第 1、2 步送法杖和弓，新角色送一把凡品劍。
 - **搜打撤（簡化版）**：野外撿到的裝備標 `risk`（可以馬上穿），死掉全部消失（穿在身上的也會）；回到青雲城、走傳送陣、或野外按傳送用回城符（原地不動 3 秒，被打或移動會中斷）才算帶回（`bankLoot`）。任務和世界王給的裝備直接安全。
 - **v1.2**：武器 6 種（`WEAPONS`／`WSKILLS`：劍、法杖、弓、大刀〔重斬／旋風斬 `W0.spinT`／裂地斬〕、拳套〔連拳／衝拳 `p.dashHit`／震地〕、扇〔迴旋風刃 `s.back`／旋風 `W0.tornados`／清風回血〕）。傳說武器 6 把（`UNIQUES` 有 `wt`），U 換成專屬招式（`WUQ`、`uniqueUlt`）。越深掉越多（`ZONE_LOOT`）。獵寶妖（`spawnHunter`）：野外身上有 2 件以上未帶回裝備，每 70–100 秒派一隻追你、不回營、進城就跑掉，打倒掉 3 件好裝。
+- **v1.3 登入／註冊**（使用者：不要標題畫面，要登入註冊；選了用使用者自己的 Firebase）：`js/firebase-config.js`（`FIREBASE_CONFIG`，null 時照舊本機存檔＋標題）、`js/auth.js`（帳號名稱轉成 `名稱@pixelraid.game` 給 Firebase Auth 的 email/密碼登入；Firestore `users/{uid}` 存 `save` JSON，`writeSave` 後 10 秒合併上傳、切走 App 時馬上上傳；新帳號會把這台裝置原本的進度帶上去；登入後直接進仙界；暫停選單「登出」會清掉本機快取）。Firebase SDK 用 gstatic CDN compat 10.12.2。Firestore 規則：只有本人能讀寫自己的 users/{uid}。
 - 狀態：title → run →（pick 三選一）→ runEnd →（pick）→ intro → play → win/lose；paused 可從 run/intro/play 進入（Esc、P、右上角按鈕、切走 App 自動暫停）。M 或右上角喇叭切換靜音。
 - 本機測試：`python3 -m http.server 8090`。`?run&sim=秒` 快轉跑酷（約 10 秒會碰到第一個機緣）；`?demo&sim=秒&swords=N&pet=fox|crane` 直接打王。
 - 截圖：Windows Edge headless（`--headless=new --virtual-time-budget=4000`），rAF 幾乎不跑要用 sim；headless 視窗寬度小於約 500 會被撐寬，手機直放要用 iframe 包一層 390×844 的頁面。

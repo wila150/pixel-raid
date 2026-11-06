@@ -23,7 +23,7 @@ const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {}, sc
 function loadSave() {
   try { return Object.assign(blankSave(), JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch { return blankSave(); }
 }
-function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* 無痕模式存不了就算了 */ } }
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* 無痕模式存不了就算了 */ } if (typeof cloudSave === "function") cloudSave(); }
 let save = loadSave();
 const realmIdx = (xw = save.xiuwei) => REALMS.reduce((i, r, j) => (xw >= r.need ? j : i), 0);
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };

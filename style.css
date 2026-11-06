@@ -107,3 +107,8 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
 .cpline.small { font-size: 13px; margin-top: 10px; color: #cfc4dc; }
 @media (max-width: 600px) { #hud { top: calc(max(8px, env(safe-area-inset-top)) + 50px); right: max(8px, env(safe-area-inset-right)); } }
 .risk { font-style: normal; font-size: 9px; color: #ffb070; }
+.login form { display: flex; flex-direction: column; gap: 10px; width: min(320px, 86vw); margin: 22px auto 0; }
+.login input { padding: 12px 14px; font-size: 17px; border-radius: 10px; border: 2px solid #4a4060; background: rgba(20,14,34,0.9); color: #fff; font-family: inherit; user-select: text; -webkit-user-select: text; }
+.login input:focus { outline: none; border-color: #ffcf6b; }
+.login .btns { margin-top: 6px; } .emsg.err { color: #ff8a7a; }
+.screen:has(.panel.login) { background: rgba(12, 9, 18, 0.95); }
