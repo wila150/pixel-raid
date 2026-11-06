@@ -94,13 +94,13 @@ function wbFire(m, p) {
     m.slamAt = null;
   } else if (k === "fan") { // 火球扇
     const n = m.phase >= 2 ? 9 : 7, spread = 1.1;
-    for (let i = 0; i < n; i++) { const a = m.fanA - spread / 2 + (spread * i) / (n - 1); W0.eshots.push({ x: m.x, y: m.y - 8, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, life: 2.2, dmg: wbDmg(m, 0.55), c: "#ff6a2a", big: true }); }
+    for (let i = 0; i < n; i++) { const a = m.fanA - spread / 2 + (spread * i) / (n - 1); W0.eshots.push({ x: m.x, y: m.y - 8, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, life: 2.2, dmg: wbDmg(m, 0.55), c: "#ff6a2a", big: true, ele: true }); }
     sfx("volley");
   } else if (k === "charge") { m.dash = { a: m.chargeA, t: 0.75, hit: false }; sfx("dash"); }
   else if (k === "spiral") { // 螺旋火焰：連續 2.4 秒往外噴
     for (let i = 0; i < 16; i++) setTimeout(() => {
       if (m.dead || state !== "world") return;
-      for (let j = 0; j < 3; j++) { const a = i * 0.45 + (j * Math.PI * 2) / 3; W0.eshots.push({ x: m.x, y: m.y - 8, vx: Math.cos(a) * 95, vy: Math.sin(a) * 95, life: 2.4, dmg: wbDmg(m, 0.45), c: "#ff3a1a", big: true }); }
+      for (let j = 0; j < 3; j++) { const a = i * 0.45 + (j * Math.PI * 2) / 3; W0.eshots.push({ x: m.x, y: m.y - 8, vx: Math.cos(a) * 95, vy: Math.sin(a) * 95, life: 2.4, dmg: wbDmg(m, 0.45), c: "#ff3a1a", big: true, ele: true }); }
     }, i * 150);
   }
 }
@@ -114,7 +114,7 @@ function updateWBZones(dt) {
     if (z.t >= z.max && z.dmg) { // 隕石落地
       fxBoom(z.x, z.y, z.r * 1.3, "255,140,50"); burst(z.x, z.y, "#ff8a2e", 14, 90, 0.4); shake = Math.max(shake, 3);
       if (Math.random() < 0.5) sfx("break");
-      if (Math.hypot(p.x - z.x, p.y - z.y) < z.r) hurtW(z.dmg);
+      if (Math.hypot(p.x - z.x, p.y - z.y) < z.r) hurtW(z.dmg, null, "ele");
     }
   }
   wbZones = wbZones.filter((z) => z.t < z.max);

@@ -66,6 +66,7 @@ const HERO_WALK = sprite([...HERO_TOP, "..kwk..kwk..", "..kk.....k.."], HERO_PAL
 const keys = new Set();
 const pressed = new Set(); // 這一幀剛按下
 window.addEventListener("keydown", (e) => {
+  if (e.target && e.target.tagName === "INPUT") return; // 打字（聊天、取名）時不當成操作
   const k = e.key.toLowerCase();
   if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
   if (!keys.has(k)) pressed.add(k);

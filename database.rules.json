@@ -1,0 +1,37 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "presence": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['x', 'y', 't']) || !newData.exists()"
+      }
+    },
+    "lb": {
+      ".read": "auth != null",
+      ".indexOn": ["lv", "cp"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['n', 'lv', 'cp', 't']) && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('lv').isNumber() && newData.child('lv').val() >= 1 && newData.child('lv').val() <= 200 && newData.child('cp').isNumber() && newData.child('cp').val() >= 0 && newData.child('cp').val() <= 10000000"
+      }
+    },
+    "chat": {
+      ".read": "auth != null",
+      ".indexOn": ["t"],
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('t').val() < now - 86400000))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'n', 'm', 't']) && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('m').isString() && newData.child('m').val().length >= 1 && newData.child('m').val().length <= 60 && newData.child('t').val() === now)"
+      }
+    },
+    "ann": {
+      ".read": "auth != null",
+      ".indexOn": ["t"],
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('t').val() < now - 86400000))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['uid', 'n', 'm', 't']) && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('m').isString() && newData.child('m').val().length <= 40 && newData.child('t').val() === now)"
+      }
+    }
+  }
+}

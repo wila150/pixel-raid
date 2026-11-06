@@ -17,8 +17,9 @@ function netStart() {
     if (snap.key === netUid) return;
     const d = snap.val(); if (!d) return;
     const o = others[snap.key];
-    if (!o) others[snap.key] = { d, x: d.x, y: d.y, walk: 0, swing: 0, swingMax: 0.2, sw: d.s || 0 };
+    if (!o) others[snap.key] = { d, x: d.x, y: d.y, walk: 0, swing: 0, swingMax: 0.2, sw: d.s || 0, cqSeen: d.cq && d.cq.length ? d.cq[d.cq.length - 1].i : 0 };
     else {
+      if (d.cq && (d.ch || 1) === myCh() && othersVisible(o)) for (const c of d.cq) if (c.i > o.cqSeen) { o.cqSeen = c.i; ghostCast(o, d.wt, c); }
       if ((d.s || 0) !== o.sw) { o.sw = d.s || 0; o.swing = o.swingMax = d.wt === "blade" ? 0.25 : d.wt === "fist" ? 0.08 : 0.18; }
       o.d = d;
     }
@@ -38,8 +39,9 @@ function netSend(force) {
   if (!netRef || !W0) return;
   const p = W0, d = {
     x: Math.round(p.x), y: Math.round(p.y), f: Math.round(p.face * 100) / 100, wt: curWeapon(), g: gearKey(),
-    lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0,
+    lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "",
   };
+  if (netCq.length) d.cq = netCq;
   const key = JSON.stringify(d);
   if (!force && key === netLast) return;
   netLast = key;
@@ -66,7 +68,42 @@ function netTick(dt) {
     o.swing = Math.max(0, o.swing - dt);
   }
 }
-const othersList = () => Object.keys(others).map((k) => others[k]);
+const othersList = () => Object.keys(others).filter((k) => (others[k].d.ch || 1) === myCh()).map((k) => others[k]); // 只畫同一條分流的人
+// ───────── 分流：同一條線的人才看得到彼此（Firebase 版只是畫面分開，真正省流量要伺服器）─────────
+const CH_MAX = 3;
+const myCh = () => (save.w && save.w.ch) || 1;
+function chCount(c) { let n = c === myCh() ? 1 : 0; for (const k in others) if ((others[k].d.ch || 1) === c) n++; return n; }
+function setCh(c) { if (!save.w || c === myCh()) return; save.w.ch = c; writeSave(); netSend(true); if (W0) { W0.shield = 3; floatText(W0.x, W0.y - 30, `切換到 ${c} 服`, "#9fe8ff", true); } }
+// ───────── 招式同步：自己放招時記一筆，跟著位置一起送出；別人收到就在畫面上重播（只有特效，不會打怪）─────────
+let netCq = [], netCqI = 0;
+function netCast(k, a, x, y) {
+  if (!NET_ON || !netRef) return;
+  netCq.push({ i: ++netCqI, k, a: Math.round(a * 100) / 100, x: Math.round(x), y: Math.round(y) });
+  if (netCq.length > 4) netCq.shift();
+  netSendT = Math.min(netSendT, 0.06);
+}
+const othersVisible = (o) => W0 && Math.abs(o.x - W0.x) < 400 && Math.abs(o.y - W0.y) < 300;
+// 隊友特效：full 全部、dim 淡化、off 關閉
+const allyA = () => { const v = (save.w && save.w.allyFx) || "dim"; return v === "off" ? 0 : v === "dim" ? 0.3 : 1; };
+function ghostCast(o, wt, c) {
+  if (!W0 || !allyA()) return;
+  const sx = o.x, sy = o.y - 3, P = (a, v) => ({ x: sx, y: sy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a, hit: new Set(), ghost: true });
+  if (c.k === "a") {
+    if (wt === "staff") W0.pshots.push(Object.assign(P(c.a, 170), { life: 0.9, kind: "orb" }));
+    else if (wt === "bow") W0.pshots.push(Object.assign(P(c.a, 300), { life: 0.6, kind: "arrow" }));
+    else if (wt === "fan") W0.pshots.push(Object.assign(P(c.a, 200), { life: 0.6, kind: "wind" }));
+  } else if (c.k === "v") W0.voids.push({ x: c.x, y: c.y, t: 2.2, max: 2.2, tick: 0, ghost: true });
+  else if (c.k === "q") {
+    if (wt === "sword") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.22, 230), { life: 0.6, kind: "sword" }));
+    else if (wt === "staff") W0.fires.push({ x: c.x, y: c.y, t: 0.45, r: 34, dmg: 0, ghost: true });
+    else if (wt === "bow") for (let i = -2; i <= 2; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.18, 280), { life: 0.55, kind: "arrow" }));
+    else if (wt === "fan") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
+    else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.4, r: 40, c: "255,220,170" });
+  } else if (c.k === "e") {
+    W0.rings.push({ x: sx, y: sy, t: 0, max: 0.5, r: 120, c: "255,210,110" });
+    for (let i = 0; i < 4; i++) bolts.push({ x: sx + rand(-90, 90), y: sy + rand(-60, 60), life: 0.3 });
+  }
+}
 function drawOther(o) {
   const d = o.d, g = String(d.g || "-1,-1,-1,none").split(","), r = +g[0], c = +g[1], b = +g[2], sk = SKINS[g[3]] ? g[3] : "none";
   const fake = { x: o.x, y: o.y, face: d.f || 0, flip: Math.cos(d.f || 0) < 0, swing: o.swing, swingMax: o.swingMax, swingR: d.wt === "blade" ? 34 : d.wt === "fist" ? 14 : 22 };

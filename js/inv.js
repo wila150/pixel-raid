@@ -85,6 +85,16 @@ function drawOrbs() {
   // 左下：生命血球
   const hx = SAFE.l + R + 14, hy = H - R - 18;
   drawOrb(hx, hy, R, p.hp / p.maxHp, "#c8282c", "#5a0a10", p.hp / p.maxHp < 0.3 ? `rgba(255,90,80,${0.6 + Math.sin(time * 8) * 0.4})` : "rgba(200,150,120,0.55)");
+  if (B.maxEs > 0) { // 能量護盾：血球外圍半透明淡藍外殼
+    const ef2 = clamp((p.es || 0) / B.maxEs, 0, 1);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(hx, hy, R * 0.85, hx, hy, R + 9);
+    g.addColorStop(0, "rgba(120,200,255,0)"); g.addColorStop(0.7, `rgba(120,200,255,${0.35 * ef2})`); g.addColorStop(1, "rgba(120,200,255,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(hx, hy, R + 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(170,225,255,${0.4 + 0.5 * ef2})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx, hy, R + 4, Math.PI / 2, Math.PI / 2 + Math.PI * 2 * ef2); ctx.stroke();
+    ctx.restore();
+    ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#bfe6ff"; ctx.fillText(`護盾 ${Math.ceil(p.es || 0)}`, hx, hy - R - 8);
+  }
   ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#f2dede";
   ctx.fillText(`${Math.ceil(p.hp)}`, hx, hy + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#c8a8a8"; ctx.fillText(`/ ${p.maxHp}`, hx, hy + 12);
   // 右下：天罰能量球（外圈細藍弧＝真氣）
@@ -152,11 +162,12 @@ function ovClose() {
 }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, .loot, .star, .cmp-item, .info, .tile, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
-const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"] };
+const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"] };
 window.addEventListener("keydown", (e) => {
+  if (e.target && e.target.tagName === "INPUT") return;
   const k = e.key.toLowerCase();
   if (!ovKind || ovJust || e.repeat) return;
   if (k === "tab") e.preventDefault();
@@ -176,6 +187,47 @@ function cmpRows(sel, cur) {
     return `<div class="stat${k === SLOTS[sel.slot].base ? " main" : ""}"><span>${AFFIX[k].n}</span><b>${va ? `+${statVal(k, va)}${pct}` : "—"}</b>${tag}</div>`;
   }).join("") + (sel.u ? `<div class="stat uq">${UNIQUES[sel.u].d}</div>` : "");
 }
+// 詞條分前綴／後綴列出（PoE）
+function affHtml(it) {
+  const ks = Object.keys(it.aff || {}).filter((k) => AFFIX[k]);
+  const row = (k) => `<div class="aff ${AFFIX[k].t}"><em>${AFFIX[k].t === "p" ? "前綴" : AFFIX[k].t === "s" ? "後綴" : "舊"}</em>${fmtAff(k, it.aff[k])}<i>${affTier(k, it.aff[k], it.il)}</i></div>`;
+  const pre = ks.filter((k) => AFFIX[k].t === "p"), suf = ks.filter((k) => AFFIX[k].t !== "p");
+  return `<div class="affs">${pre.map(row).join("")}${suf.map(row).join("")}${!ks.length ? `<div class="dim">（白裝沒有詞條：拿去工藝台注入精髓）</div>` : ""}
+    ${CARD_SLOTS.includes(it.slot) ? `<div class="rune${it.card ? " on" : ""}">◈ 符文插槽：${it.card ? `<b>${CARDS[it.card].n}</b>（${cardDesc(it.card)}）` : "空（把魔物卡片拖到左邊這件裝備上）"}</div>` : ""}</div>`;
+}
+let cardSel = null;
+const atCamp = () => W0 && safeAt(W0.x, W0.y);
+// 工藝台（右欄沒選裝備時）：碎屑換保底裝＋精髓、卡片庫存
+function craftHtml() {
+  const sh = save.shards || 0, camp = atCamp(), es = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
+  return `<div class="craft"><h3>鐵匠工藝台</h3>${camp ? "" : `<p class="warn">回到安全營地（傳送點或青雲城）才能用工藝台、精煉</p>`}
+    <div class="shards">天罰碎屑 <b>${sh}</b><small>斬妖會掉，精英、獵寶妖、世界王掉更多</small></div>
+    <div class="exch">${SLOT_KEYS.map((k) => `<div class="exrow"><span>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</span>
+      <button data-ex="${k}:2" ${camp && sh >= SHARD_RARE ? "" : "disabled"} style="color:${RARITY[2].c}">保底紫裝<small>${SHARD_RARE}</small></button>
+      <button data-ex="${k}:3" ${camp && sh >= SHARD_UNIQ ? "" : "disabled"} style="color:${RARITY[3].c}">保底傳說<small>${SHARD_UNIQ}</small></button></div>`).join("")}</div>
+    <h3>精髓 <small>${es.reduce((a, k) => a + save.ess[k], 0)}</small></h3>
+    <div class="esslist">${es.map((k) => `<span class="ess">${essName(k)} ×${save.ess[k]}<small>${AFFIX[k].t === "p" ? "前綴" : "後綴"}・${AFFIX[k].n}</small></span>`).join("") || `<p class="dim">還沒有精髓。精英怪、獵寶妖、世界王會掉</p>`}</div>
+    <p class="dim">用法：點一件白裝或藍裝 → 按精髓注入，直接變紫裝並保底洗出那條詞條</p></div>`;
+}
+function cardChips() {
+  const cs = Object.keys(save.cards || {}).filter((c) => save.cards[c] > 0);
+  if (!cs.length) return `<div class="cards0 dim">魔物卡片：還沒有（打怪很低機率掉，精英較高）</div>`;
+  return `<div class="cardbox"><small>魔物卡片：拖到左上的武器或道袍（或點卡片再點裝備）</small>${cs.map((c) => `<div class="cardchip${cardSel === c ? " sel" : ""}" data-card="${c}"><b>${CARDS[c].n} ×${save.cards[c]}</b><small>${CARDS[c].slot === "sword" ? "武器" : "道袍"}・${cardDesc(c)}</small></div>`).join("")}</div>`;
+}
+function insertCard(c, slot) {
+  const it = save.eq[slot];
+  if (!it) return "那個位置沒有裝備";
+  if (CARDS[c].slot !== slot) return `${CARDS[c].n}只能插在${CARDS[c].slot === "sword" ? "武器" : "道袍"}上`;
+  const old = it.card; it.card = c; save.cards[c]--; if (!save.cards[c]) delete save.cards[c];
+  cardSel = null; writeSave(); sfx("arrive"); if (typeof B !== "undefined" && W0) { B = worldStats(); W0.maxHp = B.maxHp; }
+  return `${CARDS[c].n} 融進 ${it.name}${old ? `（原本的${CARDS[old].n}碎掉了）` : ""}`;
+}
+function apHtml() {
+  const w = save.w; if (!w) return "";
+  const b = worldStats();
+  return `<div class="apbox"><div class="aphead">屬性點 <b>${w.free}</b></div>${["str", "agi", "wis", "vit"].map((k) => `<div class="aprow"><span>${AP[k].n}</span><b>${w.ap[k]}</b><button data-ap="${k}" ${w.free ? "" : "disabled"}>＋</button><button data-ap5="${k}" ${w.free >= 5 ? "" : "disabled"}>＋5</button><small>${AP[k].d}</small></div>`).join("")}</div>
+    <div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>護甲 <b>${Math.round(b.armor)}</b></span><span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>元素抗性 <b>${Math.round(b.res * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
+}
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
 function renderEquip(msg = "") {
   if (typeof tutEvent === "function") tutEvent("bag");
@@ -187,26 +239,31 @@ function renderEquip(msg = "") {
     const it = save.eq[k], [sx, sy] = STAR_POS[k], c = it ? RARITY[it.q].c : "#6a6078";
     return `<button class="star${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}" data-eq="${k}" style="left:${50 + sx * 38}%;top:${46 + sy * 34}%;--c:${c}">${it ? itemIcon(it) : "<i></i>"}<small>${SLOTS[k].n}${it && it.en ? ` +${it.en}` : ""}</small></button>`;
   }).join("");
-  let right = `<div class="r-empty"><h3>詞條對比</h3><p>點中間的裝備，這裡會顯示詳細詞條，並跟身上的比較</p><p>長按卡片＝直接穿上</p><p class="dim">點旁邊空白處、或再按一次 I 收起背包</p></div>`;
+  let right = craftHtml();
+  const camp = atCamp(), essK = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
   if (selItem) {
     const worn = eqSel.startsWith("eq:"), cur = save.eq[selItem.slot], diff = itemCP(selItem) - itemCP(cur);
     right = `<div class="cmp-item">
+      <div class="ilvl">物品等級 ${selItem.il}</div>
       <div class="big-ico" style="--c:${RARITY[selItem.q].c}">${itemIcon(selItem)}</div>
       <h3 style="color:${RARITY[selItem.q].c}">${selItem.name}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
+      ${affHtml(selItem)}
       <div class="stats">${cmpRows(selItem, cur)}</div>
       <div class="acts">
         ${worn ? `<button id="unequip">卸下</button>` : `<button id="equip" class="gold">穿上</button><button id="sell" class="red">出售 +${sellPrice(selItem)}</button>`}
-        ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="gold">強化 +${(selItem.en || 0) + 1}<small>${Math.round(EN_RATE[selItem.en || 0] * 100)}%・${enCost(selItem)} 靈石</small></button>` : ""}
-        ${!selItem.u && selItem.q > 0 ? `<button id="reroll">洗練<small>${rerollCost(selItem)} 靈石</small></button>` : ""}
-        ${selItem.q < 2 ? `<button id="upq">點金<small>${upCost(selItem)} 靈石</small></button>` : ""}
-      </div></div>`;
+        ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="gold" ${camp ? "" : "disabled"}>精煉 +${(selItem.en || 0) + 1}<small>${Math.round(EN_RATE[selItem.en || 0] * 100)}%・${enCost(selItem)} 靈石</small></button>` : ""}
+        ${!selItem.u && selItem.q > 0 ? `<button id="reroll" ${camp ? "" : "disabled"}>洗練<small>${rerollCost(selItem)} 靈石</small></button>` : ""}
+        ${selItem.q < 2 ? `<button id="upq" ${camp ? "" : "disabled"}>點金<small>${upCost(selItem)} 靈石</small></button>` : ""}
+      </div>
+      ${!selItem.u ? `<div class="essbar"><small>${camp ? "精髓注入（保底詞條，直接變紫裝）" : "回營地才能注入精髓"}</small>${essK.map((k) => `<button data-ess="${k}" ${camp ? "" : "disabled"}>${essName(k)}<small>${AFFIX[k].n}・剩 ${save.ess[k]}</small></button>`).join("") || `<span class="dim">沒有精髓</span>`}</div>` : ""}
+      ${camp ? "" : `<p class="warn">精煉、洗練、點金、精髓要在安全營地</p>`}</div>`;
   }
   ov.innerHTML = `<div class="col l"><div class="hero-wrap"><img class="hero-big" src="${heroURL()}" alt="">${stars}</div>
-      <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・招式 ${WEAPONS[curWeapon()].job}</small></div>
-      ${gemHtml()}</div>
+      <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
+      ${cardChips()}${apHtml()}${gemHtml()}</div>
     <div class="col c"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
       <div class="flow">${bag.length ? bag.map((it) => {
         const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]), aff = Object.keys(it.aff || {});
@@ -228,9 +285,45 @@ function bindEquip(selItem) {
     c.addEventListener("contextmenu", (e) => e.preventDefault());
     c.addEventListener("click", () => { if (long) return; sfx("click"); eqSel = eqSel === c.dataset.id ? null : c.dataset.id; again(); });
   });
-  ov.querySelectorAll(".star").forEach((b) => b.addEventListener("click", () => { sfx("click"); eqSel = save.eq[b.dataset.eq] && eqSel !== "eq:" + b.dataset.eq ? "eq:" + b.dataset.eq : null; again(); }));
+  ov.querySelectorAll(".star").forEach((b) => b.addEventListener("click", () => { sfx("click"); if (cardSel) { again(insertCard(cardSel, b.dataset.eq)); return; } eqSel = save.eq[b.dataset.eq] && eqSel !== "eq:" + b.dataset.eq ? "eq:" + b.dataset.eq : null; again(); }));
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = () => { sfx("click"); fn(); }; };
   on("equip", () => { equipItem(selItem); eqSel = null; again(`穿上了 ${selItem.name}`); });
+  // 魔物卡片：拖曳到星芒裝備位，或點卡片再點裝備
+  ov.querySelectorAll(".cardchip").forEach((c) => {
+    c.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); const sx = e.clientX, sy = e.clientY; let ghost = null;
+      const mv = (ev) => {
+        if (!ghost && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 8) { ghost = c.cloneNode(true); ghost.className = "cardchip drag"; document.body.appendChild(ghost); }
+        if (ghost) { ghost.style.left = ev.clientX + "px"; ghost.style.top = ev.clientY + "px"; }
+      };
+      const up = (ev) => {
+        window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up);
+        if (!ghost) { sfx("click"); cardSel = cardSel === c.dataset.card ? null : c.dataset.card; again(cardSel ? `選了${CARDS[cardSel].n}，點${CARDS[cardSel].slot === "sword" ? "武器" : "道袍"}插進去` : ""); return; }
+        ghost.remove(); const t = document.elementFromPoint(ev.clientX, ev.clientY), st = t && t.closest(".star");
+        if (st) again(insertCard(c.dataset.card, st.dataset.eq)); else again("拖到左上的武器或道袍上");
+      };
+      window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+    });
+  });
+  // 一鍵配點
+  const apAdd = (k, n) => { const w = save.w; n = Math.min(n, w.free); if (!n) return; w.free -= n; w.ap[k] += n; writeSave(); sfx("good"); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; setPadLabels(true); } again(); };
+  ov.querySelectorAll("[data-ap]").forEach((b) => b.addEventListener("click", () => apAdd(b.dataset.ap, 1)));
+  ov.querySelectorAll("[data-ap5]").forEach((b) => b.addEventListener("click", () => apAdd(b.dataset.ap5, 5)));
+  // 工藝台：碎屑兌換、精髓注入
+  ov.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
+    const [slot, q] = b.dataset.ex.split(":"), cost = +q === 3 ? SHARD_UNIQ : SHARD_RARE;
+    if (!atCamp() || (save.shards || 0) < cost) return;
+    if (save.bag.length >= BAG_MAX) { again("行囊滿了，先賣掉一些"); return; }
+    save.shards -= cost; const it = shardItem(slot, +q); save.bag.push(it); eqSel = it.id; writeSave(); sfx("win");
+    again(`兌換出 ${RARITY[it.q].n}・${it.name}！`);
+  }));
+  ov.querySelectorAll("[data-ess]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.ess; if (!atCamp() || !(save.ess[k] > 0) || !selItem) return;
+    if (!essCraft(selItem, k)) { again("傳說裝不能注入精髓"); return; }
+    save.ess[k]--; if (!save.ess[k]) delete save.ess[k]; writeSave(); sfx("arrive");
+    if (W0) { B = worldStats(); W0.maxHp = B.maxHp; }
+    again(`注入${essName(k)}：${selItem.name}`);
+  }));
   on("unequip", () => {
     if (save.bag.length >= BAG_MAX) { again("行囊滿了，先賣掉一些"); return; }
     save.bag.push(selItem); delete save.eq[selItem.slot]; eqSel = null; writeSave(); again();
@@ -240,11 +333,17 @@ function bindEquip(selItem) {
     const c = enCost(selItem);
     if (save.stone < c) { again("靈石不夠"); return; }
     save.stone -= c;
-    if (Math.random() < EN_RATE[selItem.en || 0]) { selItem.en = (selItem.en || 0) + 1; nameItem(selItem); writeSave(); sfx("arrive"); again(`強化成功！${selItem.name}`); }
-    else { writeSave(); sfx("hurt"); again(`強化失敗⋯⋯靈石 −${c}（裝備沒事）`); }
+    if (!atCamp()) { save.stone += c; again("回營地才能精煉"); return; }
+    if (Math.random() < EN_RATE[selItem.en || 0]) {
+      selItem.en = (selItem.en || 0) + 1; nameItem(selItem); writeSave(); sfx("arrive");
+      if (selItem.en >= 10 && typeof netAnnounce === "function") netAnnounce(`成功鍛造出 ${selItem.name}！`); // 全服流光廣播
+      again(`精煉成功！${selItem.name}`);
+    }
+    else { writeSave(); sfx("hurt"); again(`精煉失敗⋯⋯靈石 −${c}（裝備沒事）`); }
   });
   on("reroll", () => {
     const c = rerollCost(selItem);
+    if (!atCamp()) { again("回營地才能用工藝台"); return; }
     if (save.stone < c) { again("靈石不夠"); return; }
     save.stone -= c;
     const [a0, a1] = RARITY[selItem.q].aff;
@@ -253,6 +352,7 @@ function bindEquip(selItem) {
   });
   on("upq", () => {
     const c = upCost(selItem);
+    if (!atCamp()) { again("回營地才能用工藝台"); return; }
     if (save.stone < c) { again("靈石不夠"); return; }
     save.stone -= c; selItem.q++;
     selItem.base = SLOTS[selItem.slot].base === "crit" ? Math.round(selItem.base * 1.12 * 10) / 10 : Math.round(selItem.base * 1.12);
@@ -430,7 +530,7 @@ function drawStarMap(cv) {
 }
 
 // ───────── 功能選單（☰）─────────
-const MENU_TILES = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["map", "星盤", "M"], ["rank", "排行", "R"], ["swap", "換武器", "F"], ["mute", "音效", ""]];
+const MENU_TILES = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["map", "星盤", "M"], ["social", "好友聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"], ["mute", "音效", ""]];
 function openMenu() {
   if (ovKind !== "menu" && !ovOpen("menu")) return;
   const w = save.w, ap = w.autoPot !== false, aa = !!w.autoAtk;
@@ -439,6 +539,9 @@ function openMenu() {
     <h3>防疲勞</h3>
     <div class="setrow"><span>血量低於 30% 自動吃丹藥</span><button class="tab${ap ? " on" : ""}" data-ap="1">開</button><button class="tab${!ap ? " on" : ""}" data-ap="0">關</button></div>
     <div class="setrow"><span>半自動朝最近的敵人割草</span><button class="tab${aa ? " on" : ""}" data-aa="1">開</button><button class="tab${!aa ? " on" : ""}" data-aa="0">關</button></div>
+    <h3>掉落與畫面</h3>
+    <div class="setrow"><span>掉落過濾（低於這個品質直接換成靈石）</span>${["全部顯示", "藏白裝", "藏白藍"].map((n, i) => `<button class="tab${(w.filt || 0) === i ? " on" : ""}" data-fl="${i}">${n}</button>`).join("")}</div>
+    <div class="setrow"><span>隊友招式特效</span>${[["full", "全部"], ["dim", "淡化"], ["off", "關閉"]].map(([v, n]) => `<button class="tab${(w.allyFx || "dim") === v ? " on" : ""}" data-af="${v}">${n}</button>`).join("")}</div>
     <div class="setrow"><span>畫面方向</span><button class="tab${orient === "land" ? " on" : ""}" data-o="land">橫向</button><button class="tab${orient === "port" ? " on" : ""}" data-o="port">直向</button></div>
     <div class="acts row"><button id="logout" class="red">${typeof AUTH_ON !== "undefined" && AUTH_ON ? "登出" : "回標題（會存檔）"}</button></div>
     <p class="dim">${liveWorld() ? "連線中，遊戲不會暫停" : ""}　點空白處回到戰鬥</p></div><div class="col r"></div>`;
@@ -447,11 +550,14 @@ function openMenu() {
     if (m === "mute") { setMuted(!muted); openMenu(); return; }
     if (m === "bag") { ovKind = null; renderEquip(); return; }
     if (m === "map") { ovKind = null; openStarMap(); return; }
+    if (m === "social") { ovKind = null; openSocial(); return; }
     ovClose(); setTimeout(() => openHud(m), 0);
   }));
   const tog = (attr, fn) => ov.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener("click", () => { sfx("click"); fn(b.dataset[attr]); writeSave(); openMenu(); }));
   tog("ap", (v) => { w.autoPot = v === "1"; });
   tog("aa", (v) => { w.autoAtk = v === "1"; });
+  tog("fl", (v) => { w.filt = +v; });
+  tog("af", (v) => { w.allyFx = v; });
   tog("o", (v) => { setOrient(v); updateRotHint(); });
   document.getElementById("logout").onclick = () => { ovKind = null; ov.className = "ov hidden"; typeof AUTH_ON !== "undefined" && AUTH_ON ? logout() : renderTitle(); };
 }
