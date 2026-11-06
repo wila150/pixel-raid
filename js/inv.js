@@ -124,7 +124,7 @@ function drawOrbs() {
   if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = full ? "#ffe9a0" : "#d8d0ff";
     ctx.fillText(full ? "E 天罰" : `${Math.floor(ef * 100)}%`, ex, ey + 4);
-    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"], ["1", `丹藥×${save.w.potions}`, "potion"]];
+    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"], ["H", `丹藥×${save.w.potions}`, "potion"]];
     let x = ex - R - 16 - sk.length * 50;
     for (const [k, n, id] of sk) {
       const cdm = id === "roll" ? B.rollCd : 1, f = p.cds[id] / (WSKILL[id].cd * cdm), lack = p.mp < (WSKILL[id].mp || 0);
@@ -162,7 +162,7 @@ function ovClose() {
 }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"] };
@@ -195,6 +195,25 @@ function affHtml(it) {
   return `<div class="affs">${pre.map(row).join("")}${suf.map(row).join("")}${!ks.length ? `<div class="dim">（白裝沒有詞條：拿去工藝台注入精髓）</div>` : ""}
     ${CARD_SLOTS.includes(it.slot) ? `<div class="rune${it.card ? " on" : ""}">◈ 符文插槽：${it.card ? `<b>${CARDS[it.card].n}</b>（${cardDesc(it.card)}）` : "空（把魔物卡片拖到左邊這件裝備上）"}</div>` : ""}</div>`;
 }
+// 武器組、超技能插槽、傳授插槽
+function wsetHtml() {
+  if (!save.w) return "";
+  return `<div class="wset"><small>武器組（按 1／2／3 切換；放武器：點背包裡的武器 →「放到武器 N」）</small><div>${[0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="wsc${i === save.w.wi ? " on" : ""}" data-wsw="${i}" style="--c:${it ? RARITY[it.q].c : "#444"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b><small>${it ? it.name : "空"}</small></button>`; }).join("")}</div></div>`;
+}
+function extraSlots(it) {
+  let h = "";
+  if (it === save.eq.sword) {
+    const ss = Object.keys(save.sups || {}).filter((k) => save.sups[k] > 0);
+    h += `<div class="supslot${it.sup ? " on" : ""}"><b>✦ 超技能插槽</b>${jobLv() < 3 ? `<small>三轉（Lv.30）解鎖</small>` : it.sup ? `<small style="color:${SUPERS[it.sup].c}">${SUPERS[it.sup].n}：${SUPERS[it.sup].d}</small><button data-supoff="1">拆下</button>` : `<small>空：${ss.length ? "點下面的超技能寶石插上" : "沒有超技能寶石（工藝台用碎屑換、世界王會掉）"}</small>`}
+      ${jobLv() >= 3 && !it.sup ? ss.map((k) => `<button data-sup="${k}" style="color:${SUPERS[k].c}">${SUPERS[k].n} ×${save.sups[k]}<small>${SUPERS[k].d}</small></button>`).join("") : ""}</div>`;
+  }
+  if (it === save.eq.charm) {
+    const ls = Object.keys(save.links || {}).filter((k) => k !== heroKey());
+    h += `<div class="supslot${it.link ? " on" : ""}"><b>◎ 傳授插槽</b>${it.link ? `<small>${HEROES[it.link].n}：${HEROES[it.link].pd}</small><button data-linkoff="1">拔下</button>` : `<small>${ls.length ? "插上別的英雄的核心被動" : "把別的英雄角色練到三轉，就會得到他的傳授寶石"}</small>${ls.map((k) => `<button data-link="${k}">${HEROES[k].n}<small>${HEROES[k].pd}</small></button>`).join("")}`}</div>`;
+  }
+  if (it.slot === "sword" && save.bag.includes(it)) h += `<div class="acts row">${[0, 1, 2].map((i) => `<button data-wsset="${i}">放到武器 ${i + 1}</button>`).join("")}</div>`;
+  return h;
+}
 let cardSel = null;
 const atCamp = () => W0 && safeAt(W0.x, W0.y);
 // 工藝台（右欄沒選裝備時）：碎屑換保底裝＋精髓、卡片庫存
@@ -205,6 +224,7 @@ function craftHtml() {
     <div class="exch">${SLOT_KEYS.map((k) => `<div class="exrow"><span>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</span>
       <button data-ex="${k}:2" ${camp && sh >= SHARD_RARE ? "" : "disabled"} style="color:${RARITY[2].c}">保底紫裝<small>${SHARD_RARE}</small></button>
       <button data-ex="${k}:3" ${camp && sh >= SHARD_UNIQ ? "" : "disabled"} style="color:${RARITY[3].c}">保底傳說<small>${SHARD_UNIQ}</small></button></div>`).join("")}</div>
+    <div class="exrow"><span>超技能</span><button data-buysup="1" ${camp && sh >= SUPER_COST ? "" : "disabled"} style="color:#ffe066">隨機超技能寶石<small>${SUPER_COST}</small></button></div>
     <h3>精髓 <small>${es.reduce((a, k) => a + save.ess[k], 0)}</small></h3>
     <div class="esslist">${es.map((k) => `<span class="ess">${essName(k)} ×${save.ess[k]}<small>${AFFIX[k].t === "p" ? "前綴" : "後綴"}・${AFFIX[k].n}</small></span>`).join("") || `<p class="dim">還沒有精髓。精英怪、獵寶妖、世界王會掉</p>`}</div>
     <p class="dim">用法：點一件白裝或藍裝 → 按精髓注入，直接變紫裝並保底洗出那條詞條</p></div>`;
@@ -250,7 +270,7 @@ function renderEquip(msg = "") {
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
-      ${affHtml(selItem)}
+      ${affHtml(selItem)}${extraSlots(selItem)}
       <div class="stats">${cmpRows(selItem, cur)}</div>
       <div class="acts">
         ${worn ? `<button id="unequip">卸下</button>` : `<button id="equip" class="gold">穿上</button><button id="sell" class="red">出售 +${sellPrice(selItem)}</button>`}
@@ -263,7 +283,7 @@ function renderEquip(msg = "") {
   }
   ov.innerHTML = `<div class="col l"><div class="hero-wrap"><img class="hero-big" src="${heroURL()}" alt="">${stars}</div>
       <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
-      ${cardChips()}${apHtml()}${gemHtml()}</div>
+      ${wsetHtml()}${cardChips()}${apHtml()}${gemHtml()}</div>
     <div class="col c"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
       <div class="flow">${bag.length ? bag.map((it) => {
         const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]), aff = Object.keys(it.aff || {});
@@ -305,6 +325,16 @@ function bindEquip(selItem) {
       window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
     });
   });
+  ov.querySelectorAll("[data-wsw]").forEach((b) => b.addEventListener("click", () => { sfx("click"); switchW(+b.dataset.wsw); again(); }));
+  ov.querySelectorAll("[data-wsset]").forEach((b) => b.addEventListener("click", () => { sfx("good"); setWSlot(+b.dataset.wsset, selItem); eqSel = null; if (W0) { B = worldStats(); setPadLabels(true); } again(`放到武器 ${+b.dataset.wsset + 1}`); }));
+  ov.querySelectorAll("[data-sup]").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sup; selItem.sup = k; save.sups[k]--; if (!save.sups[k]) delete save.sups[k]; writeSave(); sfx("arrive"); again(`插上超技能：${SUPERS[k].n}`); }));
+  ov.querySelectorAll("[data-supoff]").forEach((b) => b.addEventListener("click", () => { addSup(selItem.sup); delete selItem.sup; writeSave(); again("拆下超技能寶石"); }));
+  ov.querySelectorAll("[data-link]").forEach((b) => b.addEventListener("click", () => { selItem.link = b.dataset.link; writeSave(); sfx("arrive"); if (W0) B = worldStats(); again(`傳授：${HEROES[selItem.link].n}`); }));
+  ov.querySelectorAll("[data-linkoff]").forEach((b) => b.addEventListener("click", () => { delete selItem.link; writeSave(); if (W0) B = worldStats(); again("拔下傳授寶石"); }));
+  ov.querySelectorAll("[data-buysup]").forEach((b) => b.addEventListener("click", () => {
+    if (!atCamp() || (save.shards || 0) < SUPER_COST) return;
+    save.shards -= SUPER_COST; const k = Object.keys(SUPERS)[Math.floor(Math.random() * 3)]; addSup(k); writeSave(); sfx("win"); again(`換到超技能寶石：${SUPERS[k].n}`);
+  }));
   // 一鍵配點
   const apAdd = (k, n) => { const w = save.w; n = Math.min(n, w.free); if (!n) return; w.free -= n; w.ap[k] += n; writeSave(); sfx("good"); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; setPadLabels(true); } again(); };
   ov.querySelectorAll("[data-ap]").forEach((b) => b.addEventListener("click", () => apAdd(b.dataset.ap, 1)));
@@ -380,7 +410,7 @@ function bindEquip(selItem) {
   ov.querySelectorAll(".gem").forEach((b) => b.addEventListener("click", () => {
     const w = save.eq.sword, g = b.dataset.g;
     if (!w) { again("先裝備一把武器"); return; }
-    w.so = w.so || []; const n = SOCKETS[w.q];
+    w.so = w.so || []; const n = sockN();
     let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
     if (i < 0) { again(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }
     w.so[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; writeSave(); sfx("good"); again(`鑲上 ${gemName(g)}`);

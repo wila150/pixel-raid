@@ -353,3 +353,28 @@ body.inworld #muteBtn { display: none; }
 #ann span { position: absolute; top: 4px; white-space: nowrap; font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif; font-size: 18px; font-weight: 700; letter-spacing: 0.12em; color: #f3e6c8; text-shadow: 0 0 8px rgba(255, 210, 140, 0.6), 0 2px 2px #000; left: 100%; }
 #ann.go span { animation: annSlide 9s linear forwards; } #ann b { color: #ffd84a; }
 @keyframes annSlide { from { left: 100%; transform: translateX(0); } to { left: 0; transform: translateX(-100%); } }
+
+/* ───────── v3.2 武器組、保命技、轉職、超技能 ───────── */
+#wbar { position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 7; display: flex; gap: 6px; }
+#wbar.hidden { display: none; }
+#wbar button { position: relative; width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--c, rgba(200,170,120,0.35)); background: rgba(14, 12, 18, 0.72); color: var(--txt); padding: 0; font-family: inherit; cursor: pointer; }
+#wbar button.on { box-shadow: 0 0 0 2px var(--c), 0 0 12px var(--c); background: rgba(40, 32, 20, 0.85); } #wbar button.empty { opacity: 0.45; }
+#wbar img { width: 26px; height: 26px; image-rendering: pixelated; margin-top: 4px; }
+#wbar small { position: absolute; right: 3px; bottom: 1px; font-size: 10px; color: #e8dcc0; }
+#wbar .save { width: auto; min-width: 64px; padding: 0 8px; border-color: rgba(255, 90, 100, 0.55); } #wbar .save b { font-size: 12px; color: #ffb0b8; } #wbar .save.cd { opacity: 0.55; }
+#wbar .save small { position: static; display: block; }
+body.inworld #wbar { pointer-events: auto; }
+.wset { margin: 8px 0; } .wset > small { display: block; font-size: 11px; color: var(--dim); margin-bottom: 4px; } .wset > div { display: flex; gap: 5px; }
+.wsc { flex: 1; min-width: 0; padding: 5px 4px; border-radius: 6px; border: 1px solid var(--c); background: rgba(20, 18, 24, 0.7); text-align: center; }
+.wsc.on { box-shadow: 0 0 0 2px var(--c); } .wsc img { width: 22px; height: 22px; image-rendering: pixelated; display: block; margin: 0 auto; }
+.wsc b { font-size: 11px; color: #ffe066; } .wsc small { display: block; font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.supslot { text-align: left; margin: 8px 0; padding: 6px 8px; border-radius: 6px; border: 1px dashed rgba(255, 224, 102, 0.35); } .supslot.on { border-style: solid; }
+.supslot b { color: #ffe066; font-size: 12px; } .supslot small { display: block; font-size: 11px; color: var(--dim); margin: 2px 0 4px; }
+.supslot button { display: block; width: 100%; text-align: left; margin-top: 4px; padding: 5px 8px; border-radius: 5px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.75); font-size: 12px; }
+.supslot button small { margin: 0; }
+.herobox { text-align: left; margin-top: 10px; } .hcore { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .hcore > div { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; } .hcore small { display: block; color: var(--dim); }
+.hpick, .chars { display: flex; gap: 6px; flex-wrap: wrap; } .jobs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 8px; }
+.job { padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 11px; opacity: 0.55; } .job small { display: block; font-size: 10px; color: var(--dim); }
+.job.done { opacity: 1; border-color: rgba(255, 224, 102, 0.5); } .job.done b { color: #ffe066; } .job.next { opacity: 1; }
+.cchar { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.75); color: var(--txt); text-align: left; font-family: inherit; }
+.cchar.on { border-color: #ffe066; } .cchar small { display: block; font-size: 11px; color: var(--dim); } .cchar.new { border-style: dashed; }

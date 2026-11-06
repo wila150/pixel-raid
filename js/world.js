@@ -200,7 +200,7 @@ function worldStats() {
   b.maxMp = 60 + w.lv * 2 + a.wis * 4;
   b.mpRegen = (4 + w.lv * 0.1) * (1 + a.wis * 0.04);
   b.potMax = 3 + Math.floor(w.lv / 8) + (save.tr.furnace || 0);
-  return b;
+  return jobStats(b);
 }
 // 三種武器各自的招式：名字、冷卻、耗真氣
 const WSKILLS = {
@@ -225,7 +225,7 @@ function applyWeapon() {
   WSKILL.ult.mp = 0; WSKILL.ult.cd = 1; // 天罰：不吃真氣，改成集滿天罰能量才能放
 }
 applyWeapon();
-const PAD_KEYS = { attack: "左鍵", spin: "Q", roll: "空白", ult: "E", potion: "1" };
+const PAD_KEYS = { attack: "左鍵", spin: "Q", roll: "空白", ult: "E", potion: "H" };
 const padOrig = {};
 pad.querySelectorAll(".btn").forEach((b) => { padOrig[b.dataset.act] = b.innerHTML; });
 function setPadLabels(world) {
@@ -334,12 +334,14 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
   if (m.mod === "鐵壁") dmg *= 0.55;
-  dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1)));
-  m.hp -= dmg; m.flash = 0.08;
+  dmg = elemHit(m, dmg); // 輔助寶石：冰凍、燃燒、融化、引爆、毒
+  const L = curLines(); // 段數：一下打好幾行，總傷害 ×(1+0.3×(段數−1))
+  dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1) * (L > 1 ? (1 + 0.3 * (L - 1)) / L : 1)));
+  m.hp -= dmg * L; m.flash = 0.08;
   if (m.st === "idle" || m.st === "home") { m.st = "chase"; packAggro(m); }
   if (kb && from && !m.elite && !m.boss) { m.kb = kb; m.ka = angTo(from, m); }
-  const lch = B.leech + 0.005 * gemLv("blood");
-  if (lch > 0) W0.regenAcc += dmg * lch;
+  const lch = B.leech + 0.005 * gemLv("blood") + (W0.invT > 0 ? 0.1 : 0);
+  if (lch > 0) W0.regenAcc += dmg * L * lch;
   const gf = gemLv("frost"); if (gf && Math.random() < 0.15 + gf * 0.1) m.slowT = Math.max(m.slowT || 0, 1.5);
   const gc = gemLv("chain");
   if (gc && !chainLock && Math.random() < 0.08 + gc * 0.05) {
@@ -347,8 +349,10 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
     if (o) { bolts.push({ x: o.x, y: o.y, life: 0.2 }); chainLock = true; hitMob(o, dmg * 0.6, 0, null, true); chainLock = false; }
   }
   W0.mp = Math.min(B.maxMp, W0.mp + (quiet ? 0 : 1));
-  floatText(m.x, m.y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? (dmg > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : "#ffffff", crit);
-  { const f = floaters[floaters.length - 1], a = (from ? angTo(from, m) : rand(-Math.PI, Math.PI)) + rand(-0.6, 0.6); f.vx = Math.cos(a) * (crit ? 55 : 30); f.vy = -(crit ? 75 : 55); f.num = true; }
+  for (let i = 0; i < Math.min(L, 10); i++) { // 段數：數字一行一行疊上去
+    floatText(m.x, m.y - 10 - i * 7, crit ? `${dmg}!` : `${dmg}`, crit ? (dmg * L > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : L > 1 ? "#ffe9c0" : "#ffffff", crit);
+    const f = floaters[floaters.length - 1], a = (from ? angTo(from, m) : rand(-Math.PI, Math.PI)) + rand(-0.6, 0.6); f.vx = Math.cos(a) * (crit ? 55 : 30) * (L > 1 ? 0.3 : 1); f.vy = -(crit ? 75 : 55) * (L > 1 ? 0.6 : 1); f.num = true; f.age = -i * 0.03;
+  }
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
   burst(m.x, m.y, crit ? "#ffd84a" : "#ffb070", crit ? 10 : 5, 60);
   fxHit(m.x + rand(-2, 2), m.y - 2 + rand(-2, 2), crit, WPN_FX[curWeapon()]);
@@ -378,7 +382,8 @@ function killMob(m) {
   save.xiuwei += Math.max(1, Math.round(exp / 6));
   const sh = m.boss ? 20 : m.hunter ? 5 : m.elite ? 3 : Math.random() < 0.05 ? 1 : 0; // 天罰碎屑
   if (sh) { save.shards = (save.shards || 0) + sh; if (sh > 1) floatText(m.x, m.y - 28, `天罰碎屑 +${sh}`, "#ffcf6b"); }
-  if (m.boss) { if (Math.random() < 0.15) wDrop({ kind: "card", c: "wboss" }, m); for (let i = 0; i < 3; i++) wDrop({ kind: "ess", k: randEss() }, m); wbKilled(m); return; }
+  if (heroHas("vampire")) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01);
+  if (m.boss) { if (Math.random() < 0.25) addSup(Object.keys(SUPERS)[Math.floor(Math.random() * 3)]); if (Math.random() < 0.15) wDrop({ kind: "card", c: "wboss" }, m); for (let i = 0; i < 3; i++) wDrop({ kind: "ess", k: randEss() }, m); wbKilled(m); return; }
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   const zl = ZONE_LOOT[m.camp.z] || 1;
@@ -422,6 +427,8 @@ let chillHit = false; // 冰靈的冰彈打中時設成 true
 function hurtW(dmg, from, kind) {
   const p = W0;
   if (p.shield > 0 || safeAt(p.x, p.y)) return; // 太極護罩、營地結界：完全不受傷
+  if (p.invT > 0) return; // 吸血鬼：血霧無敵
+  if (p.mistT > 0 && (kind || (from ? "phys" : "spell")) === "phys") { if (!p.mistMsg || time - p.mistMsg > 0.6) { p.mistMsg = time; popWord(p, "霧化", "#9aff9a"); } return; }
   if (p.iframe > 0 || !(state === "world" || ((state === "paused" || state === "pick") && pausedFrom === "world"))) return;
   kind = kind || (from ? "phys" : "spell");
   if (kind === "phys" && Math.random() < B.dodge) { p.iframe = 0.25; popWord(p, "DODGE", "#7dff6a"); return; } // 敏捷：閃避
@@ -455,6 +462,7 @@ function showWorldDead() {
   lost.forEach(ungem);
   save.bag = save.bag.filter((b) => !lost.includes(b));
   for (const k of SLOT_KEYS) if (lost.includes(save.eq[k])) delete save.eq[k];
+  if (w.ws) w.ws = w.ws.map((b) => (lost.includes(b) ? null : b));
   for (const it of lost) wDrop({ kind: "item", it, corpse: true }, W0);
   if (lost.length) W0.grave = { x: W0.x, y: W0.y, t: 600 };
   w.exp -= lose; w.x = 1200; w.y = 1530; writeSave();
@@ -474,6 +482,7 @@ function updateWorld(dt) {
   updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
   if (typeof netTick === "function") netTick(dt);
   if (!inMenu) tutTick();
+  heroTick(dt, inMenu);
   const p = W0, w = save.w;
   for (const k in p.cds) p.cds[k] = Math.max(0, p.cds[k] - dt);
   if (p.chillT > 0) { p.chillT -= dt; if (Math.random() < 0.3) particles.push({ x: p.x + rand(-5, 5), y: p.y - rand(0, 10), vx: 0, vy: 12, life: 0.4, max: 0.4, color: "#bfefff", size: 1.5 }); }
@@ -507,14 +516,14 @@ function updateWorld(dt) {
     if (p.roll <= 0) p.dashHit = null;
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "ele"); } }
 
   const near = (max) => { if (mouseAim()) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1); p.mp -= WSKILL[k].mp; if (k === "attack") W0.justAtk = true; tutEvent(k); return true; };
+  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1); p.mp -= WSKILL[k].mp; if (k === "attack") W0.justAtk = true; skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -524,7 +533,7 @@ function updateWorld(dt) {
     }
   };
   const gp = gemLv("pierce");
-  const shoot = (a, o) => { if (gp) { o.pierce = true; o.dmg *= 1 + gp * 0.05; } o.bn = B.uq.bounce ? 2 : 0; W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o)); };
+  const shoot = (a, o) => { if (gp) { o.pierce = true; o.dmg *= 1 + gp * 0.05; } o.bn = B.uq.bounce ? 2 : 0; W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o)); multiShots(a, o, shoot); };
   const autoAtk = w.autoAtk && !inMenu && p.cds.attack <= 0 && W0.mobs.some((m) => !m.dead && !m.noTarget && dist(m, p) < 70); // 設定：半自動割草
   if ((act("attack", "j", "z") || autoAtk || ((keys.has("j") || mouse.down) && p.cds.attack <= 0)) && useSkill("attack")) {
     if (B.uq.orbit && (W0.orbAtk = (W0.orbAtk || 0) + 1) % 3 === 0) { if (W0.orbs.length >= 6) W0.orbs.shift(); W0.orbs.push({ t: 8, hit: new Map() }); }
@@ -558,6 +567,7 @@ function updateWorld(dt) {
   }
   const doSpin = () => {
     const t = near(160); if (t) p.face = angTo(p, t);
+    if (superSpin(p, t)) return; // 超技能寶石：隕石、萬劍天降
     if (B.uq.voidQ) { // 傳說：劍陣變成引力黑洞
       const tx = t ? t.x : p.x + Math.cos(p.face) * 60, ty = t ? t.y : p.y + Math.sin(p.face) * 60;
       W0.voids.push({ x: tx, y: ty, t: 2.2, max: 2.2, tick: 0 }); sfx("volley"); netCast("v", p.face, tx, ty); return;
@@ -589,7 +599,8 @@ function updateWorld(dt) {
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
   if (p.enMsgT > 0) p.enMsgT = Math.max(0, p.enMsgT - dt) || 0;
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
-    if (WSKILL.ult.uq) { if (useSkill("ult")) uniqueUlt(WSKILL.ult.uq, near); }
+    if (jobLv() >= 6) { if (useSkill("ult")) { originStart(); p.en = 0; } } // 六轉：起源覺醒
+    else if (WSKILL.ult.uq) { if (useSkill("ult")) uniqueUlt(WSKILL.ult.uq, near); }
     else if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
       const t = near(150);
       if (t && useSkill("ult")) {
@@ -622,13 +633,13 @@ function updateWorld(dt) {
       sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6);
     }
   }
-  if (p.cds.ult > ultCd0) { p.en = 0; tianfa(); netCast("e", p.face, p.x, p.y); }
+  if (p.cds.ult > ultCd0 && jobLv() < 6) { p.en = 0; tianfa(); netCast("e", p.face, p.x, p.y); }
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y); }
   if (act("roll", " ", "l", "shift") && useSkill("roll")) { p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash"); }
   if (W0.kcT > 0) { W0.kcT -= dt; if (W0.kcT <= 0) W0.kc = 0; }
   if (W0.kcPop > 0) W0.kcPop -= dt;
   const autoPot = w.autoPot !== false && p.hp < p.maxHp * 0.3 && !inMenu; // 設定：低血量自動喝藥（預設開）
-  if ((act("potion", "h", "1") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
+  if ((act("potion", "h", "4") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
     w.potions--; const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); sfx("heal"); writeSave();
   }
@@ -705,10 +716,12 @@ function updateWorld(dt) {
   let aggro = false;
   const inTown = safeAt(p.x, p.y);
   for (const m of W0.mobs) {
-    if (m.boss && !m.dead) { aggro = true; updateWBoss(m, dt, p); continue; }
+    if (W0.originT > 0) continue; // 起源：時停
+    if (m.boss && !m.dead) { aggro = true; if (dotTick(m, dt)) continue; updateWBoss(m, dt, p); continue; }
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
     const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
+    if (dotTick(m, dt)) continue; // 燃燒、中毒；冰凍不能動
     if (m.slowT > 0) { m.slowT -= dt; spd *= 0.45; }
     if (m.kb > 0) { moveBody(m, Math.cos(m.ka) * m.kb * dt * 3, Math.sin(m.ka) * m.kb * dt * 3, d.r); m.kb = Math.max(0, m.kb - dt * 400); continue; }
     const homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
@@ -789,6 +802,7 @@ function updateWorld(dt) {
   W0.mobs = W0.mobs.filter((m) => !m.dead);
   // 敵人的子彈
   for (const s of W0.eshots) {
+    if (W0.originT > 0) continue;
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
     if (solid(s.x, s.y) || safeAt(s.x, s.y)) s.life = 0;
     if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg, null, s.ele ? "ele" : "spell"); chillHit = false; }
@@ -1389,6 +1403,7 @@ function uniqueUlt(u, near) {
 }
 // 一鍵換武器：換成背包裡下一種武器（同種挑最強的），戰鬥中也能換
 function quickSwap() {
+  if (save.w.ws && save.w.ws.some(Boolean)) { for (let i = 1; i <= 2; i++) { const j = (save.w.wi + i) % 3; if (save.w.ws[j]) { switchW(j); return; } } } // 有武器組就輪流切
   const order = WT_KEYS, cur = curWeapon();
   for (let i = 1; i < order.length; i++) {
     const t = order[(order.indexOf(cur) + i) % order.length];
@@ -1413,7 +1428,7 @@ function updateWorldButtons() {
   hudEl.querySelector('[data-h="bag"]').classList.toggle("dot", save.bag.some((b) => sameWt(b) && itemCP(b) > itemCP(save.eq[b.slot])));
   hudEl.querySelector('[data-h="ap"]').classList.toggle("dot", save.w.free > 0);
 }
-const riskyItems = () => save.bag.filter((b) => b.risk).concat(SLOT_KEYS.map((k) => save.eq[k]).filter((b) => b && b.risk));
+const riskyItems = () => save.bag.filter((b) => b.risk).concat(SLOT_KEYS.map((k) => save.eq[k]).filter((b) => b && b.risk), ((save.w && save.w.ws) || []).filter((b) => b && b.risk));
 function bankLoot(why) { // 撤離成功：未帶回的裝備變成永久的
   const r = riskyItems();
   if (!r.length) return;

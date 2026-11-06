@@ -120,10 +120,14 @@ const GEMS = {
   burst: { n: "爆裂", c: "#ff8a3d", d: (l) => `斬殺妖獸時炸開，傷害周圍（威力 ${l} 級）` },
   pierce: { n: "穿透", c: "#d8d2e0", d: (l) => `飛出去的招式全部穿透，傷害 +${l * 5}%` },
   blood: { n: "嗜血", c: "#c0304a", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%` },
+  lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `飛出去的招式多 ${l >= 3 ? 4 : 2} 道（每道 70%）` },
+  ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）` },
+  fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）` },
+  det: { n: "引爆", c: "#ffb347", d: (l) => `打中燃燒中的怪 ${12 + l * 5}% 機率炸開` },
 };
 const GEM_KEYS = Object.keys(GEMS);
 const GEM_MAX = 5;
-const SOCKETS = [1, 2, 2, 3]; // 依品質（凡、靈、玄、傳說）
+const SOCKETS = [3, 3, 3, 3]; // 舊的；現在孔數看轉職 sockN()（build.js）
 const gemName = (g) => { const [k, l] = g.split(":"); return `${GEMS[k].n}寶石 ${l} 級`; };
 const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":")) n += +g.split(":")[1]; return n; };
 const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
@@ -392,7 +396,7 @@ function renderEquip(msg = "") {
   screenEl.querySelectorAll(".gem").forEach((b) => b.addEventListener("click", () => { // 鑲上寶石
     const w = save.eq.sword, g = b.dataset.g;
     if (!w) { renderEquip("先裝備一把武器"); return; }
-    w.so = w.so || []; const n = SOCKETS[w.q];
+    w.so = w.so || []; const n = sockN();
     let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
     if (i < 0) { renderEquip(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }
     w.so[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; writeSave(); sfx("good"); renderEquip(`鑲上 ${gemName(g)}`);
@@ -438,7 +442,7 @@ function renderEquip(msg = "") {
 }
 function gemHtml() {
   const w = save.eq.sword, gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort();
-  const n = w ? SOCKETS[w.q] : 0, so = (w && w.so) || [];
+  const n = w ? sockN() : 0, so = (w && w.so) || [];
   const socks = w ? Array.from({ length: n }, (_, i) => { const g = so[i]; return g ? `<button class="gsock" data-i="${i}" style="border-color:${GEMS[g.split(":")[0]].c}"><b style="color:${GEMS[g.split(":")[0]].c}">◆ ${gemName(g)}</b><small>${GEMS[g.split(":")[0]].d(+g.split(":")[1])}</small></button>` : `<span class="gsock empty">空孔</span>`; }).join("") : `<span class="sub">沒有武器</span>`;
   return `<div class="gems"><div class="baghead">技能寶石（武器 ${n} 孔，效果作用在全部招式上；點孔裡的寶石拆下）</div>
     <div class="gsocks">${socks}</div>
