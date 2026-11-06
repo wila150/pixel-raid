@@ -65,3 +65,11 @@ function renderSkills(msg = "") {
   };
   document.getElementById("close").onclick = worldReturn;
 }
+// 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有技能點 → 技能
+setInterval(() => {
+  const w = save.w; if (!w || !w.created) return;
+  const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
+  const a = q("ap"), s = q("skill");
+  if (a) a.classList.toggle("dot", (w.free || 0) > 0 || (!!J && w.lv >= J.lv));
+  if (s) s.classList.toggle("dot", spFree() > 0);
+}, 1000);

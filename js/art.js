@@ -153,6 +153,7 @@ TREE_IMG.snow = sprite([
   ".....kkkkkk.......",
 ], { k: K, W: "#f4f8ff", L: "#2e5a4a", T: "#4a3a2a", t: "#2a2018" });
 TREE_IMG.town = TREE_IMG.grass;
+TREE_IMG.swamp = TREE_IMG.forest; TREE_IMG.thunder = TREE_IMG.forest; TREE_IMG.sky = TREE_IMG.snow;
 const ROCK_IMG = sprite([
   "................",
   ".....kkkkk......",
@@ -211,6 +212,9 @@ const DECO_SET = {
   waste: ["pebble", "pebble", "bone", "crack", "skull", "crack"],
   volcano: ["ember", "ash", "crack", "pebble", "ember"],
   snow: ["snowT", "snowT", "iceC", "twig", "pebble"],
+  swamp: ["mush", "mushB", "fern", "bone", "tuft2", "skull"],
+  thunder: ["pebble", "crack", "pebble", "crack", "skull"],
+  sky: ["flowerW", "flowerW", "stoneT", "tuft", "flowerY"],
   town: ["stoneT", "stoneT", "flowerY", "tuft"],
 };
 function drawDeco(x, y, z, v) { // v：0～1 的固定亂數

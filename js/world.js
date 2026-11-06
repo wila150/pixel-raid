@@ -2,7 +2,7 @@
 // 玩法：自己放技能打怪 → 升等配點 → 撿裝備變強 → 往北走打更強的怪 → 火山祭壇挑戰焚天石魔
 "use strict";
 
-const TS = 16, TW = 200, TH = 112; // 一格 16 單位，地圖 3200×1792（x 2400 以東是寒霜雪域）
+const TS = 16, TW = 300, TH = 112; // 一格 16 單位，地圖 4800×1792（x 2400 以東雪域；3200 以東南沼澤、北雷霆峽谷；4000 以東天外仙域）
 const TOWN = { x: 1200, y: 1520, r: 120 };
 const ZONES = {
   town: { n: "青雲城", lv: [0, 0], g: ["#4a4458", "#433e52"] },
@@ -11,11 +11,19 @@ const ZONES = {
   waste: { n: "亂石荒原", lv: [11, 17], g: ["#4a4034", "#443a2f"], mobs: ["golem", "bomber", "wolf"] },
   volcano: { n: "焚天火山", lv: [16, 24], g: ["#3a2424", "#342020"], mobs: ["crow", "lava", "bomber"] },
   snow: { n: "寒霜雪域", lv: [22, 30], g: ["#c4d0de", "#b8c6d6"], mobs: ["frostwolf", "frostwolf", "icewisp", "yeti"] },
+  swamp: { n: "幽冥沼澤", lv: [30, 50], g: ["#2a3328", "#263024"], mobs: ["toad", "toad", "bonewolf", "bogtree"] },
+  thunder: { n: "雷霆峽谷", lv: [48, 75], g: ["#363448", "#312f42"], mobs: ["thawk", "thawk", "tgolem", "twisp"] },
+  sky: { n: "天外仙域", lv: [72, 120], g: ["#5a5a80", "#55557a"], mobs: ["crane", "skyfox", "skyfox", "guardian", "jianling"] },
 };
 const EN_FULL = 100; // 天罰能量
 const SNOW_X = 2400, SNOW_PASS = { x: 2400, y: 640 }; // 雪域在東邊，只有一個山口能過去
+const EAST_X = 3200, SKY_X = 4000, MID_Y = 896; // 雪域再往東：沼澤（南）、雷霆峽谷（北），最東天外仙域
+const PASS2 = { x: 3200, y: 1300 }, PASS3 = { x: 3600, y: 896 }, PASS4 = { x: 4000, y: 420 };
+const PASSES = [SNOW_PASS, PASS2, PASS3, PASS4];
 function zoneAt(x, y) {
   if (Math.hypot(x - TOWN.x, y - TOWN.y) < TOWN.r + 10) return "town";
+  if (x >= SKY_X) return "sky";
+  if (x >= EAST_X) return y < MID_Y ? "thunder" : "swamp";
   if (x >= SNOW_X) return "snow";
   if (y < 480) return "volcano";
   if (y > 1120) return "grass";
@@ -28,6 +36,9 @@ const WAYPOINTS = [
   { id: "waste", n: "亂石荒原", x: 1820, y: 820 },
   { id: "volcano", n: "焚天火山", x: 1200, y: 380 },
   { id: "snow", n: "寒霜雪域", x: 2820, y: 640 },
+  { id: "swamp", n: "幽冥沼澤", x: 3560, y: 1450 },
+  { id: "thunder", n: "雷霆峽谷", x: 3480, y: 640 },
+  { id: "sky", n: "天外仙域", x: 4170, y: 470 },
 ];
 const ALTAR = { x: 1200, y: 150 };
 
@@ -100,6 +111,24 @@ const YETI = sprite([
   ".kk.kWWk.kk.",
   "....kk.kk...",
 ], { k: "#1b1424", W: "#f0f4ff", w: "#b8c8e0", B: "#3a6aa8" });
+// 換色：色相轉 dh 度、飽和度 ×sat、亮度 ×lum（每隻怪只算一次）
+const RC = {};
+function recolor(src, dh, sat, lum) {
+  const c = document.createElement("canvas"); c.width = src.width; c.height = src.height;
+  const g = c.getContext("2d"); g.drawImage(src, 0, 0);
+  const im = g.getImageData(0, 0, c.width, c.height), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    let r = d[i] / 255, gg = d[i + 1] / 255, b = d[i + 2] / 255;
+    const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b); let h = 0, s2 = 0, l = (mx + mn) / 2;
+    if (mx !== mn) { const dd = mx - mn; s2 = l > 0.5 ? dd / (2 - mx - mn) : dd / (mx + mn); h = mx === r ? (gg - b) / dd + (gg < b ? 6 : 0) : mx === gg ? (b - r) / dd + 2 : (r - gg) / dd + 4; h /= 6; }
+    h = (h + dh / 360) % 1; s2 = Math.min(1, s2 * sat); l = Math.min(0.95, l * lum);
+    const q = l < 0.5 ? l * (1 + s2) : l + s2 - l * s2, p = 2 * l - q;
+    const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; };
+    d[i] = f(h + 1 / 3) * 255; d[i + 1] = f(h) * 255; d[i + 2] = f(h - 1 / 3) * 255;
+  }
+  g.putImageData(im, 0, 0); return c;
+}
 const WMOBS = {
   imp: { n: "小妖", img: () => MOB, hp: 30, spd: 34, dmg: 6, r: 6, exp: 4, ai: "melee", sz: "S", race: "B" },
   wolf: { n: "狼妖", img: () => WOLF, hp: 42, spd: 64, dmg: 7, r: 6, exp: 6, ai: "melee", sz: "M", race: "B" },
@@ -111,13 +140,24 @@ const WMOBS = {
   frostwolf: { n: "霜狼", img: () => FROSTWOLF, hp: 64, spd: 78, dmg: 10, r: 6, exp: 18, ai: "melee", chill: true, sz: "M", race: "B", ele: "W" },
   icewisp: { n: "冰靈", img: () => ICEWISP, hp: 58, spd: 40, dmg: 10, r: 6, exp: 18, ai: "ranged", range: 125, shot: 105, chill: true, sz: "S", ele: "W" },
   yeti: { n: "雪巨猿", img: () => YETI, hp: 300, spd: 30, dmg: 26, r: 9, exp: 34, ai: "melee", armor: 0.25, heavy: true, chill: true, sz: "L", race: "B", ele: "W" },
+  // 東邊三區：用舊怪的骨架換顏色（recolor），數值和經驗比較高
+  toad: { n: "毒沼蟾", img: () => RC.toad || (RC.toad = recolor(MOB, 150, 1.1, 0.8)), hp: 46, spd: 40, dmg: 11, r: 6, exp: 30, ai: "melee", sz: "S", race: "B" },
+  bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", sz: "M", race: "B" },
+  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, sz: "M", race: "P" },
+  thawk: { n: "雷鷹", img: () => RC.thawk || (RC.thawk = recolor(CROW, 200, 1.2, 1.1)), hp: 70, spd: 84, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 130, shot: 140, sz: "S", race: "B" },
+  tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", armor: 0.35, heavy: true, sz: "L", race: "R" },
+  twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 140, shot: 130, sz: "S" },
+  crane: { n: "仙鶴妖", img: () => RC.crane || (RC.crane = recolor(CROW, 0, 0.1, 1.9)), hp: 80, spd: 90, dmg: 13, r: 6, exp: 44, ai: "ranged", range: 135, shot: 140, sz: "S", race: "B" },
+  skyfox: { n: "天狐", img: () => RC.skyfox || (RC.skyfox = recolor(WOLF, 30, 1.3, 1.6)), hp: 84, spd: 90, dmg: 14, r: 6, exp: 44, ai: "melee", sz: "M", race: "B" },
+  guardian: { n: "天兵石像", img: () => RC.guardian || (RC.guardian = recolor(GOLEM, 40, 1.4, 1.5)), hp: 380, spd: 28, dmg: 32, r: 9, exp: 80, ai: "melee", armor: 0.4, heavy: true, sz: "L", race: "R" },
+  jianling: { n: "劍靈", img: () => RC.jianling || (RC.jianling = recolor(ICEWISP, 0, 0.2, 1.8)), hp: 74, spd: 52, dmg: 14, r: 6, exp: 44, ai: "ranged", range: 150, shot: 150, sz: "S" },
   hunter: { n: "獵寶妖", img: () => WOLF, hp: 70, spd: 70, dmg: 12, r: 7, exp: 30, ai: "melee", sz: "M", race: "B" }, // 身上寶物多時會來追殺
 };
 const SZ_N = { S: "小", M: "中", L: "大" };
 // 體型 × 武器修正（RO）：輕型飛劍割小怪 100%、砍大型王只剩 50%；玄鐵重劍專剋大型
 const SIZE_MOD = { sword: { S: 1, M: 0.75, L: 0.5 }, blade: { S: 0.75, M: 1, L: 1.25 }, bow: { S: 1, M: 1, L: 0.75 }, fist: { S: 1, M: 1, L: 0.75 }, staff: { S: 1, M: 1, L: 1 }, fan: { S: 1, M: 1, L: 1 } };
 const SPELL_WT = { staff: 1, fan: 1 };
-const ZONE_LOOT = { town: 1, grass: 1, forest: 1.3, waste: 1.6, volcano: 2, snow: 2.4 }; // 越深的地方掉越多
+const ZONE_LOOT = { town: 1, grass: 1, forest: 1.3, waste: 1.6, volcano: 2, snow: 2.4, swamp: 2.8, thunder: 3.2, sky: 3.8 }; // 越深的地方掉越多
 
 // ───────── 地圖生成（固定種子，每次都一樣）─────────
 let wmap = null; // Uint8Array：0 空地、1 樹、2 石、3 熔岩、4 水、5 城牆、6 房子
@@ -139,6 +179,9 @@ function buildWorld() {
     else if (z === "waste") t = v > 0.95 || (n > 0.78 && v < 0.35) ? 2 : 0;
     else if (z === "volcano") t = n > 0.68 && v < 0.5 ? 3 : v > 0.96 ? 2 : 0;
     else if (z === "snow") t = n > 0.64 && v < 0.5 ? 1 : n < 0.12 ? 4 : v > 0.975 ? 2 : 0;
+    else if (z === "swamp") t = n > 0.6 && v < 0.5 ? 1 : n < 0.24 ? 4 : v > 0.985 ? 2 : 0;
+    else if (z === "thunder") t = v > 0.94 || (n > 0.74 && v < 0.45) ? 2 : 0;
+    else if (z === "sky") t = n > 0.72 && v < 0.35 ? 1 : n < 0.1 ? 4 : v > 0.99 ? 2 : 0;
     wmap[ty * TW + tx] = t;
   }
   // 城牆（四個城門）＋房子
@@ -154,8 +197,13 @@ function buildWorld() {
   // 雪山山脊（只留一個山口）
   for (let ty = 1; ty < TH - 1; ty++) for (const tx of [149, 150]) { const y = ty * TS; if (Math.abs(y - SNOW_PASS.y) > 70) wmap[ty * TW + tx] = 2; }
   roads.push([WAYPOINTS[3], SNOW_PASS], [SNOW_PASS, WAYPOINTS[5]]);
+  // 東邊三區的山脊：雪域｜沼澤、沼澤／峽谷、峽谷｜仙域，各留一個山口
+  for (let ty = 1; ty < TH - 1; ty++) for (const tx of [199, 200]) { const y = ty * TS; if (Math.abs(y - PASS2.y) > 70) wmap[ty * TW + tx] = 2; }
+  for (let tx = 201; tx < 249; tx++) for (const ty of [55, 56]) { const x = tx * TS; if (Math.abs(x - PASS3.x) > 70) wmap[ty * TW + tx] = 2; }
+  for (let ty = 1; ty < TH - 1; ty++) for (const tx of [249, 250]) { const y = ty * TS; if (Math.abs(y - PASS4.y) > 70) wmap[ty * TW + tx] = 2; }
+  roads.push([WAYPOINTS[5], PASS2], [PASS2, WAYPOINTS[6]], [WAYPOINTS[6], PASS3], [PASS3, WAYPOINTS[7]], [WAYPOINTS[7], PASS4], [PASS4, WAYPOINTS[8]]);
   for (const [a, b] of roads) carve(a, b, 2);
-  for (const p of [...WAYPOINTS, ALTAR, SNOW_PASS]) clearAround(p.x, p.y, 3);
+  for (const p of [...WAYPOINTS, ALTAR, ...PASSES]) clearAround(p.x, p.y, 3);
 }
 function setT(x, y, t) { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); if (tx >= 0 && ty >= 0 && tx < TW && ty < TH) wmap[ty * TW + tx] = t; }
 function clearAround(x, y, r) { for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const t = tileAt(x + i * TS, y + j * TS); if (t !== 5 && t !== 6) setT(x + i * TS, y + j * TS, 0); } }
@@ -287,16 +335,16 @@ function worldReturn() { // 從裝備、秘境等畫面回到大世界
 // 怪物營地：分散在各地區，死了會重生
 function makeCamps() {
   const r = mulberry32(20261106);
-  const want = { grass: 16, forest: 16, waste: 14, volcano: 12, snow: 14 };
+  const want = { grass: 16, forest: 16, waste: 14, volcano: 12, snow: 14, swamp: 14, thunder: 14, sky: 20 };
   for (const z in want) {
     let n = 0, tries = 0;
     while (n < want[z] && tries++ < 4000) {
       const x = 40 + r() * (TW * TS - 80), y = 40 + r() * (TH * TS - 80);
-      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || Math.hypot(x - SNOW_PASS.x, y - SNOW_PASS.y) < 150 || WAYPOINTS.some((wp) => Math.hypot(x - wp.x, y - wp.y) < CAMP_R + 90)) continue;
+      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || PASSES.some((q) => Math.hypot(x - q.x, y - q.y) < 150) || WAYPOINTS.some((wp) => Math.hypot(x - wp.x, y - wp.y) < CAMP_R + 90)) continue;
       if (W0.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 120)) continue;
       const lo = ZONES[z].lv[0], hi = ZONES[z].lv[1];
       const far = clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 1300, 0, 1);
-      const zf = z === "grass" ? clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 700, 0, 1) : z === "volcano" ? clamp((480 - y) / 400, 0, 1) : z === "snow" ? clamp((x - SNOW_X - 100) / 600, 0, 1) : far;
+      const zf = z === "grass" ? clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 700, 0, 1) : z === "volcano" ? clamp((480 - y) / 400, 0, 1) : z === "snow" ? clamp((x - SNOW_X - 100) / 600, 0, 1) : z === "swamp" ? clamp((Math.hypot(x - PASS2.x, y - PASS2.y) - 150) / 700, 0, 1) : z === "thunder" ? clamp((Math.hypot(x - PASS3.x, y - PASS3.y) - 150) / 650, 0, 1) : z === "sky" ? clamp((Math.hypot(x - PASS4.x, y - PASS4.y) - 150) / 1100, 0, 1) : far;
       const camp = { x, y, z, lv: Math.round(lo + (hi - lo) * zf), size: 4 + Math.floor(r() * 4), respawn: [] };
       W0.camps.push(camp);
       for (let i = 0; i < camp.size; i++) spawnWMob(camp);
@@ -388,7 +436,7 @@ function killMob(m) {
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   const zl = ZONE_LOOT[m.camp.z] || 1;
   const dm = 1 + (B.drop || 0);
-  if (Math.random() < (m.hunter ? 0.2 : m.elite ? 0.03 : 0.003) * dm) wDrop({ kind: "card", c: m.type }, m); // 魔物卡片
+  if (Math.random() < (m.hunter ? 0.2 : m.elite ? 0.03 : 0.003) * dm) { if (CARDS[m.type]) wDrop({ kind: "card", c: m.type }, m); } // 魔物卡片
   if (Math.random() < (m.hunter ? 1 : m.elite ? 0.2 : 0.006 * zl) * dm) wDrop({ kind: "ess", k: randEss() }, m); // 精髓
   if (m.hunter) { for (let i = 0; i < 2; i++) wDropItem(rollItem(1, il + 1), m); wDrop({ kind: "stone", v: 10 + m.lv }, m); floatText(m.x, m.y - 20, "獵寶妖被斬了！", "#ffe066", true); }
   else if (Math.random() < (m.elite ? 0.4 : 0.028) * zl * dm) wDropItem(rollItem(m.elite ? 1 : 0, il), m); // 越深掉越多件，但只有精英掉好東西
@@ -409,7 +457,8 @@ function gainExp(n) {
   while (w.exp >= expNext(w.lv)) {
     w.exp -= expNext(w.lv); w.lv++; w.free += 4;
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; W0.mp = B.maxMp;
-    floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4）`, "#ffe066", true);
+    floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4、技能點 +1）`, "#ffe066", true);
+    if (typeof JOBS !== "undefined") { const J = JOBS[jobLv()]; if (J && w.lv === J.lv) floatText(W0.x, W0.y - 50, `可以${J.n}了！打開角色（C）轉職`, "#ffcf6b", true); }
     sfx("arrive"); burst(W0.x, W0.y, "#ffe066", 40, 120, 0.8); flashT = 0.2; flashColor = "255,240,180";
   }
   writeSave();
@@ -963,6 +1012,8 @@ function renderWorld() {
     if (t === 0) drawDeco(x, y, z, v);
     if (t === 3) { ctx.fillStyle = `rgba(255,${100 + Math.sin(time * 3 + tx) * 40},30,0.85)`; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,230,120,0.5)"; ctx.fillRect(x + v * 10, y + 4, 3, 2); }
     else if (t === 4 && z === "snow") { ctx.fillStyle = "#8fc4e8"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.fillRect(x + 2 + v * 8, y + 3, 4, 1); ctx.fillRect(x + 4, y + 10 - v * 4, 2, 1); }
+    else if (t === 4 && z === "swamp") { ctx.fillStyle = "#2c3f26"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(140,200,90,0.25)"; ctx.fillRect(x + ((time * 3 + v * 16) % 14), y + 8, 2, 2); }
+    else if (t === 4 && z === "sky") { ctx.fillStyle = "#dfe6fa"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(x + ((time * 4 + v * 16) % 12), y + 5, 5, 2); }
     else if (t === 4) { ctx.fillStyle = "#2a4a7a"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(160,200,255,0.3)"; ctx.fillRect(x + ((time * 6 + v * 16) % 14), y + 6, 3, 1); }
     else if (t === 5) drawWallTile(x, y);
     else if (t === 6) drawHouseTile(x, y, tx, ty);
@@ -1173,8 +1224,9 @@ function drawBigMap() { // 半透明大地圖蓋在畫面中間，邊打邊看
 function drawWorldHud() {
   const p = W0, w = save.w;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (W0.zone === "snow") { // 下雪
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
+  if (W0.zone === "thunder" && Math.sin(time * 0.7) > 0.995) { ctx.fillStyle = "rgba(220,220,255,0.18)"; ctx.fillRect(0, 0, W, H); } // 峽谷偶爾打雷閃光
+  if (W0.zone === "snow" || W0.zone === "sky") { // 下雪（仙域是飄落的光點）
+    ctx.fillStyle = W0.zone === "sky" ? "rgba(255,236,170,0.7)" : "rgba(255,255,255,0.8)";
     for (let i = 0; i < 70; i++) {
       const sp = 0.5 + hash(i * 3.7), x = ((hash(i) * W + Math.sin(time * 0.8 + i) * 12 - cam.x * 0.6) % W + W) % W, y = ((hash(i * 9.1) * H + time * 38 * sp - cam.y * 0.6) % H + H) % H;
       ctx.fillRect(x, y, sp > 1.1 ? 3 : 2, sp > 1.1 ? 3 : 2);
@@ -1321,6 +1373,20 @@ const QUESTS = [
   { t: "寒霜雪域斬妖 25 隻（小心凍傷）", k: "kill", z: "snow", n: 25 },
   { t: "升到 Lv.26", k: "lv", n: 26, item: 2 },
   { t: "寒霜雪域斬殺精英 3 隻", k: "elite", z: "snow", n: 3, item: 2 },
+  { t: "雪域往東過山口，找到幽冥沼澤傳送陣", k: "wp", id: "swamp", n: 1, item: 2 },
+  { t: "幽冥沼澤斬妖 30 隻", k: "kill", z: "swamp", n: 30 },
+  { t: "升到 Lv.40", k: "lv", n: 40, item: 2 },
+  { t: "幽冥沼澤斬殺精英 4 隻", k: "elite", z: "swamp", n: 4, item: 2 },
+  { t: "沼澤往北過山口，找到雷霆峽谷傳送陣", k: "wp", id: "thunder", n: 1, item: 2 },
+  { t: "雷霆峽谷斬妖 35 隻", k: "kill", z: "thunder", n: 35 },
+  { t: "升到 Lv.60", k: "lv", n: 60, item: 2 },
+  { t: "雷霆峽谷斬殺精英 5 隻", k: "elite", z: "thunder", n: 5, item: 2 },
+  { t: "升到 Lv.70（可以三轉・元嬰）", k: "lv", n: 70, item: 2 },
+  { t: "峽谷往東過山口，找到天外仙域傳送陣", k: "wp", id: "sky", n: 1, item: 2 },
+  { t: "天外仙域斬妖 40 隻", k: "kill", z: "sky", n: 40 },
+  { t: "升到 Lv.90", k: "lv", n: 90, item: 2 },
+  { t: "天外仙域斬殺精英 8 隻", k: "elite", z: "sky", n: 8, item: 2 },
+  { t: "升到 Lv.120（四轉・起源覺醒）", k: "lv", n: 120, item: 2 },
 ];
 function curQuest() {
   const w = save.w;
@@ -1328,7 +1394,7 @@ function curQuest() {
   w.q = w.q || 0; w.qp = w.qp || 0;
   if (w.q < QUESTS.length) return { ...QUESTS[w.q], main: true };
   // 懸賞：在適合自己等級的地區斬妖
-  const z = ["snow", "volcano", "waste", "forest", "grass"].find((k) => w.lv >= ZONES[k].lv[0]) || "grass";
+  const z = ["sky", "thunder", "swamp", "snow", "volcano", "waste", "forest", "grass"].find((k) => w.lv >= ZONES[k].lv[0]) || "grass";
   if (!w.bounty) w.bounty = { z, n: 25 };
   return { t: `${ZONES[w.bounty.z].n}斬妖 ${w.bounty.n} 隻`, k: "kill", z: w.bounty.z, n: w.bounty.n, main: false };
 }

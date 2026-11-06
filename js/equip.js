@@ -147,6 +147,16 @@ const CARDS = {
   icewisp: { n: "冰靈卡", slot: "robe", st: { res: 15 } },
   yeti: { n: "雪巨猿卡", slot: "sword", st: { eleW: 25 } },
   hunter: { n: "獵寶妖卡", slot: "robe", st: { drop: 25 } },
+  toad: { n: "毒沼蟾卡", slot: "robe", st: { leech: 2 } },
+  bonewolf: { n: "屍骨狼卡", slot: "sword", st: { aspd: 10 } },
+  bogtree: { n: "腐沼樹妖卡", slot: "robe", st: { hp: 300 } },
+  thawk: { n: "雷鷹卡", slot: "sword", st: { crit: 6 } },
+  tgolem: { n: "雷甲巨像卡", slot: "robe", st: { def: 150 } },
+  twisp: { n: "雷靈卡", slot: "robe", st: { supp: 12 } },
+  crane: { n: "仙鶴妖卡", slot: "robe", st: { dodge: 10 } },
+  skyfox: { n: "天狐卡", slot: "sword", st: { critD: 40 } },
+  guardian: { n: "天兵石像卡", slot: "robe", st: { es: 200 } },
+  jianling: { n: "劍靈卡", slot: "sword", st: { atkP: 15 } },
   wboss: { n: "焚天石魔卡", slot: "sword", st: { critL: 10, sizeL: 15 } },
 };
 const CARD_SLOTS = ["sword", "robe"];

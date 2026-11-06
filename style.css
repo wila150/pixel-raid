@@ -474,3 +474,5 @@ body.inworld #quick { display: flex; }
 .skup:disabled { opacity: 0.3; cursor: default; }
 .skwin .apfoot .sbtn { flex: none; }
 .skwin .sub, .charwin .sub { letter-spacing: normal; text-align: left; }
+.qbtn { position: relative; }
+.qbtn.dot::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: #ff4a3a; border: 1.5px solid #fff; }

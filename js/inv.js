@@ -458,6 +458,11 @@ let fogArr = null, fogT = 0;
 function fogLoad() {
   const w = save.w; fogArr = new Uint8Array(FOG_W * FOG_H);
   if (w.fog && w.fog.length === fogArr.length) { for (let i = 0; i < fogArr.length; i++) fogArr[i] = w.fog.charCodeAt(i) === 49 ? 1 : 0; return; }
+  if (w.fog && w.fog.length % FOG_H === 0 && w.fog.length / FOG_H < FOG_W) { // 地圖往東加寬：舊的迷霧一列一列搬過來
+    const ow = w.fog.length / FOG_H;
+    for (let y = 0; y < FOG_H; y++) for (let x = 0; x < ow; x++) fogArr[y * FOG_W + x] = w.fog.charCodeAt(y * ow + x) === 49 ? 1 : 0;
+    fogSave(); return;
+  }
   fogReveal(TOWN.x, TOWN.y, 4); // 舊存檔：城鎮和已點亮的營地附近先打開
   for (const wp of WAYPOINTS) if (w.wp.includes(wp.id)) fogReveal(wp.x, wp.y, 3);
   fogSave();
@@ -496,7 +501,7 @@ function buildTerrain() { // 地形縮圖（一格一點），只做一次
   }
   g.putImageData(img, 0, 0); return c;
 }
-const ZONE_BOSS = { town: "無（安全區）", grass: "精英小妖、狼妖首領", forest: "精英樹妖", waste: "精英石甲妖、獵寶妖", volcano: "焚天石魔 Lv.22（祭壇）", snow: "精英雪巨猿" };
+const ZONE_BOSS = { town: "無（安全區）", grass: "精英小妖、狼妖首領", forest: "精英樹妖", waste: "精英石甲妖、獵寶妖", volcano: "焚天石魔 Lv.22（祭壇）", snow: "精英雪巨猿", swamp: "精英屍骨狼、腐沼樹妖", thunder: "精英雷甲巨像", sky: "精英天兵石像、劍靈" };
 function openTeleport() { openStarMap(); }
 function openStarMap() {
   if (ovKind !== "map" && !ovOpen("map")) return;
