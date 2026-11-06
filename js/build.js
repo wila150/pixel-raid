@@ -15,19 +15,19 @@ const heroHas = (k) => heroKey() === k || !!(save.eq.charm && save.eq.charm.link
 // ───────── 轉職（不換職業，是擴充插槽與被動）─────────
 const JOBS = [
   { lv: 10, n: "一轉・築基", d: "武器輔助插槽 3→4、移動 +5%" },
-  { lv: 20, n: "二轉・金丹", d: "輔助插槽 5、攻速 +8%" },
-  { lv: 30, n: "三轉・元嬰", d: "解鎖武器的「超技能插槽」；英雄核心變成傳授寶石，可以插給其他角色" },
-  { lv: 40, n: "四轉・化神", d: "輔助插槽 6、所有招式段數 +1" },
-  { lv: 50, n: "五轉・合體", d: "段數再 +1、傷害 +15%" },
-  { lv: 60, n: "六轉・渡劫", d: "起源覺醒：天罰能量集滿按 E，放出全螢幕時停的起源大招" },
+  { lv: 30, n: "二轉・金丹", d: "輔助插槽 5、攻速 +8%、解鎖武器的「超技能插槽」；英雄核心變成傳授寶石，可以插給其他角色" },
+  { lv: 70, n: "三轉・元嬰", d: "輔助插槽 6、所有招式段數 +1" },
+  { lv: 120, n: "四轉・化神", d: "段數再 +1、傷害 +15%、起源覺醒：天罰能量集滿按 E，放出全螢幕時停的起源大招" },
 ];
-const jobLv = () => (save.w && save.w.job) || 0;
-const sockN = () => { const j = jobLv(); return j >= 4 ? 6 : j >= 2 ? 5 : j >= 1 ? 4 : 3; };
+// 舊存檔是 6 轉制，換成 4 轉制（一次性）
+const migJob = (w) => { if (w && w.job && !w.jv) { w.job = [0, 1, 2, 2, 3, 4, 4][w.job] || 4; } if (w) w.jv = 2; return w; };
+const jobLv = () => (save.w && migJob(save.w).job) || 0;
+const sockN = () => { const j = jobLv(); return j >= 3 ? 6 : j >= 2 ? 5 : j >= 1 ? 4 : 3; };
 function jobStats(b) {
   const j = jobLv();
   if (j >= 1) b.spdMul *= 1.05;
   if (j >= 2) b.aspd *= 1.08;
-  if (j >= 5) b.atk *= 1.15;
+  if (j >= 4) b.atk *= 1.15;
   if (heroHas("vampire")) b.leech += 0.03;
   return b;
 }
@@ -35,7 +35,7 @@ function doJob() {
   const w = save.w, j = jobLv(), J = JOBS[j];
   if (!J || w.lv < J.lv) return false;
   w.job = j + 1;
-  if (w.job >= 3) { save.links = save.links || {}; save.links[heroKey()] = 1; }
+  if (w.job >= 2) { save.links = save.links || {}; save.links[heroKey()] = 1; }
   writeSave();
   if (W0) {
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; applyWeapon(); setPadLabels(true);
@@ -43,7 +43,7 @@ function doJob() {
     burst(W0.x, W0.y, "#ffe066", 60, 160, 1); W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.8, r: 140, c: "255,230,150" });
     floatText(W0.x, W0.y - 40, `${J.n}！`, "#ffe066", true);
   }
-  if (w.job >= 3 && typeof netAnnounce === "function") netAnnounce(`完成${J.n}！`);
+  if (w.job >= 2 && typeof netAnnounce === "function") netAnnounce(`完成${J.n}！`);
   return true;
 }
 
@@ -52,7 +52,7 @@ function curLines() {
   if (!W0) return 1;
   if (W0.originT > 0) return 8;
   const j = jobLv();
-  let L = 1 + (j >= 4 ? 1 : 0) + (j >= 5 ? 1 : 0);
+  let L = 1 + (j >= 3 ? 1 : 0) + (j >= 4 ? 1 : 0);
   if (W0.lbT > 0) L *= 2;
   return L;
 }
@@ -98,14 +98,14 @@ function multiShots(a, o, push) {
   for (let i = 1; i <= n; i++) for (const s of [-1, 1]) push(a + s * i * 0.22, Object.assign({}, o, { dmg: o.dmg * 0.7, noMulti: true }));
 }
 
-// ───────── 超技能寶石（三轉解鎖，一把武器一顆，改變技能機制）─────────
+// ───────── 超技能寶石（二轉解鎖，一把武器一顆，改變技能機制）─────────
 const SUPERS = {
   meteor: { n: "天降隕石", c: "#ff7a3a", d: "Q 招變成天降隕石：0.8 秒後在目標砸下巨大隕石" },
   swordrain: { n: "萬劍天降", c: "#bfe6ff", d: "Q 招變成萬劍天降：身邊落下 16 把飛劍" },
   thunder: { n: "雷霆萬鈞", c: "#e0d0ff", d: "所有招式打中時 15% 再劈一道落雷" },
 };
 const SUPER_COST = 120; // 天罰碎屑
-const supOn = (k) => jobLv() >= 3 && save.eq.sword && save.eq.sword.sup === k;
+const supOn = (k) => jobLv() >= 2 && save.eq.sword && save.eq.sword.sup === k;
 const addSup = (k, n = 1) => { save.sups = save.sups || {}; save.sups[k] = (save.sups[k] || 0) + n; };
 function superSpin(p, t) { // doSpin 開頭呼叫；回傳 true＝已經放了
   const tx = t ? t.x : p.x + Math.cos(p.face) * 60, ty = t ? t.y : p.y + Math.sin(p.face) * 60;
@@ -152,7 +152,7 @@ function heroSave() {
   floatText(p.x, p.y - 30, h.save + "！", "#ffe066", true); sfx("arrive");
 }
 
-// ───────── 起源覺醒（六轉）：全螢幕時停＋段數炸裂 ─────────
+// ───────── 起源覺醒（四轉）：全螢幕時停＋段數炸裂 ─────────
 const ORIGIN_N = { sword: "起源．萬劍歸墟", staff: "起源．終焉隕石滅絕", bow: "起源．射日九天", blade: "起源．斷岳開天", fist: "起源．百裂金剛", fan: "起源．乾坤歸一" };
 function originStart() {
   W0.originT = 2.2; W0.originN = ORIGIN_N[curWeapon()]; W0.originTick = 0;
@@ -261,9 +261,9 @@ renderAP = function (msg) {
     ${!w.heroSet ? `<div class="baghead">還沒選過英雄：可以免費選一次</div><div class="hpick">${HERO_KEYS.map((k) => `<button class="tab${k === heroKey() ? " on" : ""}" data-hero="${k}">${HEROES[k].n}</button>`).join("")}</div>` : ""}
     <div class="baghead">轉職 <small>目前 ${j ? JOBS[j - 1].n : "未轉職"}</small></div>
     <div class="jobs">${JOBS.map((x, i) => `<span class="job${i < j ? " done" : i === j ? " next" : ""}"><b>${x.n}</b><small>Lv.${x.lv}・${x.d}</small></span>`).join("")}</div>
-    ${J ? `<button id="doJob" class="big${w.lv >= J.lv ? "" : " alt"}" ${w.lv >= J.lv ? "" : "disabled"}>${w.lv >= J.lv ? `進行 ${J.n}` : `Lv.${J.lv} 可以 ${J.n}`}</button>` : `<p class="sub">已經完成六轉</p>`}
-    <div class="baghead">角色（行囊共用；練到三轉，英雄核心會變成傳授寶石）</div>
-    <div class="chars">${cs.map((c, i) => { const cw = i === save.ci ? w : c && c.w; if (!cw) return ""; return `<button class="cchar${i === save.ci ? " on" : ""}" data-char="${i}"><b>${cw.nick || "修士"}</b><small>${HEROES[cw.hero] ? HEROES[cw.hero].n : "時空浪人"}・Lv.${cw.lv}${cw.job ? "・" + JOBS[cw.job - 1].n.split("・")[0] : ""}</small></button>`; }).join("")}
+    ${J ? `<button id="doJob" class="big${w.lv >= J.lv ? "" : " alt"}" ${w.lv >= J.lv ? "" : "disabled"}>${w.lv >= J.lv ? `進行 ${J.n}` : `Lv.${J.lv} 可以 ${J.n}`}</button>` : `<p class="sub">已經完成四轉</p>`}
+    <div class="baghead">角色（行囊共用；練到二轉，英雄核心會變成傳授寶石）</div>
+    <div class="chars">${cs.map((c, i) => { const cw = i === save.ci ? w : c && c.w; if (!cw) return ""; return `<button class="cchar${i === save.ci ? " on" : ""}" data-char="${i}"><b>${cw.nick || "修士"}</b><small>${HEROES[cw.hero] ? HEROES[cw.hero].n : "時空浪人"}・Lv.${cw.lv}${migJob(cw).job ? "・" + JOBS[cw.job - 1].n.split("・")[0] : ""}</small></button>`; }).join("")}
       ${cs.length < 3 ? `<button class="cchar new" id="newChar"><b>＋ 新角色</b><small>從 Lv.1 開始</small></button>` : ""}</div>`;
   panel.insertBefore(box, btns);
   box.querySelectorAll("[data-hero]").forEach((b) => b.addEventListener("click", () => { w.hero = b.dataset.hero; w.heroSet = 1; writeSave(); B = worldStats(); sfx("arrive"); renderAP(`英雄核心：${HEROES[w.hero].n}`); }));

@@ -599,7 +599,7 @@ function updateWorld(dt) {
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
   if (p.enMsgT > 0) p.enMsgT = Math.max(0, p.enMsgT - dt) || 0;
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
-    if (jobLv() >= 6) { if (useSkill("ult")) { originStart(); p.en = 0; } } // 六轉：起源覺醒
+    if (jobLv() >= 4) { if (useSkill("ult")) { originStart(); p.en = 0; } } // 四轉：起源覺醒
     else if (WSKILL.ult.uq) { if (useSkill("ult")) uniqueUlt(WSKILL.ult.uq, near); }
     else if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
       const t = near(150);
@@ -633,7 +633,7 @@ function updateWorld(dt) {
       sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6);
     }
   }
-  if (p.cds.ult > ultCd0 && jobLv() < 6) { p.en = 0; tianfa(); netCast("e", p.face, p.x, p.y); }
+  if (p.cds.ult > ultCd0 && jobLv() < 4) { p.en = 0; tianfa(); netCast("e", p.face, p.x, p.y); }
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y); }
   if (act("roll", " ", "l", "shift") && useSkill("roll")) { p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash"); }
   if (W0.kcT > 0) { W0.kcT -= dt; if (W0.kcT <= 0) W0.kc = 0; }
