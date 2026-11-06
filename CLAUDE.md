@@ -97,7 +97,7 @@
   - 分流 `save.w.ch` 1–3（presence 送 `ch`、`z` 地區），`othersList()` 只回傳同分流。**只是畫面分開，資料還是全部下載**；真正的 AOI／自動分流要遊戲伺服器。
   - 社交面板 G（選單「好友聊天」）：左好友卡片（綠點在線、N服·地圖、飛劍按鈕 `flyToFriend` → 飛到好友最近的傳送點，自動切同分流，野外要原地 3 秒）、中聊天（RTDB `chat`，Enter 直接打字、頭上泡泡、左邊聊天流）、右線上玩家（加好友，好友存 `save.w.fr`）。
   - 全服流光廣播：精煉到 +10 以上成功 `netAnnounce` → RTDB `ann`，大家畫面上方水墨字滑過（`#ann`）。
-  - **RTDB 規則在 `database.rules.json`（加了 chat、ann）**；用 REST PUT 到 `.settings/rules.json` 發佈。
+  - **RTDB 規則在 `database.rules.json`（加了 chat、ann）**；用 REST PUT 到 `.settings/rules.json` 發佈。**11/07 已發佈並測過**（臨時帳號：自己能發 chat/ann、不能改別人的、未登入讀不到；測完已刪帳號和訊息）。
 - 打字時（INPUT）core/ui/inv/world 的鍵盤處理都會跳過。
 - 還沒做：公會仙盟／拳館預約、交易所＋POS 收據、真的遊戲伺服器（AOI、自動分流）。
 
