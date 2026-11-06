@@ -2,7 +2,7 @@
 // 玩法：自己放技能打怪 → 升等配點 → 撿裝備變強 → 往北走打更強的怪 → 火山祭壇挑戰焚天石魔
 "use strict";
 
-const TS = 16, TW = 150, TH = 112; // 一格 16 單位，地圖 2400×1792
+const TS = 16, TW = 200, TH = 112; // 一格 16 單位，地圖 3200×1792（x 2400 以東是寒霜雪域）
 const TOWN = { x: 1200, y: 1520, r: 120 };
 const ZONES = {
   town: { n: "青雲城", lv: [0, 0], g: ["#4a4458", "#433e52"] },
@@ -10,9 +10,12 @@ const ZONES = {
   forest: { n: "幽暗森林", lv: [6, 12], g: ["#1d3326", "#1a2e22"], mobs: ["wolf", "treant", "treant", "imp"] },
   waste: { n: "亂石荒原", lv: [11, 17], g: ["#4a4034", "#443a2f"], mobs: ["golem", "bomber", "wolf"] },
   volcano: { n: "焚天火山", lv: [16, 24], g: ["#3a2424", "#342020"], mobs: ["crow", "lava", "bomber"] },
+  snow: { n: "寒霜雪域", lv: [22, 30], g: ["#c4d0de", "#b8c6d6"], mobs: ["frostwolf", "frostwolf", "icewisp", "yeti"] },
 };
+const SNOW_X = 2400, SNOW_PASS = { x: 2400, y: 640 }; // 雪域在東邊，只有一個山口能過去
 function zoneAt(x, y) {
   if (Math.hypot(x - TOWN.x, y - TOWN.y) < TOWN.r + 10) return "town";
+  if (x >= SNOW_X) return "snow";
   if (y < 480) return "volcano";
   if (y > 1120) return "grass";
   return x < 1150 ? "forest" : "waste";
@@ -23,6 +26,7 @@ const WAYPOINTS = [
   { id: "forest", n: "幽暗森林", x: 520, y: 800 },
   { id: "waste", n: "亂石荒原", x: 1820, y: 820 },
   { id: "volcano", n: "焚天火山", x: 1200, y: 380 },
+  { id: "snow", n: "寒霜雪域", x: 2820, y: 640 },
 ];
 const ALTAR = { x: 1200, y: 150 };
 
@@ -65,6 +69,36 @@ const LAVA = sprite([
   ".kk.kRRk.kk.",
   "....kk.kk...",
 ], { k: "#1b1424", R: "#7a2a1e", r: "#b04a2a", Y: "#ffe066", O: "#ffb030" });
+const FROSTWOLF = sprite([
+  "k.k.......",
+  "kWk.......",
+  "kWWkkkkk..",
+  "kWEWWWWWkk",
+  ".kWWWWWWWk",
+  "..kBkkkBk.",
+  "..kk...kk.",
+], { k: "#1b1424", W: "#e8f2ff", E: "#4ad8ff", B: "#9ab0c8" });
+const ICEWISP = sprite([
+  "...kk...",
+  "..kCCk..",
+  ".kCWWCk.",
+  "kCWEEWCk",
+  "kCWWWWCk",
+  ".kCCCCk.",
+  "..kCCk..",
+  "...kk...",
+], { k: "#1b3a5a", C: "#6ac8f0", W: "#d8f6ff", E: "#1b3a5a" });
+const YETI = sprite([
+  "...kkkkkk...",
+  "..kWWWWWWk..",
+  ".kWWkWWkWWk.",
+  ".kWWBWWBWWk.",
+  "kkWWWwwWWWkk",
+  "kWWkWWWWkWWk",
+  "kWWkWWWWkWWk",
+  ".kk.kWWk.kk.",
+  "....kk.kk...",
+], { k: "#1b1424", W: "#f0f4ff", w: "#b8c8e0", B: "#3a6aa8" });
 const WMOBS = {
   imp: { n: "小妖", img: () => MOB, hp: 30, spd: 34, dmg: 6, r: 6, exp: 4, ai: "melee" },
   wolf: { n: "狼妖", img: () => WOLF, hp: 42, spd: 64, dmg: 7, r: 6, exp: 6, ai: "melee" },
@@ -73,9 +107,12 @@ const WMOBS = {
   bomber: { n: "爆石靈", img: () => BOMBER, hp: 32, spd: 58, dmg: 26, r: 6, exp: 10, ai: "bomber" },
   crow: { n: "火鴉", img: () => CROW, hp: 55, spd: 72, dmg: 9, r: 6, exp: 14, ai: "ranged", range: 115, shot: 120 },
   lava: { n: "熔岩獸", img: () => LAVA, hp: 230, spd: 30, dmg: 22, r: 9, exp: 26, ai: "melee", armor: 0.3, heavy: true },
+  frostwolf: { n: "霜狼", img: () => FROSTWOLF, hp: 64, spd: 78, dmg: 10, r: 6, exp: 18, ai: "melee", chill: true },
+  icewisp: { n: "冰靈", img: () => ICEWISP, hp: 58, spd: 40, dmg: 10, r: 6, exp: 18, ai: "ranged", range: 125, shot: 105, chill: true },
+  yeti: { n: "雪巨猿", img: () => YETI, hp: 300, spd: 30, dmg: 26, r: 9, exp: 34, ai: "melee", armor: 0.25, heavy: true, chill: true },
   hunter: { n: "獵寶妖", img: () => WOLF, hp: 70, spd: 70, dmg: 12, r: 7, exp: 30, ai: "melee" }, // 身上寶物多時會來追殺
 };
-const ZONE_LOOT = { town: 1, grass: 1, forest: 1.3, waste: 1.6, volcano: 2 }; // 越深的地方掉越多
+const ZONE_LOOT = { town: 1, grass: 1, forest: 1.3, waste: 1.6, volcano: 2, snow: 2.4 }; // 越深的地方掉越多
 
 // ───────── 地圖生成（固定種子，每次都一樣）─────────
 let wmap = null; // Uint8Array：0 空地、1 樹、2 石、3 熔岩、4 水、5 城牆、6 房子
@@ -96,6 +133,7 @@ function buildWorld() {
     else if (z === "forest") t = n > 0.42 && v < 0.55 ? 1 : n < 0.1 ? 4 : v > 0.985 ? 2 : 0;
     else if (z === "waste") t = v > 0.95 || (n > 0.78 && v < 0.35) ? 2 : 0;
     else if (z === "volcano") t = n > 0.68 && v < 0.5 ? 3 : v > 0.96 ? 2 : 0;
+    else if (z === "snow") t = n > 0.64 && v < 0.5 ? 1 : n < 0.12 ? 4 : v > 0.975 ? 2 : 0;
     wmap[ty * TW + tx] = t;
   }
   // 城牆（四個城門）＋房子
@@ -108,8 +146,11 @@ function buildWorld() {
     for (let i = 0; i < bw; i++) for (let j = 0; j < bh; j++) setT(TOWN.x + bx + i * TS, TOWN.y + by + j * TS, 6);
   // 路：從城門通往各傳送陣、祭壇
   const roads = [[TOWN, WAYPOINTS[1]], [TOWN, WAYPOINTS[2]], [TOWN, WAYPOINTS[3]], [TOWN, WAYPOINTS[4]], [WAYPOINTS[4], ALTAR], [WAYPOINTS[2], WAYPOINTS[4]], [WAYPOINTS[3], WAYPOINTS[4]]];
+  // 雪山山脊（只留一個山口）
+  for (let ty = 1; ty < TH - 1; ty++) for (const tx of [149, 150]) { const y = ty * TS; if (Math.abs(y - SNOW_PASS.y) > 70) wmap[ty * TW + tx] = 2; }
+  roads.push([WAYPOINTS[3], SNOW_PASS], [SNOW_PASS, WAYPOINTS[5]]);
   for (const [a, b] of roads) carve(a, b, 2);
-  for (const p of [...WAYPOINTS, ALTAR]) clearAround(p.x, p.y, 3);
+  for (const p of [...WAYPOINTS, ALTAR, SNOW_PASS]) clearAround(p.x, p.y, 3);
 }
 function setT(x, y, t) { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); if (tx >= 0 && ty >= 0 && tx < TW && ty < TH) wmap[ty * TW + tx] = t; }
 function clearAround(x, y, r) { for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const t = tileAt(x + i * TS, y + j * TS); if (t !== 5 && t !== 6) setT(x + i * TS, y + j * TS, 0); } }
@@ -216,6 +257,7 @@ function enterWorld() {
 }
 let W0gift = false;
 function worldReturn() { // 從裝備、秘境等畫面回到大世界
+  if (typeof tutHighlight === "function") tutHighlight();
   if (!inWorld) { renderTitle(); return; }
   B = worldStats();
   W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp);
@@ -229,16 +271,16 @@ function worldReturn() { // 從裝備、秘境等畫面回到大世界
 // 怪物營地：分散在各地區，死了會重生
 function makeCamps() {
   const r = mulberry32(20261106);
-  const want = { grass: 16, forest: 16, waste: 14, volcano: 12 };
+  const want = { grass: 16, forest: 16, waste: 14, volcano: 12, snow: 14 };
   for (const z in want) {
     let n = 0, tries = 0;
     while (n < want[z] && tries++ < 4000) {
       const x = 40 + r() * (TW * TS - 80), y = 40 + r() * (TH * TS - 80);
-      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12)) continue;
+      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || Math.hypot(x - SNOW_PASS.x, y - SNOW_PASS.y) < 150) continue;
       if (W0.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 120)) continue;
       const lo = ZONES[z].lv[0], hi = ZONES[z].lv[1];
       const far = clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 1300, 0, 1);
-      const zf = z === "grass" ? clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 700, 0, 1) : z === "volcano" ? clamp((480 - y) / 400, 0, 1) : far;
+      const zf = z === "grass" ? clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 700, 0, 1) : z === "volcano" ? clamp((480 - y) / 400, 0, 1) : z === "snow" ? clamp((x - SNOW_X - 100) / 600, 0, 1) : far;
       const camp = { x, y, z, lv: Math.round(lo + (hi - lo) * zf), size: 3 + Math.floor(r() * 3), respawn: [] };
       W0.camps.push(camp);
       for (let i = 0; i < camp.size; i++) spawnWMob(camp);
@@ -296,7 +338,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.hp <= 0) killMob(m);
 }
 function killMob(m) {
-  m.dead = true;
+  m.dead = true; tutEvent("kill");
   const gb = gemLv("burst"); if (gb) { W0.fires.push({ x: m.x, y: m.y, t: 0.08, r: 26 + gb * 2, dmg: 6 + gb * 4, c: "#ff8a3d" }); }
   const d = WMOBS[m.type], w = save.w;
   burst(m.x, m.y, m.elite ? "#6fb8ff" : "#b07dff", m.elite ? 30 : 12, 90);
@@ -334,6 +376,7 @@ function gainExp(n) {
   }
   writeSave();
 }
+let chillHit = false; // 冰靈的冰彈打中時設成 true
 function hurtW(dmg, from) {
   const p = W0;
   if (p.iframe > 0 || !(state === "world" || ((state === "paused" || state === "pick") && pausedFrom === "world"))) return;
@@ -344,6 +387,7 @@ function hurtW(dmg, from) {
   sfx("hurt"); shake = Math.max(shake, 5); flashT = 0.1; flashColor = "255,40,40";
   if (from && B.thorns > 0 && from.hp !== undefined) hitMob(from, dmg * B.thorns * 3, 0, null, true);
   if (from) { const a = angTo(from, p); moveBody(p, Math.cos(a) * 8, Math.sin(a) * 8, 5); }
+  if ((from && from.type && WMOBS[from.type] && WMOBS[from.type].chill) || chillHit) { if (!(p.chillT > 0)) floatText(p.x, p.y - 22, "凍傷！變慢", "#9fe8ff"); p.chillT = 1.6; }
   if (p.hp <= 0) { p.hp = 0; state = "worldDead"; screenEl.classList.add("hidden"); sfx("lose"); setTimeout(showWorldDead, 900); }
 }
 function showWorldDead() {
@@ -368,8 +412,10 @@ function updateWorld(dt) {
   updateWFx(dt);
   updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
   if (typeof netTick === "function") netTick(dt);
+  if (!inMenu) tutTick();
   const p = W0, w = save.w;
   for (const k in p.cds) p.cds[k] = Math.max(0, p.cds[k] - dt);
+  if (p.chillT > 0) { p.chillT -= dt; if (Math.random() < 0.3) particles.push({ x: p.x + rand(-5, 5), y: p.y - rand(0, 10), vx: 0, vy: 12, life: 0.4, max: 0.4, color: "#bfefff", size: 1.5 }); }
   p.iframe = Math.max(0, p.iframe - dt); p.hurt = Math.max(0, p.hurt - dt); p.swing = Math.max(0, p.swing - dt);
   p.mp = Math.min(B.maxMp, p.mp + B.mpRegen * dt);
   p.regenAcc += B.regen * dt;
@@ -393,14 +439,14 @@ function updateWorld(dt) {
     if (p.roll <= 0) p.dashHit = null;
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6); } }
 
   const near = (max) => { let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : 1); p.mp -= WSKILL[k].mp; return true; };
+  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : 1); p.mp -= WSKILL[k].mp; tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -576,7 +622,7 @@ function updateWorld(dt) {
         if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.3; m.atkT = 99; }
         if (m.wind > 0 && (m.wind -= dt) <= 0) {
           m.wind = 0; m.atkT = m.mod === "狂暴" ? 0.9 : 1.4;
-          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff7a2e" : "#9fe07a" });
+          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff7a2e" : d.chill ? "#9fe8ff" : "#9fe07a", chill: d.chill });
         }
       } else if (d.ai === "bomber") {
         if (m.fuse > 0) {
@@ -624,7 +670,7 @@ function updateWorld(dt) {
   for (const s of W0.eshots) {
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
     if (solid(s.x, s.y)) s.life = 0;
-    if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; hurtW(s.dmg); }
+    if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg); chillHit = false; }
   }
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
   W0.combatT = aggro ? W0.combatT + dt : 0;
@@ -771,6 +817,7 @@ function renderWorld() {
     ctx.fillStyle = ZONES[z].g[(tx + ty) % 2]; ctx.fillRect(x, y, TS, TS);
     if (t === 0) drawDeco(x, y, z, v);
     if (t === 3) { ctx.fillStyle = `rgba(255,${100 + Math.sin(time * 3 + tx) * 40},30,0.85)`; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,230,120,0.5)"; ctx.fillRect(x + v * 10, y + 4, 3, 2); }
+    else if (t === 4 && z === "snow") { ctx.fillStyle = "#8fc4e8"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.fillRect(x + 2 + v * 8, y + 3, 4, 1); ctx.fillRect(x + 4, y + 10 - v * 4, 2, 1); }
     else if (t === 4) { ctx.fillStyle = "#2a4a7a"; ctx.fillRect(x, y, TS, TS); ctx.fillStyle = "rgba(160,200,255,0.3)"; ctx.fillRect(x + ((time * 6 + v * 16) % 14), y + 6, 3, 1); }
     else if (t === 5) drawWallTile(x, y);
     else if (t === 6) drawHouseTile(x, y, tx, ty);
@@ -922,17 +969,26 @@ function drawWMob(m) {
   const gap = m.lv - save.w.lv;
   ctx.fillStyle = m.elite ? "#6fb8ff" : gap >= 4 ? "#ff6b6b" : gap <= -5 ? "#a99bb8" : "#f3eada";
   ctx.fillStyle = m.hunter ? "#ff6b6b" : ctx.fillStyle;
-  ctx.fillText(`${m.elite && !m.hunter ? (m.mod || "") + "精英 " : ""}${d.n} Lv.${m.lv}`, m.x, m.y - d.r * sc - 9);
+  const lab = `${m.elite && !m.hunter ? (m.mod || "") + "精英 " : ""}${d.n} Lv.${m.lv}`, fc = ctx.fillStyle;
+  ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
+  ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
 }
 function drawWorldHud() {
   const p = W0, w = save.w;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (W0.zone === "snow") { // 下雪
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    for (let i = 0; i < 70; i++) {
+      const sp = 0.5 + hash(i * 3.7), x = ((hash(i) * W + Math.sin(time * 0.8 + i) * 12 - cam.x * 0.6) % W + W) % W, y = ((hash(i * 9.1) * H + time * 38 * sp - cam.y * 0.6) % H + H) % H;
+      ctx.fillRect(x, y, sp > 1.1 ? 3 : 2, sp > 1.1 ? 3 : 2);
+    }
+  }
   // 小地圖（右上，在按鈕列下面）
-  const mw = Math.min(104, W * 0.26), mh = mw * (TH / TW), mx0 = W - mw - 12 - SAFE.r, my0 = (W <= 600 ? 112 : 66) + SAFE.t, sc = mw / (TW * TS);
+  const mw = Math.min(104, W * 0.26), mh = mw * (TH / TW), mx0 = W - mw - 12 - SAFE.r, my0 = 58 + SAFE.t, sc = mw / (TW * TS);
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(mx0 - 2, my0 - 2, mw + 4, mh + 4);
   for (let j = 0; j < 14; j++) for (let i = 0; i < 20; i++) {
     const z = zoneAt((i + 0.5) / 20 * TW * TS, (j + 0.5) / 14 * TH * TS);
-    ctx.fillStyle = ZONES[z].g[0]; ctx.fillRect(mx0 + i * mw / 20, my0 + j * mh / 14, mw / 20 + 0.5, mh / 14 + 0.5);
+    ctx.fillStyle = z === "snow" ? "#8a98ac" : ZONES[z].g[0]; ctx.fillRect(mx0 + i * mw / 20, my0 + j * mh / 14, mw / 20 + 0.5, mh / 14 + 0.5);
   }
   for (const wp of WAYPOINTS) { ctx.fillStyle = w.wp.includes(wp.id) ? "#9fe8ff" : "#555"; ctx.fillRect(mx0 + wp.x * sc - 1.5, my0 + wp.y * sc - 1.5, 3, 3); }
   ctx.fillStyle = "#ff4a2a"; ctx.fillRect(mx0 + ALTAR.x * sc - 2, my0 + ALTAR.y * sc - 2, 4, 4);
@@ -1000,10 +1056,12 @@ function drawWorldHud() {
     ctx.textAlign = "center"; ctx.font = "900 22px 'Noto Sans TC', sans-serif";
     ctx.fillStyle = "#1b1424"; ctx.fillText(z.n, W / 2 + 2, H * 0.3 + 2); ctx.fillStyle = "#ffe0b0"; ctx.fillText(z.n, W / 2, H * 0.3);
     ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc";
-    ctx.fillText(W0.zone === "town" ? "安全區・補滿丹藥、帶回裝備" : `妖獸 Lv.${z.lv[0]}–${z.lv[1]}`, W / 2, H * 0.3 + 22);
+    const sub = W0.zone === "town" ? "安全區・補滿丹藥、帶回裝備" : W0.zone === "snow" ? `妖獸 Lv.${z.lv[0]}–${z.lv[1]}・被打中會凍傷變慢` : `妖獸 Lv.${z.lv[0]}–${z.lv[1]}`;
+    ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.strokeStyle = "#1b1424"; ctx.strokeText(sub, W / 2, H * 0.3 + 22); ctx.fillText(sub, W / 2, H * 0.3 + 22);
     ctx.globalAlpha = 1;
   }
-  if (time < 6 && w.lv === 1 && w.exp === 0) {
+  drawTut();
+  if (time < 6 && w.lv === 1 && w.exp === 0 && w.tut === undefined) {
     ctx.textAlign = "center"; ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff";
     ctx.fillText(TOUCH ? "左邊拖曳移動，右下按鈕出招" : "WASD 移動　J／K／U 出招　空白 閃身　H 丹藥", W / 2, H * 0.62);
     ctx.fillText(W < 500 ? "照左上角的任務走" : "照左上角的任務走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
@@ -1046,6 +1104,10 @@ const QUESTS = [
   { t: "焚天火山斬妖 20 隻", k: "kill", z: "volcano", n: 20 },
   { t: "找到焚天火山傳送陣", k: "wp", id: "volcano", n: 1 },
   { t: "火山北邊祭壇：打倒焚天石魔", k: "boss", n: 1, item: 2 },
+  { t: "往東過雪山山口，找到寒霜雪域傳送陣", k: "wp", id: "snow", n: 1, item: 1 },
+  { t: "寒霜雪域斬妖 25 隻（小心凍傷）", k: "kill", z: "snow", n: 25 },
+  { t: "升到 Lv.26", k: "lv", n: 26, item: 2 },
+  { t: "寒霜雪域斬殺精英 3 隻", k: "elite", z: "snow", n: 3, item: 2 },
 ];
 function curQuest() {
   const w = save.w;
@@ -1053,7 +1115,7 @@ function curQuest() {
   w.q = w.q || 0; w.qp = w.qp || 0;
   if (w.q < QUESTS.length) return { ...QUESTS[w.q], main: true };
   // 懸賞：在適合自己等級的地區斬妖
-  const z = ["volcano", "waste", "forest", "grass"].find((k) => w.lv >= ZONES[k].lv[0]) || "grass";
+  const z = ["snow", "volcano", "waste", "forest", "grass"].find((k) => w.lv >= ZONES[k].lv[0]) || "grass";
   if (!w.bounty) w.bounty = { z, n: 25 };
   return { t: `${ZONES[w.bounty.z].n}斬妖 ${w.bounty.n} 隻`, k: "kill", z: w.bounty.z, n: w.bounty.n, main: false };
 }

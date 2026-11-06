@@ -53,7 +53,7 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 #topbar { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); display: flex; gap: 8px; z-index: 20; }
 .tbtn { width: 40px; height: 40px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.5); background: rgba(20,14,30,0.6); color: #fff; font-size: 18px; cursor: pointer; }
 .tbtn.hidden { display: none; }
-#hud { position: fixed; top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 96px); display: flex; gap: 6px; z-index: 20; }
+#hud { position: fixed; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 10px); right: calc(max(14px, env(safe-area-inset-right)) + 262px); display: flex; gap: 6px; z-index: 20; } /* 在技能按鈕左邊 */
 #hud.hidden { display: none; }
 .hbtn { position: relative; width: 44px; height: 44px; display: grid; place-items: center; align-content: center; border-radius: 10px; border: 2px solid #ffcf6b; background: rgba(40,26,60,0.75); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; font-family: inherit; }
 .hbtn small { font-size: 9px; margin-top: 2px; }
@@ -105,7 +105,7 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; color: #a99bb8; font-size: 14px; }
 .card.ap[disabled] { opacity: 0.5; cursor: default; }
 .cpline.small { font-size: 13px; margin-top: 10px; color: #cfc4dc; }
-@media (max-width: 600px) { #hud { top: calc(max(8px, env(safe-area-inset-top)) + 50px); right: max(8px, env(safe-area-inset-right)); } }
+@media (max-width: 600px) and (orientation: portrait) { #hud { bottom: calc(max(14px, env(safe-area-inset-bottom)) + 214px); right: max(8px, env(safe-area-inset-right)); } }
 .risk { font-style: normal; font-size: 9px; color: #ffb070; }
 .login form { display: flex; flex-direction: column; gap: 10px; width: min(320px, 86vw); margin: 22px auto 0; }
 .login input { padding: 12px 14px; font-size: 17px; border-radius: 10px; border: 2px solid #4a4060; background: rgba(20,14,34,0.9); color: #fff; font-family: inherit; user-select: text; -webkit-user-select: text; }
@@ -193,3 +193,13 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
   .screen { padding-top: calc(max(8px, env(safe-area-inset-top)) + 104px); } /* 讓開上面兩排按鈕 */
   .btns .big { padding: 10px 18px; font-size: 16px; }
 }
+/* 新手引導：該按的按鈕閃金光 */
+.tut-hi { animation: tutHi 0.8s ease-in-out infinite alternate; border-color: #ffe066 !important; }
+@keyframes tutHi { from { box-shadow: 0 0 0 0 rgba(255,224,102,0.9); } to { box-shadow: 0 0 16px 6px rgba(255,224,102,0.9); } }
+/* 右上角按鈕列會蓋住畫面標題：留空間 */
+/* 像素小圖示 */
+.uico { width: 24px; height: 24px; image-rendering: pixelated; display: block; pointer-events: none; }
+.tbtn .uico { width: 22px; height: 22px; margin: auto; }
+.hbtn { width: 48px; height: 48px; background: linear-gradient(#3a2a58, #221836); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.5); }
+.hbtn small { font-size: 9px; margin-top: 1px; color: #ffe9b0; font-weight: 700; }
+.hbtn:active { transform: translateY(1px); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.35); }

@@ -48,3 +48,12 @@
 - core.js `SAFE {l,r,t,b}`：瀏海安全區，world.js 左上 HUD 與小地圖已避開。
 - main.js dt 加 Math.max(0)：換畫面時 last 可能比 rAF 時間晚，dt 變負會讓飄字越長越大。
 - 測試直向：headless Edge 視窗最小寬度約 500，要用 iframe 包 390px 寬。
+
+## v2.3 雪域、新手引導、介面
+- 地圖加寬到 TW=200（3200 寬）。x≥2400 是「寒霜雪域」Lv.22–30（`SNOW_X`），中間有雪山山脊，只有山口 `SNOW_PASS`(2400,640) 能過；傳送陣 snow (2820,640)。
+- 新怪：霜狼、冰靈、雪巨猿，都有 `chill`：打中玩家會凍傷 1.6 秒（`W0.chillT`，移動 ×0.6）。冰靈的冰彈靠 `chillHit` 旗標。
+- 主線多 4 個雪域任務；懸賞也會派雪域。雪域會下雪（畫在 drawWorldHud 的螢幕座標）。怪物名字和地區副標加了黑邊。
+- `js/tutorial.js`：新角色 `save.w.tut=0` 開始 6 步引導（移動→攻擊→技能→閃身→背包→殺第一隻），該按的按鈕加 `.tut-hi` 閃光。舊存檔沒有 tut 不會跳。
+- `js/icons.js`：右上與 HUD 的 emoji 換成像素圖示（`UI_ICON`、`uiIcon(k)`、`setMuteIcon`）。
+- HUD 按鈕列移到下面：橫向在技能按鈕左邊，直向在技能按鈕上面。小地圖改在 y=58。
+- 分享縮圖 `icons/og.png`（og:image）。

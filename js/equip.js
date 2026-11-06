@@ -236,6 +236,7 @@ const statRows = (it) => {
 const itemHead = (it) => `<div class="ihead" style="color:${RARITY[it.q].c}">${itemIcon(it)}【${RARITY[it.q].n}】${it.name}<small>${it.slot === "sword" ? `${WEAPONS[wtOf(it)].n}（${WEAPONS[wtOf(it)].job}：${WEAPONS[wtOf(it)].d}）` : SLOTS[it.slot].n}・${it.il} 級</small></div>`;
 let eqSel = null; // 正在看的裝備 id（或 "eq:slot"）
 function renderEquip(msg = "") {
+  if (typeof tutEvent === "function") tutEvent("bag");
   if (!inWorld) state = "title";
   const bag = save.bag.slice().sort((a, b) => b.q - a.q || itemCP(b) - itemCP(a));
   const cell = (k) => {

@@ -134,6 +134,24 @@ const TREE_IMG = {
     "..................",
   ], { k: K, T: "#3a2a2a", t: "#1f1414", O: "#ff7a2a" }),
 };
+TREE_IMG.snow = sprite([
+  "........k.........",
+  ".......kWk........",
+  "......kWWLk.......",
+  ".....kWWLLLk......",
+  "......kLWLk.......",
+  ".....kWWWLLk......",
+  "....kWWLLLLLk.....",
+  "...kWLLLWWLLLk....",
+  ".....kWWLLLk......",
+  "....kWWWLLLLk.....",
+  "...kWWLLLWWLLk....",
+  "..kLLLLLLLLLLLk...",
+  "...kkkkTtkkkk.....",
+  ".......Tt.........",
+  "......kTtk........",
+  ".....kkkkkk.......",
+], { k: K, W: "#f4f8ff", L: "#2e5a4a", T: "#4a3a2a", t: "#2a2018" });
 TREE_IMG.town = TREE_IMG.grass;
 const ROCK_IMG = sprite([
   "................",
@@ -182,6 +200,9 @@ const DECO = {
   skull: sprite([".WWW.", "WkWkW", ".WWW.", ".W.W."], { W: "#e8e0cc", k: K }),
   ember: sprite(["O.", ".Y"], { O: "#ff7a2a", Y: "#ffe066" }),
   ash: sprite(["kk.", ".kk"], { k: "rgba(20,10,10,0.4)" }),
+  snowT: sprite([".W.", "WWW"], { W: "#eef4ff" }),
+  iceC: sprite([".C.", "CWC", ".C."], { C: "#7ac8f0", W: "#e8fbff" }),
+  twig: sprite(["k...", ".k.k", "..k."], { k: "#5a4a3a" }),
   stoneT: sprite(["hhhhhh", "h....h", "hhhhhh"], { h: "rgba(0,0,0,0.12)" }),
 };
 const DECO_SET = {
@@ -189,6 +210,7 @@ const DECO_SET = {
   forest: ["fern", "fern", "mush", "mushB", "tuft2", "tuft"],
   waste: ["pebble", "pebble", "bone", "crack", "skull", "crack"],
   volcano: ["ember", "ash", "crack", "pebble", "ember"],
+  snow: ["snowT", "snowT", "iceC", "twig", "pebble"],
   town: ["stoneT", "stoneT", "flowerY", "tuft"],
 };
 function drawDeco(x, y, z, v) { // v：0～1 的固定亂數
@@ -466,7 +488,7 @@ function renderCreate(msg = "") {
     const n = document.getElementById("cname").value.trim().replace(/[<>&"]/g, "");
     if (n.length < 2) { renderCreate("名字至少 2 個字"); return; }
     save.w = blankW();
-    Object.assign(save.w, { created: 1, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
+    Object.assign(save.w, { created: 1, tut: 0, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
     const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; nameItem(it);
     if (save.eq.sword) save.bag.push(save.eq.sword);
     save.eq.sword = it;
