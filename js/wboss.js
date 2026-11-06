@@ -160,9 +160,9 @@ function wbKilled(m) { // 打倒世界王
   W0.wbCool = WB_COOL; wbZones = [];
   shake = 12; flashT = 0.2; flashColor = "255,220,150"; sfx("win");
   floatText(m.x, m.y - 40, "擊敗焚天石魔！", "#ffe066", true);
-  const il = Math.floor(save.w.lv / 3) + 2;
+  const il = Math.floor(WB_LV / 3) + 2; // 掉落等級看王的等級（Lv.22），不看玩家：高等回來刷沒有好處
   for (let i = 0; i < 4; i++) { const it = rollItem(1, il); delete it.risk; wDrop({ kind: "item", it, safe: true }, m); }
   for (let i = 0; i < 2; i++) wDrop({ kind: "gem", g: randGem(Math.random() < 0.3 ? 2 : 1) }, m);
-  wDrop({ kind: "stone", v: 80 + save.w.lv * 3 }, m);
+  wDrop({ kind: "stone", v: 80 + WB_LV * 3 }, m);
   questEvent("boss");
 }
