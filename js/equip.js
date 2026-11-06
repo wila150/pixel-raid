@@ -25,7 +25,11 @@ const WEAPONS = {
   sword: { n: "劍", job: "劍修", d: "近身揮砍、劍氣穿透、掌心雷", names: ["青鋼劍", "寒鐵劍", "流雲劍", "赤霄劍", "斬月劍"] },
   staff: { n: "法杖", job: "法修", d: "遠程法球、火雨範圍、冰環減速", names: ["桃木杖", "青玉杖", "紫焰杖", "玄冰杖", "太乙杖"] },
   bow: { n: "弓", job: "弓修", d: "快速連射、散射、穿雲箭", names: ["竹弓", "鐵胎弓", "追星弓", "落日弓", "射天弓"] },
+  blade: { n: "大刀", job: "刀修", d: "大範圍重斬、旋風斬、裂地斬", names: ["柴刀", "厚背刀", "虎牙刀", "破山刀", "斷岳刀"] },
+  fist: { n: "拳套", job: "拳修", d: "超快連拳、衝拳突進、震地", names: ["布纏手", "鐵指虎", "熊爪套", "金剛拳套", "龍鱗拳套"] },
+  fan: { n: "扇", job: "扇修", d: "迴旋風刃、旋風、清風回血", names: ["竹扇", "羽扇", "流風扇", "青鸞扇", "乾坤扇"] },
 };
+const WT_KEYS = Object.keys(WEAPONS);
 const wtOf = (it) => (it && it.slot === "sword" ? it.wt || "sword" : null);
 const curWeapon = () => wtOf(save.eq.sword) || "sword";
 const sameWt = (b) => b.slot !== "sword" || wtOf(b) === curWeapon(); // 自動換裝、賣垃圾不會動到別種武器
@@ -60,7 +64,12 @@ const RARITY = [
 ];
 // 傳說裝：固定名字＋特殊效果
 const UNIQUES = {
-  thunder: { slot: "sword", n: "九霄引雷劍", d: "爆擊時引下天雷" },
+  thunder: { slot: "sword", wt: "sword", n: "九霄引雷劍", d: "爆擊時引下天雷；U 變成「九霄天雷」：一次劈附近 6 隻" },
+  phoenix: { slot: "sword", wt: "staff", n: "朱雀焚天杖", d: "U 變成「朱雀環」：身邊炸出一圈穿透火焰" },
+  sunbow: { slot: "sword", wt: "bow", n: "落日神弓", d: "U 變成「箭雨」：目標一帶落下 12 支箭" },
+  moon: { slot: "sword", wt: "blade", n: "斬月狂刀", d: "U 變成「月輪」：一大圈刀氣，傷害極高" },
+  tiger: { slot: "sword", wt: "fist", n: "伏虎拳套", d: "U 變成「百裂拳」：對眼前的敵人瞬間打 10 拳" },
+  qiankun: { slot: "sword", wt: "fan", n: "乾坤奪魄扇", d: "U 變成「乾坤吸」：把附近的妖獸全吸過來再震飛" },
   vajra: { slot: "crown", n: "不壞金冠", d: "生命低於 30% 時，受到的傷害減半" },
   devour: { slot: "robe", n: "萬妖噬魂袍", d: "斬妖試煉每斬 30 隻妖，傷害 +3%；渡劫時吸血 +2%" },
   cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半，斬妖試煉移動 +25%" },
@@ -81,13 +90,13 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
   let slot = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], u = null;
-  if (q === 3) { u = Object.keys(UNIQUES)[Math.floor(Math.random() * 5)]; slot = UNIQUES[u].slot; }
+  if (q === 3) { u = Object.keys(UNIQUES)[Math.floor(Math.random() * Object.keys(UNIQUES).length)]; slot = UNIQUES[u].slot; }
   else if (wt) slot = "sword";
   const s = SLOTS[slot], bv = BASE_VAL[s.base];
   const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, u,
     name: u ? UNIQUES[u].n : s.names[Math.min(4, Math.floor(il / 1.2))], base: Math.round((bv[0] + bv[1] * il) * (0.85 + Math.random() * 0.3) * (1 + q * 0.12) * 10) / 10 };
   if (s.base !== "crit") it.base = Math.round(it.base);
-  if (slot === "sword") it.wt = u ? "sword" : wt || ["sword", "staff", "bow"][Math.floor(Math.random() * 3)];
+  if (slot === "sword") it.wt = u ? UNIQUES[u].wt : wt || WT_KEYS[Math.floor(Math.random() * WT_KEYS.length)];
   const [a0, a1] = RARITY[q].aff;
   rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1)));
   nameItem(it);
