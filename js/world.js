@@ -281,7 +281,7 @@ function makeCamps() {
       const lo = ZONES[z].lv[0], hi = ZONES[z].lv[1];
       const far = clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 1300, 0, 1);
       const zf = z === "grass" ? clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 700, 0, 1) : z === "volcano" ? clamp((480 - y) / 400, 0, 1) : z === "snow" ? clamp((x - SNOW_X - 100) / 600, 0, 1) : far;
-      const camp = { x, y, z, lv: Math.round(lo + (hi - lo) * zf), size: 3 + Math.floor(r() * 3), respawn: [] };
+      const camp = { x, y, z, lv: Math.round(lo + (hi - lo) * zf), size: 4 + Math.floor(r() * 4), respawn: [] };
       W0.camps.push(camp);
       for (let i = 0; i < camp.size; i++) spawnWMob(camp);
       n++;
@@ -305,7 +305,9 @@ function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
 }
 // ───────── 傷害 ─────────
-const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power"));
+const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
+const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
+const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus());
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead) return;
@@ -327,7 +329,8 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
     if (o) { bolts.push({ x: o.x, y: o.y, life: 0.2 }); chainLock = true; hitMob(o, dmg * 0.6, 0, null, true); chainLock = false; }
   }
   W0.mp = Math.min(B.maxMp, W0.mp + (quiet ? 0 : 1));
-  floatText(m.x, m.y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
+  floatText(m.x, m.y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? (dmg > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : "#ffffff", crit);
+  { const f = floaters[floaters.length - 1], a = (from ? angTo(from, m) : rand(-Math.PI, Math.PI)) + rand(-0.6, 0.6); f.vx = Math.cos(a) * (crit ? 55 : 30); f.vy = -(crit ? 75 : 55); f.num = true; }
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
   burst(m.x, m.y, crit ? "#ffd84a" : "#ffb070", crit ? 10 : 5, 60);
   fxHit(m.x + rand(-2, 2), m.y - 2 + rand(-2, 2), crit, WPN_FX[curWeapon()]);
@@ -339,6 +342,9 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
 }
 function killMob(m) {
   m.dead = true; tutEvent("kill");
+  W0.kc = (W0.kcT > 0 ? W0.kc || 0 : 0) + 1; W0.kcT = KC_WIN; W0.kcPop = 0.25;
+  if (W0.kc > (W0.kcBest || 0)) W0.kcBest = W0.kc;
+  if (W0.kc % 25 === 0) { floatText(W0.x, W0.y - 34, `${W0.kc} 連斬！`, "#ff8a3d", true); sfx("crit"); }
   const gb = gemLv("burst"); if (gb) { W0.fires.push({ x: m.x, y: m.y, t: 0.08, r: 26 + gb * 2, dmg: 6 + gb * 4, c: "#ff8a3d" }); }
   const d = WMOBS[m.type], w = save.w;
   burst(m.x, m.y, m.elite ? "#6fb8ff" : "#b07dff", m.elite ? 30 : 12, 90);
@@ -361,7 +367,7 @@ function killMob(m) {
   if (Math.random() < (m.elite ? 0.8 : 0.15)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
   if (Math.random() < 0.03) wDrop({ kind: "potion" }, m);
   if (m.elite && Math.random() < 0.15) wDrop({ kind: "key", k: makeKey(Math.max(1, Math.ceil(m.lv / 4))) }, m);
-  if (!m.hunter && !m.noRespawn) m.camp.respawn.push(22 + Math.random() * 10);
+  if (!m.hunter && !m.noRespawn) m.camp.respawn.push(15 + Math.random() * 7);
 }
 function wDrop(o, at) { o.x = at.x + rand(-12, 12); o.y = at.y + rand(-8, 8); o.t = 0; W0.drops.push(o); }
 function gainExp(n) {
@@ -544,7 +550,10 @@ function updateWorld(dt) {
     }
   }
   if (act("roll", " ", "l", "shift") && useSkill("roll")) { p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash"); }
-  if (act("potion", "h", "c") && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
+  if (W0.kcT > 0) { W0.kcT -= dt; if (W0.kcT <= 0) W0.kc = 0; }
+  if (W0.kcPop > 0) W0.kcPop -= dt;
+  const autoPot = w.autoPot !== false && p.hp < p.maxHp * 0.3 && !inMenu; // 設定：低血量自動喝藥（預設開）
+  if ((act("potion", "h", "c") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
     w.potions--; const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); sfx("heal"); writeSave();
   }
@@ -836,14 +845,21 @@ function renderWorld() {
   // 掉落物
   for (const o of W0.drops) {
     if (Math.abs(o.x - cam.x) > hw || Math.abs(o.y - cam.y) > hh) continue;
-    if (o.kind === "item") {
-      const c = RARITY[o.it.q].c, hgt = 12 + o.it.q * 9;
-      ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4 + o.x); ctx.fillStyle = c; ctx.fillRect(o.x - 1.5, o.y - hgt, 3, hgt); ctx.globalAlpha = 1;
+    if (o.kind === "item") { // 掉落標籤：品質越高越顯眼；仙品以上有衝天光柱
+      const q = o.it.q, c = RARITY[q].c, hgt = 12 + q * 9;
+      if (q >= 2) {
+        const bh = q === 3 ? 160 : 70, pw = q === 3 ? 7 : 4, g = ctx.createLinearGradient(0, o.y - bh, 0, o.y);
+        g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, c);
+        ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.45 + 0.2 * Math.sin(time * 5 + o.x);
+        ctx.fillStyle = g; ctx.fillRect(o.x - pw / 2, o.y - bh, pw, bh); ctx.fillRect(o.x - pw, o.y - bh * 0.6, pw * 2, bh * 0.6);
+        ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.ellipse(o.x, o.y, 9 + Math.sin(time * 6) * 2, 4, 0, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ctx.restore();
+      } else { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4 + o.x); ctx.fillStyle = c; ctx.fillRect(o.x - 1.5, o.y - hgt, 3, hgt); ctx.globalAlpha = 1; }
       ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6); ctx.fillStyle = c; ctx.fillRect(o.x - 2, o.y - 2, 4, 4);
-      ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-      const tw = ctx.measureText(o.it.name).width;
-      ctx.fillStyle = "rgba(0,0,0,0.75)"; ctx.fillRect(o.x - tw / 2 - 2, o.y - hgt - 8, tw + 4, 8);
-      ctx.fillStyle = c; ctx.fillText(o.it.name, o.x, o.y - hgt - 2);
+      ctx.font = `${q >= 2 ? 900 : "bold"} ${q >= 2 ? 7 : 6}px 'Noto Sans TC', sans-serif`; ctx.textAlign = "center";
+      const tw = ctx.measureText(o.it.name).width, lh = q >= 2 ? 10 : 8, ly = o.y - hgt - lh;
+      ctx.fillStyle = q >= 2 ? c : "rgba(0,0,0,0.75)"; ctx.fillRect(o.x - tw / 2 - 3, ly, tw + 6, lh);
+      if (q >= 2) { ctx.fillStyle = "rgba(20,10,0,0.55)"; ctx.fillRect(o.x - tw / 2 - 2, ly + 1, tw + 4, lh - 2); }
+      ctx.fillStyle = q >= 2 ? "#fff" : q === 0 ? "#c8c0d0" : c; ctx.fillText(o.it.name, o.x, ly + lh - 2.5);
     } else if (o.kind === "stone") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); }
     else if (o.kind === "potion") { ctx.fillStyle = "#ff6b8a"; ctx.fillRect(o.x - 2, o.y - 3, 4, 5); ctx.fillStyle = "#fff"; ctx.fillRect(o.x - 1, o.y - 4, 2, 1); }
     else if (o.kind === "key") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 3, o.y - 1, 6, 2); ctx.fillRect(o.x + 2, o.y - 3, 2, 6); }
@@ -973,6 +989,34 @@ function drawWMob(m) {
   ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
   ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
 }
+let miniRect = null;
+cvs.addEventListener("pointerdown", (e) => { // 點小地圖：開／關大地圖
+  if (state !== "world") return;
+  if (bigMap) { bigMap = false; return; }
+  const r = miniRect; if (r && e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h + 16) bigMap = true;
+});
+function drawBigMap() { // 半透明大地圖蓋在畫面中間，邊打邊看
+  const p = W0, w = save.w, bw = Math.min(W - 40, (H - 150) * TW / TH), bh = bw * TH / TW, bx = (W - bw) / 2, by = 50 + SAFE.t, sc = bw / (TW * TS);
+  ctx.globalAlpha = 0.78; ctx.fillStyle = "#0e0a16"; ctx.fillRect(bx - 4, by - 4, bw + 8, bh + 8);
+  const cols = 60, rows = 34;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const x = (i + 0.5) / cols * TW * TS, y = (j + 0.5) / rows * TH * TS, z = zoneAt(x, y);
+    ctx.fillStyle = z === "snow" ? "#8a98ac" : ZONES[z].g[0]; ctx.fillRect(bx + i * bw / cols, by + j * bh / rows, bw / cols + 0.5, bh / rows + 0.5);
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+  for (const wp of WAYPOINTS) {
+    const on = w.wp.includes(wp.id), x = bx + wp.x * sc, y = by + wp.y * sc;
+    ctx.fillStyle = on ? "#9fe8ff" : "#666"; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "#0e0a16"; ctx.strokeText(wp.n, x, y - 8); ctx.fillStyle = on ? "#fff" : "#9a90a8"; ctx.fillText(wp.n, x, y - 8);
+  }
+  ctx.fillStyle = "#ff4a2a"; ctx.fillRect(bx + ALTAR.x * sc - 3, by + ALTAR.y * sc - 3, 6, 6);
+  const qt = questTarget(); if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 2; ctx.strokeRect(bx + qt.x * sc - 7, by + qt.y * sc - 7, 14, 14); }
+  for (const m of W0.mobs) if ((m.elite || m.boss) && !m.dead) { ctx.fillStyle = m.boss ? "#ff2a2a" : "#ff6b4a"; ctx.fillRect(bx + m.x * sc - 2, by + m.y * sc - 2, 4, 4); }
+  if (typeof othersList === "function") { ctx.fillStyle = "#7dff8a"; for (const o of othersList()) ctx.fillRect(bx + o.x * sc - 2, by + o.y * sc - 2, 4, 4); }
+  ctx.fillStyle = Math.floor(time * 4) % 2 ? "#fff" : "#ffe066"; ctx.beginPath(); ctx.arc(bx + p.x * sc, by + p.y * sc, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.font = "10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc"; ctx.fillText(`${TOUCH ? "點一下畫面" : "Tab"} 關閉　黃框＝任務　紅點＝精英`, W / 2, by + bh + 14);
+}
 function drawWorldHud() {
   const p = W0, w = save.w;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -996,6 +1040,8 @@ function drawWorldHud() {
   if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 1; ctx.strokeRect(mx0 + qt.x * sc - 3, my0 + qt.y * sc - 3, 6, 6); }
   const ol = typeof othersList === "function" ? othersList() : [];
   ctx.fillStyle = "#7dff8a"; for (const o of ol) ctx.fillRect(mx0 + o.x * sc - 1, my0 + o.y * sc - 1, 2.5, 2.5);
+  for (const m of W0.mobs) if ((m.elite || m.boss) && !m.dead) { ctx.fillStyle = m.boss ? "#ff2a2a" : "#ff6b4a"; const r = m.boss ? 4 : 2.5; ctx.fillRect(mx0 + m.x * sc - r / 2, my0 + m.y * sc - r / 2, r, r); }
+  miniRect = { x: mx0 - 2, y: my0 - 2, w: mw + 4, h: mh + 4 };
   ctx.fillStyle = "#fff"; ctx.fillRect(mx0 + p.x * sc - 1.5, my0 + p.y * sc - 1.5, 3, 3);
   ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "right"; ctx.fillStyle = "#cfc4dc";
   ctx.fillText(ZONES[W0.zone || "town"].n, mx0 + mw, my0 + mh + 13);
@@ -1061,6 +1107,24 @@ function drawWorldHud() {
     ctx.globalAlpha = 1;
   }
   drawTut();
+  if (p.hp < p.maxHp * 0.3) { // 低血量：螢幕邊緣泛紅閃
+    const a = 0.35 + 0.25 * Math.sin(time * 8), g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
+    g.addColorStop(0, "rgba(255,0,0,0)"); g.addColorStop(1, `rgba(220,20,20,${a})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  if ((W0.kc || 0) >= 3) { // 連斬計數（右邊，小地圖下面）
+    const cx = W - 70 - SAFE.r, cy = 58 + SAFE.t + Math.min(104, W * 0.26) * (TH / TW) + 52, pop = 1 + Math.max(0, W0.kcPop) * 1.6;
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(pop, pop);
+    ctx.textAlign = "center"; ctx.font = "900 26px 'Noto Sans TC', sans-serif"; ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.strokeStyle = "#1b1424";
+    const col = W0.kc >= 50 ? "#ff4a3a" : W0.kc >= 20 ? "#ff8a3d" : "#ffe066";
+    ctx.strokeText(W0.kc, 0, 0); ctx.fillStyle = col; ctx.fillText(W0.kc, 0, 0);
+    ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.lineWidth = 3; ctx.strokeText("連斬", 0, 14); ctx.fillStyle = "#fff"; ctx.fillText("連斬", 0, 14);
+    ctx.restore();
+    const b = kcBonus();
+    ctx.textAlign = "center"; ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.lineWidth = 3; ctx.strokeStyle = "#1b1424";
+    const bt = b > 0 ? `傷害 +${Math.round(b * 100)}%` : "5 連斬起傷害提升"; ctx.strokeText(bt, cx, cy + 28); ctx.fillStyle = b > 0 ? "#ffb070" : "#cfc4dc"; ctx.fillText(bt, cx, cy + 28);
+    ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(cx - 30, cy + 33, 60, 4); ctx.fillStyle = col; ctx.fillRect(cx - 30, cy + 33, 60 * (W0.kcT / KC_WIN), 4);
+  }
+  if (bigMap) drawBigMap();
   if (time < 6 && w.lv === 1 && w.exp === 0 && w.tut === undefined) {
     ctx.textAlign = "center"; ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff";
     ctx.fillText(TOUCH ? "左邊拖曳移動，右下按鈕出招" : "WASD 移動　J／K／U 出招　空白 閃身　H 丹藥", W / 2, H * 0.62);
@@ -1249,12 +1313,22 @@ function openTeleport() {
     worldReturn(); bankLoot("傳送陣");
   }));
 }
-hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => openHud(b.dataset.h)));
+// 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
+window.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", t: "tp", r: "rank", q: "swap" };
+  if (k === "tab") e.preventDefault();
+  if (state !== "world" || e.repeat) return;
+  if (map[k]) openHud(map[k]);
+  if (k === "tab" || k === "m") bigMap = !bigMap;
+});
+let bigMap = false;
+function openHud(h) {
   if (state !== "world") return;
   sfx("click");
-  if (b.dataset.h === "bag") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); eqSel = null; renderEquip(); }
-  else if (b.dataset.h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
-  else if (b.dataset.h === "swap") quickSwap();
-  else if (b.dataset.h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
+  if (h === "bag") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); eqSel = null; renderEquip(); }
+  else if (h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
+  else if (h === "swap") quickSwap();
+  else if (h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
   else openTeleport();
-}));
+}

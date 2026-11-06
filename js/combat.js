@@ -418,7 +418,7 @@ function updateHazards(dt) {
 function updateFx(dt) {
   for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.life -= dt; }
   particles = particles.filter((p) => p.life > 0);
-  for (const f of floaters) { f.y -= 26 * dt; f.life -= dt; }
+  for (const f of floaters) { if (f.num) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 200 * dt; f.vx *= 0.96; } else f.y -= 26 * dt; f.life -= dt; } // 傷害數字往外噴、往下掉
   floaters = floaters.filter((f) => f.life > 0);
   shake = Math.max(0, shake - dt * 30);
   for (const f of floaters) f.age += dt;

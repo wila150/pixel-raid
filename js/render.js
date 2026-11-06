@@ -278,7 +278,8 @@ function drawFx() {
   for (const f of floaters) {
     ctx.globalAlpha = Math.min(1, f.life * 2);
     const pop = 1 + Math.max(0, 0.12 - f.age) * (f.big ? 8 : 5);
-    ctx.font = `bold ${Math.round((f.big ? 12 : 9) * pop)}px "Noto Sans TC", sans-serif`;
+    ctx.font = `${f.num && f.big ? 900 : "bold"} ${Math.round((f.num && f.big ? 14 : f.big ? 12 : f.num ? 8 : 9) * pop)}px "Noto Sans TC", sans-serif`;
+    if (f.num && f.big) { ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.strokeStyle = f.color === "#ff4a3a" ? "#3a0808" : "#5a2a00"; ctx.strokeText(f.text, f.x, f.y); }
     ctx.fillStyle = "#1b1424"; ctx.fillText(f.text, f.x + 1, f.y + 1);
     ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
   }

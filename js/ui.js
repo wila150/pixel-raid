@@ -109,7 +109,7 @@ function renderTitle() {
   state = "title";
   screenEl.innerHTML = `<div class="panel">
     <h1>萬劍<br>仙途</h1>
-    <p class="sub">PIXEL RAID · 原型 v2.3</p>
+    <p class="sub">PIXEL RAID · 原型 v2.4</p>
     <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
     <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;
@@ -234,7 +234,7 @@ function resumeGame() {
 window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (k === "escape" || k === "p") state === "paused" ? resumeGame() : pauseGame();
-  if (k === "m") setMuted(!muted);
+  if (k === "m" && state !== "world") setMuted(!muted); // 仙界裡 M 是大地圖
 });
 document.addEventListener("visibilitychange", () => { if (document.hidden) pauseGame(); }); // 切到別的 App 自動暫停
 pauseBtn.addEventListener("click", () => (state === "paused" ? resumeGame() : pauseGame()));

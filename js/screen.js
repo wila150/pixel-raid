@@ -66,13 +66,19 @@ setTimeout(() => showA2hs(), 2500); // iPhone 沒有安裝事件，進來 2.5 �
 
 // 選單裡的設定（ui.js 的 pauseGame 用）
 function screenSettingsHtml() {
-  return `<div class="setrow"><span>畫面方向</span><button class="tab${orient === "land" ? " on" : ""}" data-o="land">橫向</button><button class="tab${orient === "port" ? " on" : ""}" data-o="port">直向</button></div>
+  const ap = !(save.w && save.w.autoPot === false);
+  return `${save.w ? `<div class="setrow"><span>血量低於 30% 自動喝丹藥</span><button class="tab${ap ? " on" : ""}" data-ap="1">開</button><button class="tab${!ap ? " on" : ""}" data-ap="0">關</button></div>` : ""}
+    <div class="setrow"><span>畫面方向</span><button class="tab${orient === "land" ? " on" : ""}" data-o="land">橫向</button><button class="tab${orient === "port" ? " on" : ""}" data-o="port">直向</button></div>
     ${!isStandalone() && isTouch ? `<div class="setrow"><button id="a2hsMenu" class="alt">📲 加入主畫面（全螢幕玩）</button></div>` : ""}`;
 }
 function bindScreenSettings() {
   screenEl.querySelectorAll("[data-o]").forEach((b) => b.addEventListener("click", () => {
     setOrient(b.dataset.o); updateRotHint();
     screenEl.querySelectorAll("[data-o]").forEach((x) => x.classList.toggle("on", x.dataset.o === orient));
+  }));
+  screenEl.querySelectorAll("[data-ap]").forEach((b) => b.addEventListener("click", () => {
+    save.w.autoPot = b.dataset.ap === "1"; writeSave(); sfx("click");
+    screenEl.querySelectorAll("[data-ap]").forEach((x) => x.classList.toggle("on", x.dataset.ap === b.dataset.ap));
   }));
   const a = document.getElementById("a2hsMenu");
   if (a) a.onclick = () => showA2hs(true);
