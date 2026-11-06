@@ -53,6 +53,13 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 #topbar { position: fixed; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); display: flex; gap: 8px; z-index: 20; }
 .tbtn { width: 40px; height: 40px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.5); background: rgba(20,14,30,0.6); color: #fff; font-size: 18px; cursor: pointer; }
 .tbtn.hidden { display: none; }
+#hud { position: fixed; top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 96px); display: flex; gap: 6px; z-index: 20; }
+#hud.hidden { display: none; }
+.hbtn { position: relative; width: 44px; height: 44px; display: grid; place-items: center; align-content: center; border-radius: 10px; border: 2px solid #ffcf6b; background: rgba(40,26,60,0.75); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; font-family: inherit; }
+.hbtn small { font-size: 9px; margin-top: 2px; }
+.hbtn.dot::after { content: ""; position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: #ff4a3a; border: 2px solid #fff; }
+.title-tap { margin-top: 30px; } .title-tap .big { padding: 16px 60px; font-size: 24px; }
+.keys { margin-top: 18px; font-size: 12px; color: #a99bb8; line-height: 1.8; }
 .panel.wide { max-width: 760px; }
 .pick-title { font-size: clamp(26px, 6vw, 40px) !important; }
 .cards { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 18px; }
@@ -98,3 +105,5 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; color: #a99bb8; font-size: 14px; }
 .card.ap[disabled] { opacity: 0.5; cursor: default; }
 .cpline.small { font-size: 13px; margin-top: 10px; color: #cfc4dc; }
+@media (max-width: 600px) { #hud { top: calc(max(8px, env(safe-area-inset-top)) + 50px); right: max(8px, env(safe-area-inset-right)); } }
+.risk { font-style: normal; font-size: 9px; color: #ffb070; }

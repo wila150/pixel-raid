@@ -37,6 +37,7 @@ function settle(win, rank, ranFail = false) {
   if (win && run && run.fromWorld) { // 世界王：多掉高級裝備
     const il = Math.floor(save.w.lv / 3) + 1;
     for (let i = 0; i < 3; i++) grantLoot(rollItem(1, il));
+    questEvent("boss");
   }
   if (win && mode === "normal") {
     grantLoot(rollItem(rank === "S" || rank === "A" ? 1 : 0));
@@ -94,63 +95,22 @@ function showEnd(win) {
   screenEl.classList.remove("hidden");
   bindEndButtons();
 }
-// 主畫面：境界、修為、法寶、靈獸、兩種模式
+// 主畫面：只有一個按鈕，點了直接進仙界（其他東西都在遊戲畫面右上角）
 function renderTitle() {
   if (inWorld && W0 && save.w) { save.w.x = Math.round(W0.x); save.w.y = Math.round(W0.y); writeSave(); }
   inWorld = false;
   setPadLabels(false);
   pad.classList.add("hidden");
   state = "title";
-  const r = realmIdx(), next = REALMS[r + 1];
-  const pct = next ? Math.round(((save.xiuwei - REALMS[r].need) / (next.need - REALMS[r].need)) * 100) : 100;
-  const trs = Object.keys(TREASURES).filter((k) => save.tr[k]).map((k) => `${TREASURES[k].n} Lv.${save.tr[k]}`);
-  const best = save.daily[todayKey()];
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v1.0</p>
-    <div class="profile">
-      <div><b>${REALMS[r].n}期</b>　修為 ${save.xiuwei}${next ? ` / ${next.need}` : "（已達巔峰）"}</div>
-      <div class="xwbar"><i style="width:${pct}%"></i></div>
-      <div class="small">法寶：${trs.length ? trs.join("、") : "還沒有，渡劫成功會掉落"}</div>
-      <div class="cprow">戰力 <b>${totalCP()}</b>　流派 <b>${SCHOOLS[save.school || "ti"].n}</b><small>（${SCHOOLS[save.school || "ti"].tag}）</small></div>
-      <div class="small">靈獸：${save.pet ? `${PETS[save.pet].n} Lv.${save.petLv}（${PETS[save.pet].d}）` : "還沒有"}</div>
-    </div>
-    <div class="btns">
-      <button id="world" class="big hero">進入仙界${save.w ? `<small>Lv.${save.w.lv}</small>` : "<small>大世界冒險</small>"}</button>
-    </div>
-    <div class="btns small2">
-      <button id="school" class="big alt">流派</button>
-      <button id="equipBtn" class="big alt">裝備${save.bag.some((b) => itemCP(b) > itemCP(save.eq[b.slot])) ? " <span class=\"dot\">●</span>" : ""}<small>背包 ${save.bag.length}・靈石 ${save.stone}</small></button>
-    </div>
-    <details class="minis"><summary>小遊戲</summary>
-    <div class="btns small2">
-      <button id="start" class="big">御劍跑酷</button>
-      <button id="maps" class="big">秘境${save.maxTier ? `<small>最深 ${save.maxTier} 層</small>` : "<small>刷寶</small>"}</button>
-      <button id="hunt" class="big">斬妖試煉</button>
-      <button id="daily" class="big alt">每日渡劫${best ? `<small>今日最佳 ${best}</small>` : ""}</button>
-    </div></details>
-    <div class="howto">
-      <p><b>進入仙界</b>　自由探索的大世界：青雲城找 NPC 換裝、補給、配點；出城往北走，越北邊妖獸越強；傳送陣快速移動；火山祭壇挑戰世界王焚天石魔</p>
-      <p><b>操作</b>　WASD 移動　J 劍擊　K 劍氣斬　U 掌心雷　空白鍵 閃身　H 丹藥；手機左邊拖曳移動、右下按鈕出招</p>
-      <p><b>第一關 御劍</b>　左右拖曳／A、D 選門，<span class="blue">藍門</span>加飛劍、<span class="red">紅門</span>扣飛劍；靠近封印石會自動用飛劍打，打碎有獎勵；閃開紫色妖群</p>
-      <p><b>第二關 渡劫</b>　WASD／方向鍵 移動　J 劍擊　K 劍陣　空白鍵 閃身　H 丹藥　U 天罰（集滿能量）</p>
-      <p><b>手機</b>　左半邊拖曳移動，右下按鈕放技能（建議橫放）</p>
-      <p><b>斬妖試煉</b>　在山林裡移動，飛劍自動斬妖；撿妖丹升級、每級三選一變強，撐過 3 分鐘再去渡劫</p>
-      <p><b>秘境</b>　用秘境鑰進去刷寶：斬妖到門檻後打秘境之主，噴一地裝備和更深一層的鑰匙。鑰匙詞綴越危險，寶越多</p>
-      <p><b>裝備</b>　斬妖、跑酷、渡劫會掉裝備，詞綴隨機；靈石可以洗練詞綴、點金升品質</p>
-      <p><b>每日渡劫</b>　每天一張固定地圖，大家同樣起點、不吃境界加成，比分數</p>
-    </div>
+    <p class="sub">PIXEL RAID · 原型 v1.1</p>
+    <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
+    <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;
   screenEl.classList.remove("hidden");
-  document.getElementById("start").onclick = () => start("normal");
   document.getElementById("world").onclick = enterWorld;
-  document.getElementById("daily").onclick = () => start("daily");
-  document.getElementById("hunt").onclick = () => startHunt();
-  document.getElementById("maps").onclick = () => { keySel = null; renderMaps(); };
-  document.getElementById("school").onclick = renderSchools;
-  document.getElementById("equipBtn").onclick = () => { eqSel = null; renderEquip(); };
 }
-
 
 // 畫面上的介面（不跟鏡頭移動）
 function drawHud() {
@@ -249,7 +209,7 @@ function pauseGame() {
   pad.classList.add("hidden");
   screenEl.innerHTML = `<div class="panel">
     <h1>暫停</h1>
-    <div class="btns"><button id="resume" class="big">繼續</button><button id="home" class="big alt">放棄，回主畫面</button></div>
+    <div class="btns"><button id="resume" class="big">繼續</button><button id="home" class="big alt">${inWorld ? "回標題（會存檔）" : "放棄，回主畫面"}</button></div>
     <p class="sub">按 Esc／P 也可以繼續</p>
   </div>`;
   screenEl.classList.remove("hidden");
@@ -274,6 +234,7 @@ muteBtn.addEventListener("click", () => setMuted(!muted));
 function updateTopButtons() {
   pauseBtn.classList.toggle("hidden", !canPause());
   muteBtn.textContent = muted ? "🔇" : "🔊";
+  updateWorldButtons();
 }
 // 所有按鈕點了都有聲音
 screenEl.addEventListener("click", (e) => { if (e.target.closest("button")) sfx("click"); });

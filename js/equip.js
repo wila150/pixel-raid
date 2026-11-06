@@ -13,13 +13,22 @@ const SCHOOLS = {
 
 // ───────── 裝備 ─────────
 const SLOTS = {
-  sword: { n: "劍", base: "atk", names: ["青鋼劍", "寒鐵劍", "流雲劍", "赤霄劍", "斬月劍"] },
+  sword: { n: "武器", base: "atk", names: ["青鋼劍", "寒鐵劍", "流雲劍", "赤霄劍", "斬月劍"] },
   crown: { n: "冠", base: "hp", names: ["布冠", "玉簪冠", "紫金冠", "星辰冠", "蓮華冠"] },
   robe: { n: "袍", base: "def", names: ["粗麻袍", "青衫", "鶴紋道袍", "玄鱗甲", "雲錦法衣"] },
   boots: { n: "靴", base: "spd", names: ["草鞋", "布靴", "追風靴", "流光靴", "凌虛靴"] },
   charm: { n: "佩", base: "crit", names: ["木牌", "玉佩", "靈犀佩", "龍紋佩", "太虛佩"] },
 };
 const SLOT_KEYS = Object.keys(SLOTS);
+// 武器決定招式（沒有職業，拿什麼武器就打什麼路子）
+const WEAPONS = {
+  sword: { n: "劍", job: "劍修", d: "近身揮砍、劍氣穿透、掌心雷", names: ["青鋼劍", "寒鐵劍", "流雲劍", "赤霄劍", "斬月劍"] },
+  staff: { n: "法杖", job: "法修", d: "遠程法球、火雨範圍、冰環減速", names: ["桃木杖", "青玉杖", "紫焰杖", "玄冰杖", "太乙杖"] },
+  bow: { n: "弓", job: "弓修", d: "快速連射、散射、穿雲箭", names: ["竹弓", "鐵胎弓", "追星弓", "落日弓", "射天弓"] },
+};
+const wtOf = (it) => (it && it.slot === "sword" ? it.wt || "sword" : null);
+const curWeapon = () => wtOf(save.eq.sword) || "sword";
+const sameWt = (b) => b.slot !== "sword" || wtOf(b) === curWeapon(); // 自動換裝、賣垃圾不會動到別種武器
 // 詞綴：lo～hi 是 0 級的範圍，每級裝備 +35%；w 是算戰力的權重
 const AFFIX = {
   atk: { n: "攻擊", lo: 4, hi: 10, w: 6 },
@@ -39,7 +48,7 @@ const AFFIX = {
 const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", def: "堅石", spd: "迅捷", crit: "致命", critD: "破軍", leech: "嗜血", thorns: "荊棘", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
 function nameItem(it) {
   if (it.u) { it.name = UNIQUES[it.u].n; return; }
-  const base = SLOTS[it.slot].names[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
+  const base = (it.slot === "sword" ? WEAPONS[wtOf(it)].names : SLOTS[it.slot].names)[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
   it.name = it.q === 0 || !ks.length ? base : `${AFF_WORD[ks[0]]}${base}${it.q >= 2 && ks[1] ? `・${AFF_WORD[ks[1]]}` : ""}`;
 }
 const BASE_VAL = { atk: [8, 4], hp: [30, 15], def: [6, 3], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
@@ -66,17 +75,19 @@ function rollAffixes(it, n) {
   for (let i = 0; i < n && pool.length; i++) { const k = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; it.aff[k] = rollAffVal(k, it.il); }
 }
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
-function rollItem(boost = 0, ilv = null) {
+function rollItem(boost = 0, ilv = null, wt = null) {
   const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
   const r = Math.random() * 100, w = boost ? [30, 42, 22, 6] : [58, 30, 10, 2];
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
   let slot = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], u = null;
   if (q === 3) { u = Object.keys(UNIQUES)[Math.floor(Math.random() * 5)]; slot = UNIQUES[u].slot; }
+  else if (wt) slot = "sword";
   const s = SLOTS[slot], bv = BASE_VAL[s.base];
   const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, u,
     name: u ? UNIQUES[u].n : s.names[Math.min(4, Math.floor(il / 1.2))], base: Math.round((bv[0] + bv[1] * il) * (0.85 + Math.random() * 0.3) * (1 + q * 0.12) * 10) / 10 };
   if (s.base !== "crit") it.base = Math.round(it.base);
+  if (slot === "sword") it.wt = u ? "sword" : wt || ["sword", "staff", "bow"][Math.floor(Math.random() * 3)];
   const [a0, a1] = RARITY[q].aff;
   rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1)));
   nameItem(it);
@@ -108,7 +119,7 @@ function applyBuild(b, daily) {
     for (const a in s) st[a] = (st[a] || 0) + s[a];
     if (it.u) uq[it.u] = true;
   }
-  const g = (k) => st[k] || 0, sc = save.school || "ti";
+  const g = (k) => st[k] || 0, sc = ""; // 不再選流派：玩法由武器決定，數值由裝備詞綴決定
   b.school = sc; b.uq = uq;
   b.maxHp = Math.round((b.maxHp + g("hp")) * (sc === "ti" ? 1.2 : sc === "fa" ? 0.8 : 1));
   b.atk *= (1 + g("atk") / 100) * (1 + g("atkP") / 100) * (sc === "fa" ? 1.35 : 1);
@@ -183,7 +194,7 @@ const statRows = (it) => {
   return Object.keys(st).map((k) => `<div class="srow"><span>${AFFIX[k].n}${k === SLOTS[it.slot].base ? "（主）" : ""}</span><b>+${AFFIX[k].dec || k === "crit" ? Math.round(st[k] * 10) / 10 : Math.round(st[k])}${AFFIX[k].pct ? "%" : ""}</b></div>`).join("")
     + (it.u ? `<div class="srow uq">${UNIQUES[it.u].d}</div>` : "");
 };
-const itemHead = (it) => `<div class="ihead" style="color:${RARITY[it.q].c}">【${RARITY[it.q].n}】${it.name}<small>${SLOTS[it.slot].n}・${it.il} 級</small></div>`;
+const itemHead = (it) => `<div class="ihead" style="color:${RARITY[it.q].c}">【${RARITY[it.q].n}】${it.name}<small>${it.slot === "sword" ? `${WEAPONS[wtOf(it)].n}（${WEAPONS[wtOf(it)].job}：${WEAPONS[wtOf(it)].d}）` : SLOTS[it.slot].n}・${it.il} 級</small></div>`;
 let eqSel = null; // 正在看的裝備 id（或 "eq:slot"）
 function renderEquip(msg = "") {
   state = "title";
@@ -209,14 +220,14 @@ function renderEquip(msg = "") {
   }
   screenEl.innerHTML = `<div class="panel wide equip">
     <h1 class="pick-title">裝備</h1>
-    <div class="cpline">戰力 <b>${totalCP()}</b>　靈石 <b class="stone">${save.stone}</b>　流派 <b>${SCHOOLS[save.school || "ti"].n}</b></div>
+    <div class="cpline">戰力 <b>${totalCP()}</b>　靈石 <b class="stone">${save.stone}</b>　招式 <b>${WEAPONS[curWeapon()].job}</b><small>（換武器就換招式）</small></div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="slots">${SLOT_KEYS.map(cell).join("")}</div>
     ${detail}
     <div class="baghead">背包 ${save.bag.length} / ${BAG_MAX}</div>
     <div class="bag">${bag.length ? bag.map((it) => {
       const better = itemCP(it) > itemCP(save.eq[it.slot]);
-      return `<button class="bitem${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" style="border-color:${RARITY[it.q].c}"><small>${SLOTS[it.slot].n}</small><b style="color:${RARITY[it.q].c}">${it.name}</b><i>戰 ${itemCP(it)}${better ? ' <span class="up">▲</span>' : ""}</i></button>`;
+      return `<button class="bitem${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" style="border-color:${RARITY[it.q].c}"><small>${SLOTS[it.slot].n}</small><b style="color:${RARITY[it.q].c}">${it.name}</b><i>戰 ${itemCP(it)}${better ? ' <span class="up">▲</span>' : ""}</i>${it.risk ? '<em class="risk">未帶回</em>' : ""}</button>`;
     }).join("") : `<p class="sub">還沒有裝備：斬妖、跑酷、渡劫都會掉</p>`}</div>
     <div class="btns">
       <button id="autoEq" class="big">一鍵換最強</button>
@@ -256,13 +267,13 @@ function renderEquip(msg = "") {
   on("autoEq", () => {
     let n = 0;
     for (const k of SLOT_KEYS) {
-      const best = save.bag.filter((b) => b.slot === k).sort((a, b) => itemCP(b) - itemCP(a))[0];
+      const best = save.bag.filter((b) => b.slot === k && sameWt(b)).sort((a, b) => itemCP(b) - itemCP(a))[0];
       if (best && itemCP(best) > itemCP(save.eq[k])) { equipItem(best); n++; }
     }
     eqSel = null; renderEquip(n ? `換上了 ${n} 件更強的裝備` : "身上已經是最強的了");
   });
   on("sellJunk", () => {
-    const junk = save.bag.filter((b) => b.q <= 1 && itemCP(b) <= itemCP(save.eq[b.slot]));
+    const junk = save.bag.filter((b) => b.q <= 1 && sameWt(b) && itemCP(b) <= itemCP(save.eq[b.slot]));
     const gain = junk.reduce((s, b) => s + sellPrice(b), 0);
     save.bag = save.bag.filter((b) => !junk.includes(b)); save.stone += gain; eqSel = null; writeSave();
     renderEquip(junk.length ? `賣掉 ${junk.length} 件，靈石 +${gain}（比身上好的會留著）` : "沒有可以賣的");

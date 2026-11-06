@@ -149,21 +149,35 @@ function worldStats() {
   b.potMax = 3 + Math.floor(w.lv / 8) + (save.tr.furnace || 0);
   return b;
 }
-const PAD_LABELS = { attack: ["劍擊", "J"], spin: ["劍氣斬", "K"], roll: ["閃身", "空白"], ult: ["掌心雷", "U"], potion: ["丹藥", "H"] };
+// 三種武器各自的招式：名字、冷卻、耗真氣
+const WSKILLS = {
+  sword: { attack: ["劍擊", 0.3, 0], spin: ["劍氣斬", 0.7, 10], ult: ["掌心雷", 2.5, 22] },
+  staff: { attack: ["法球", 0.42, 0], spin: ["火雨", 1.1, 14], ult: ["冰環", 3, 24] },
+  bow: { attack: ["連射", 0.2, 0], spin: ["散射", 0.8, 10], ult: ["穿雲箭", 2, 18] },
+};
+let WSKILL = {};
+function applyWeapon() {
+  const ws = WSKILLS[curWeapon()];
+  WSKILL = { roll: { cd: 1.1, mp: 0 }, potion: { cd: 1, mp: 0 } };
+  for (const k in ws) WSKILL[k] = { n: ws[k][0], cd: ws[k][1], mp: ws[k][2] };
+}
+applyWeapon();
+const PAD_KEYS = { attack: "J", spin: "K", roll: "空白", ult: "U", potion: "H" };
 const padOrig = {};
 pad.querySelectorAll(".btn").forEach((b) => { padOrig[b.dataset.act] = b.innerHTML; });
 function setPadLabels(world) {
   pad.querySelectorAll(".btn").forEach((b) => {
     if (!world) { b.innerHTML = padOrig[b.dataset.act]; return; }
-    const [n, k] = PAD_LABELS[b.dataset.act];
+    applyWeapon();
+    const k = PAD_KEYS[b.dataset.act], n = WSKILL[b.dataset.act].n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
     b.innerHTML = `${n}<small>${k}</small>${b.dataset.act === "potion" ? '<b class="count">3</b>' : ""}${b.dataset.act !== "attack" ? '<i class="cd"></i>' : ""}`;
   });
 }
-const WSKILL = { attack: { cd: 0.3, mp: 0 }, spin: { cd: 0.7, mp: 10 }, ult: { cd: 2.5, mp: 22 }, roll: { cd: 1.1, mp: 0 }, potion: { cd: 1, mp: 0 } };
 
 function enterWorld() {
   if (!wmap) buildWorld();
   if (!save.w) save.w = blankW();
+  if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; nameItem(it); save.eq.sword = it; writeSave(); }
   mode = "normal";
   inWorld = true;
   B = worldStats();
@@ -171,7 +185,7 @@ function enterWorld() {
   const w = save.w;
   if (blockedCircle(w.x, w.y, 5)) { w.x = 1200; w.y = 1530; }
   if (!W0) {
-    W0 = { camps: [], mobs: [], pshots: [], eshots: [], drops: [], npcCool: null, zone: "", bannerT: 0, saveT: 5, combatT: 0, lastAggro: 0 };
+    W0 = { camps: [], mobs: [], pshots: [], eshots: [], fires: [], rings: [], drops: [], npcCool: null, zone: "", bannerT: 0, saveT: 5, combatT: 0, lastAggro: 0 };
     makeCamps();
   }
   Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0,
@@ -253,6 +267,7 @@ function killMob(m) {
   if (m.lv < w.lv - 5) exp *= 0.3;
   exp = Math.max(1, Math.round(exp));
   gainExp(exp);
+  questEvent(m.elite ? "elite" : "kill", m.camp.z);
   save.xiuwei += Math.max(1, Math.round(exp / 6));
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
@@ -289,10 +304,13 @@ function hurtW(dmg, from) {
 }
 function showWorldDead() {
   const w = save.w, lose = Math.round(w.exp * 0.1);
+  const lost = riskyItems();
+  save.bag = save.bag.filter((b) => !b.risk);
+  for (const k of SLOT_KEYS) if (save.eq[k] && save.eq[k].risk) delete save.eq[k];
   w.exp -= lose; w.x = 1200; w.y = 1530; writeSave();
   pad.classList.add("hidden");
   screenEl.innerHTML = `<div class="panel"><h1>你倒下了…</h1>
-    <div class="result">損失經驗 ${lose}<br>撿到的裝備都還在。回城換裝、配點，或先在比較簡單的地區練等。</div>
+    <div class="result">損失經驗 ${lose}<br>${lost.length ? `還沒帶回的 ${lost.length} 件裝備掉光了：${lost.map((it) => `<b style="color:${RARITY[it.q].c}">${it.name}</b>`).join("、")}` : "沒有掉裝備（都已經帶回了）"}<br><small>野外撿到的裝備要回城、走傳送陣，或用回城符才算帶回</small></div>
     <div class="btns"><button id="revive" class="big">在青雲城復活</button><button id="home" class="big alt">回主畫面</button></div></div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("revive").onclick = () => { W0.x = 1200; W0.y = 1530; enterWorld(); };
@@ -332,31 +350,56 @@ function updateWorld(dt) {
 
   const near = (max) => { let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
   const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : 1); p.mp -= WSKILL[k].mp; return true; };
-  // 劍擊：前方扇形，自動轉向最近的怪
+  const wt = curWeapon();
+  const shoot = (a, o) => W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o));
   if ((act("attack", "j", "z") || (keys.has("j") && p.cds.attack <= 0)) && useSkill("attack")) {
-    const t = near(50); if (t) p.face = angTo(p, t);
-    p.swing = 0.18; sfx("dash");
-    for (const m of W0.mobs) {
-      if (m.dead) continue;
-      const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      if (d < 30 + WMOBS[m.type].r && diff < 1.1) hitMob(m, wDmg(10), 80, p);
+    if (wt === "sword") { // 劍擊：前方扇形
+      const t = near(50); if (t) p.face = angTo(p, t);
+      p.swing = 0.18; sfx("dash");
+      for (const m of W0.mobs) {
+        if (m.dead) continue;
+        const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        if (d < 30 + WMOBS[m.type].r && diff < 1.1) hitMob(m, wDmg(10), 80, p);
+      }
+    } else if (wt === "staff") { // 法球：遠程、打到第一隻就消失
+      const t = near(150); if (t) p.face = angTo(p, t);
+      shoot(p.face, { v: 170, life: 0.9, dmg: 12, kind: "orb", pierce: false, kb: 40 }); sfx("volley");
+    } else { // 連射：快、傷害低
+      const t = near(170); if (t) p.face = angTo(p, t);
+      shoot(p.face + rand(-0.05, 0.05), { v: 300, life: 0.6, dmg: 6, kind: "arrow", pierce: false, kb: 15 }); sfx("dash");
     }
   }
-  // 劍氣斬：三道穿透劍氣
   if (act("spin", "k", "x") && useSkill("spin")) {
     const t = near(160); if (t) p.face = angTo(p, t);
-    for (let i = -1; i <= 1; i++) { const a = p.face + i * 0.22; W0.pshots.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * 230, vy: Math.sin(a) * 230, a, life: 0.6, hit: new Set() }); }
-    sfx("volley");
+    if (wt === "sword") { // 劍氣斬：三道穿透劍氣
+      for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.22, { v: 230, life: 0.6, dmg: 14, kind: "sword", pierce: true, kb: 50 });
+      sfx("volley");
+    } else if (wt === "staff") { // 火雨：在目標位置落下、範圍爆炸
+      const tx = t ? t.x : p.x + Math.cos(p.face) * 60, ty = t ? t.y : p.y + Math.sin(p.face) * 60;
+      W0.fires.push({ x: tx, y: ty, t: 0.45, r: 34, dmg: 30 }); sfx("dash");
+    } else { // 散射：五支箭
+      for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.18, { v: 280, life: 0.55, dmg: 9, kind: "arrow", pierce: false, kb: 30 });
+      sfx("volley");
+    }
   }
-  // 掌心雷：劈最近的怪和牠旁邊的
   if (act("ult", "u", "i") && p.cds.ult <= 0 && p.mp >= WSKILL.ult.mp) {
-    const t = near(150);
-    if (t && useSkill("ult")) {
-      bolts.push({ x: t.x, y: t.y, life: 0.3 });
-      for (const m of W0.mobs) if (!m.dead && dist(m, t) < 38) hitMob(m, wDmg(26), 40, t, true);
-      sfx("crit"); shake = Math.max(shake, 6); flashT = 0.08; flashColor = "200,220,255";
-      burst(t.x, t.y, "#cfe0ff", 26, 120, 0.6);
-    } else if (!t) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc");
+    if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
+      const t = near(150);
+      if (t && useSkill("ult")) {
+        bolts.push({ x: t.x, y: t.y, life: 0.3 });
+        for (const m of W0.mobs) if (!m.dead && dist(m, t) < 38) hitMob(m, wDmg(26), 40, t, true);
+        sfx("crit"); shake = Math.max(shake, 6); flashT = 0.08; flashColor = "200,220,255";
+        burst(t.x, t.y, "#cfe0ff", 26, 120, 0.6);
+      } else if (!t) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc");
+    } else if (wt === "staff" && useSkill("ult")) { // 冰環：身邊一圈傷害＋減速
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < 60) { hitMob(m, wDmg(18), 70, p, true); m.slowT = 3; }
+      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r: 60 });
+      sfx("crit"); shake = Math.max(shake, 5); burst(p.x, p.y, "#bfefff", 30, 140, 0.5);
+    } else if (wt === "bow" && useSkill("ult")) { // 穿雲箭：一支大箭穿透一整排
+      const t = near(220); if (t) p.face = angTo(p, t);
+      shoot(p.face, { v: 380, life: 0.8, dmg: 34, kind: "big", pierce: true, kb: 90 });
+      sfx("crit"); shake = Math.max(shake, 4);
+    }
   }
   if (act("roll", " ", "l", "shift") && useSkill("roll")) { p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash"); }
   if (act("potion", "h", "c") && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
@@ -368,17 +411,31 @@ function updateWorld(dt) {
   for (const s of W0.pshots) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
     if (solid(s.x, s.y)) s.life = 0;
-    for (const m of W0.mobs) if (!m.dead && !s.hit.has(m) && Math.hypot(m.x - s.x, m.y - s.y) < WMOBS[m.type].r + 4) { s.hit.add(m); hitMob(m, wDmg(14), 50, p, true); }
+    for (const m of W0.mobs) if (s.life > 0 && !m.dead && !s.hit.has(m) && Math.hypot(m.x - s.x, m.y - s.y) < WMOBS[m.type].r + (s.kind === "big" ? 7 : 4)) {
+      s.hit.add(m); hitMob(m, wDmg(s.dmg), s.kb, p, true);
+      if (!s.pierce) { s.life = 0; burst(s.x, s.y, s.kind === "orb" ? "#c9a2ff" : "#ffe9a0", 5, 40); }
+    }
   }
   W0.pshots = W0.pshots.filter((s) => s.life > 0);
+  for (const f of W0.fires) { // 火雨落地
+    f.t -= dt;
+    if (f.t <= 0) {
+      for (const m of W0.mobs) if (!m.dead && dist(m, f) < f.r + WMOBS[m.type].r) hitMob(m, wDmg(f.dmg), 40, f, true);
+      burst(f.x, f.y, "#ff8a2e", 36, 130, 0.6); burst(f.x, f.y, "#ffd84a", 16, 80, 0.4); shake = Math.max(shake, 5); sfx("break");
+    }
+  }
+  W0.fires = W0.fires.filter((f) => f.t > 0);
+  for (const r of W0.rings) r.t += dt;
+  W0.rings = W0.rings.filter((r) => r.t < r.max);
 
   // 怪物：只更新玩家附近的
   let aggro = false;
   const inTown = zoneAt(p.x, p.y) === "town";
   for (const m of W0.mobs) {
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
-    const d = WMOBS[m.type], dp = dist(m, p), spd = d.spd * B.slow * (m.elite ? 1.1 : 1);
+    const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
+    if (m.slowT > 0) { m.slowT -= dt; spd *= 0.45; }
     if (m.kb > 0) { moveBody(m, Math.cos(m.ka) * m.kb * dt * 3, Math.sin(m.ka) * m.kb * dt * 3, d.r); m.kb = Math.max(0, m.kb - dt * 400); continue; }
     const homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
     if (m.st === "idle") {
@@ -443,7 +500,7 @@ function updateWorld(dt) {
     if (o.kind !== "item" && o.kind !== "key" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
     if (d < 10) {
       o.got = true;
-      if (o.kind === "item") grantLoot(o.it, p.x, p.y - 6);
+      if (o.kind === "item") { if (W0.zone !== "town") o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
       else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
       else if (o.kind === "potion") { w.potions = Math.min(B.potMax, w.potions + 1); floatText(p.x, p.y - 16, "丹藥 +1", "#7dff8a"); sfx("heal"); }
       else if (o.kind === "key") { addKey(o.k); floatText(p.x, p.y - 16, `秘境鑰 第 ${o.k.tier} 層`, "#9fe8ff", true); sfx("arrive"); }
@@ -454,7 +511,7 @@ function updateWorld(dt) {
 
   // 地區切換提示、傳送陣解鎖
   const z = zoneAt(p.x, p.y);
-  if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); } }
+  if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); bankLoot("回到青雲城"); } }
   W0.bannerT = Math.max(0, W0.bannerT - dt);
   for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < 40) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `解鎖傳送陣：${wp.n}`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
 
@@ -464,16 +521,25 @@ function updateWorld(dt) {
   if (!hitSpot) W0.npcCool = null;
   else if (W0.npcCool !== hitSpot.id) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
 
+  if (pressed.has("q")) quickSwap();
+  if (pressed.has("t")) openTeleport();
+  if (W0.recall > 0) { // 回城符：原地不動 3 秒
+    if (ml > 0.1 || p.hurt > 0) { W0.recall = 0; floatText(p.x, p.y - 26, "回城被打斷", "#ff8a7a"); }
+    else {
+      W0.recall -= dt;
+      if (Math.random() < 0.5) particles.push({ x: p.x + rand(-8, 8), y: p.y + 4, vx: 0, vy: -40, life: 0.5, max: 0.5, color: "#9fe8ff", size: 2 });
+      if (W0.recall <= 0) { W0.recall = 0; bankLoot("回城符"); W0.x = 1200; W0.y = 1530; cam.x = W0.x; cam.y = W0.y; burst(W0.x, W0.y, "#9fe8ff", 30, 100); sfx("arrive"); }
+    }
+  }
+  checkQuest();
   W0.saveT -= dt;
   if (W0.saveT <= 0) { W0.saveT = 5; w.x = Math.round(p.x); w.y = Math.round(p.y); writeSave(); }
 }
 
 // ───────── NPC 與選單 ─────────
 const NPCS = [
-  { id: "smith", n: "煉器師", x: 1138, y: 1480, pal: { W: "#c98a4a", w: "#8a5a2a", B: "#5a3a1a" }, d: "換裝備、出售、洗練、點金" },
   { id: "alch", n: "丹師", x: 1262, y: 1480, pal: { W: "#7fd88a", w: "#4a9a5a", B: "#2a6a3a" }, d: "回滿生命真氣、補滿丹藥" },
   { id: "rift", n: "秘境使者", x: 1138, y: 1566, pal: { W: "#a96be0", w: "#7a3fb8", B: "#4a2a7a" }, d: "用秘境鑰進秘境刷寶" },
-  { id: "elder", n: "長老", x: 1262, y: 1566, pal: { W: "#eef2fa", w: "#c9c2d8", B: "#ffcf6b" }, d: "配能力點、換流派" },
 ];
 const NPC_IMG = {};
 for (const n of NPCS) NPC_IMG[n.id] = sprite([...HERO_TOP, "...kwk.kwk..", "...kk...kk.."], Object.assign({}, HERO_PAL, n.pal));
@@ -490,14 +556,12 @@ function openSpot(s) {
   pad.classList.add("hidden");
   const w = save.w;
   let body = "", btns = "";
-  if (s.id === "smith") { worldReturnTo(); eqSel = null; renderEquip(); return; }
   if (s.id === "rift") { worldReturnTo(); keySel = null; renderMaps(); return; }
   if (s.id === "alch") {
     W0.hp = W0.maxHp; W0.mp = B.maxMp; w.potions = Math.max(w.potions, B.potMax); writeSave();
     body = `生命、真氣都回滿了，丹藥補到 ${w.potions} 顆。`;
-  } else if (s.id === "elder") { renderAP(); return; }
-  else if (s.kind === "wp") {
-    body = "要傳送到哪裡？";
+  } else if (s.kind === "wp") { openTeleport(); return; } else if (false) {
+    body = "";
     btns = WAYPOINTS.filter((wp) => w.wp.includes(wp.id) && wp.id !== s.wp.id).map((wp) => `<button class="big alt tp" data-wp="${wp.id}">${wp.n}<small>Lv.${ZONES[wp.id].lv.join("–")}</small></button>`).join("");
     if (!btns) body = "還沒有解鎖其他傳送陣。走到各地區的傳送陣就會解鎖。";
   } else if (s.kind === "altar") {
@@ -521,18 +585,18 @@ function worldReturnTo() { /* renderEquip／renderMaps 的「返回」會看 inW
 function renderAP() {
   const w = save.w;
   B = worldStats();
-  screenEl.innerHTML = `<div class="panel wide equip"><h1 class="pick-title">長老</h1>
+  screenEl.innerHTML = `<div class="panel wide equip"><h1 class="pick-title">角色</h1>
     <div class="cpline">Lv.${w.lv}　能力點 <b>${w.free}</b>　戰力 <b>${totalCP()}</b></div>
+    <div class="cpline small">招式跟著武器走：現在拿${WEAPONS[curWeapon()].n}（${WEAPONS[curWeapon()].d}）</div>
     <div class="cards">${Object.keys(AP).map((k) => `<button class="card ap" data-k="${k}" ${w.free ? "" : "disabled"}><b>${AP[k].n} ${w.ap[k]}</b><span class="desc">每點 ${AP[k].d}</span><i>＋1</i></button>`).join("")}</div>
     <div class="cpline small">生命 ${B.maxHp}　攻擊 ×${B.atk.toFixed(2)}　真氣 ${B.maxMp}　爆擊 ${Math.round(B.crit * 100)}%</div>
-    <div class="btns"><button id="apReset" class="big alt">重新配點（−${20 * w.lv} 靈石）</button><button id="school" class="big alt">換流派（${SCHOOLS[save.school].n}）</button><button id="close" class="big">離開</button></div></div>`;
+    <div class="btns"><button id="apReset" class="big alt">重新配點（−${20 * w.lv} 靈石）</button><button id="close" class="big">離開</button></div></div>`;
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".ap").forEach((b) => b.addEventListener("click", () => { if (!w.free) return; w.free--; w.ap[b.dataset.k]++; writeSave(); sfx("good"); renderAP(); }));
   document.getElementById("apReset").onclick = () => {
     const c = 20 * w.lv; if (save.stone < c) { sfx("bad"); return; }
     save.stone -= c; for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); renderAP();
   };
-  document.getElementById("school").onclick = renderSchools;
   document.getElementById("close").onclick = worldReturn;
 }
 // 世界王：進入原本的打王場地，數值用大世界的等級和裝備
@@ -630,7 +694,16 @@ function renderWorld() {
       }
     }
   }
-  for (const s of W0.pshots) drawSword(s.x, s.y, s.a, 10);
+  for (const s of W0.pshots) {
+    if (s.kind === "sword") drawSword(s.x, s.y, s.a, 10);
+    else if (s.kind === "orb") { ctx.fillStyle = "rgba(201,162,255,0.4)"; ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#f0e0ff"; ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3); }
+    else { const L = s.kind === "big" ? 14 : 7; ctx.strokeStyle = s.kind === "big" ? "#ffe066" : "#f3eada"; ctx.lineWidth = s.kind === "big" ? 3 : 1.2;
+      ctx.beginPath(); ctx.moveTo(s.x - Math.cos(s.a) * L, s.y - Math.sin(s.a) * L); ctx.lineTo(s.x, s.y); ctx.stroke(); }
+  }
+  for (const f of W0.fires) { ctx.strokeStyle = `rgba(255,120,40,${0.4 + 0.4 * Math.sin(time * 30)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#ffb347"; ctx.fillRect(f.x - 2, f.y - 4 - f.t * 160, 4, 8); }
+  for (const r of W0.rings) { ctx.strokeStyle = `rgba(191,239,255,${1 - r.t / r.max})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * (r.t / r.max), 0, Math.PI * 2); ctx.stroke(); }
+  for (const m of W0.mobs) if (!m.dead && m.slowT > 0) { ctx.fillStyle = "rgba(160,220,255,0.35)"; ctx.fillRect(m.x - 5, m.y - 2, 10, 3); }
   for (const s of W0.eshots) { ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
   drawFx();
   drawWorldHud();
@@ -660,8 +733,8 @@ function drawWMob(m) {
 function drawWorldHud() {
   const p = W0, w = save.w;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  // 小地圖（左上）
-  const mw = Math.min(110, W * 0.28), mh = mw * (TH / TW), mx0 = 10, my0 = 10, sc = mw / (TW * TS);
+  // 小地圖（右上，在按鈕列下面）
+  const mw = Math.min(104, W * 0.26), mh = mw * (TH / TW), mx0 = W - mw - 12, my0 = W <= 600 ? 112 : 66, sc = mw / (TW * TS);
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(mx0 - 2, my0 - 2, mw + 4, mh + 4);
   for (let j = 0; j < 14; j++) for (let i = 0; i < 20; i++) {
     const z = zoneAt((i + 0.5) / 20 * TW * TS, (j + 0.5) / 14 * TH * TS);
@@ -669,19 +742,60 @@ function drawWorldHud() {
   }
   for (const wp of WAYPOINTS) { ctx.fillStyle = w.wp.includes(wp.id) ? "#9fe8ff" : "#555"; ctx.fillRect(mx0 + wp.x * sc - 1.5, my0 + wp.y * sc - 1.5, 3, 3); }
   ctx.fillStyle = "#ff4a2a"; ctx.fillRect(mx0 + ALTAR.x * sc - 2, my0 + ALTAR.y * sc - 2, 4, 4);
+  const qt = questTarget();
+  if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 1; ctx.strokeRect(mx0 + qt.x * sc - 3, my0 + qt.y * sc - 3, 6, 6); }
   ctx.fillStyle = "#fff"; ctx.fillRect(mx0 + p.x * sc - 1.5, my0 + p.y * sc - 1.5, 3, 3);
-  // 生命、真氣、經驗
-  const bx = mx0, by = my0 + mh + 10, bw = Math.min(150, W * 0.36);
+  ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "right"; ctx.fillStyle = "#cfc4dc";
+  ctx.fillText(ZONES[W0.zone || "town"].n, mx0 + mw, my0 + mh + 13);
+  // 左上：頭像、等級、生命、真氣
+  const x0 = 10, y0 = 10;
+  ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x0, y0, 40, 40);
+  ctx.strokeStyle = "#ffcf6b"; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, 40, 40);
+  ctx.imageSmoothingEnabled = false; ctx.drawImage(HERO, 0, 0, 12, 10, x0 + 4, y0 + 6, 32, 27);
+  ctx.fillStyle = "#1b1424"; ctx.fillRect(x0, y0 + 32, 40, 10);
+  ctx.textAlign = "center"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffe066"; ctx.fillText(`Lv.${w.lv}`, x0 + 20, y0 + 40);
+  const bx = x0 + 46, bw = Math.min(130, W * 0.3);
   const bar = (y, f, c, label) => {
-    ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(bx - 2, y - 2, bw + 4, 12);
-    ctx.fillStyle = c; ctx.fillRect(bx, y, bw * clamp(f, 0, 1), 8);
-    ctx.fillStyle = "#fff"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillText(label, bx + 3, y + 7.5);
+    ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fillRect(bx - 2, y - 2, bw + 4, 13);
+    ctx.fillStyle = c; ctx.fillRect(bx, y, bw * clamp(f, 0, 1), 9);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillText(label, bx + 3, y + 8);
   };
-  bar(by, p.hp / p.maxHp, p.hp / p.maxHp < 0.3 ? "#ff5a4a" : "#d83a3a", `生命 ${Math.ceil(p.hp)}/${p.maxHp}`);
-  bar(by + 14, p.mp / B.maxMp, "#3a7ad8", `真氣 ${Math.floor(p.mp)}/${B.maxMp}`);
-  bar(by + 28, w.exp / expNext(w.lv), "#e0c040", `Lv.${w.lv}　${Math.floor(w.exp / expNext(w.lv) * 100)}%`);
-  ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc";
-  ctx.fillText(`丹藥 ${w.potions}　靈石 ${save.stone}${w.free ? `　能力點 ${w.free}（找長老）` : ""}`, bx, by + 50);
+  ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
+  ctx.fillText(`${REALMS[realmIdx()].n}期修士　戰力 ${totalCP()}`, bx, y0 + 8);
+  bar(y0 + 14, p.hp / p.maxHp, p.hp / p.maxHp < 0.3 ? "#ff5a4a" : "#d83a3a", `${Math.ceil(p.hp)}/${p.maxHp}`);
+  bar(y0 + 29, p.mp / B.maxMp, "#3a7ad8", `${Math.floor(p.mp)}/${B.maxMp}`);
+  // 任務欄
+  const q = curQuest();
+  if (q) {
+    const qy = y0 + 50, qw = Math.min(190, W * 0.46);
+    ctx.fillStyle = "rgba(10,8,18,0.7)"; ctx.fillRect(x0, qy, qw, 38);
+    ctx.fillStyle = "#ffcf6b"; ctx.fillRect(x0, qy, 3, 38);
+    ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffcf6b"; ctx.fillText(q.main ? "主線" : "懸賞", x0 + 8, qy + 12);
+    ctx.fillStyle = "#fff"; ctx.fillText(q.t, x0 + 34, qy + 12);
+    const f = clamp(questProg() / q.n, 0, 1);
+    ctx.fillStyle = "#2a2238"; ctx.fillRect(x0 + 8, qy + 20, qw - 16, 6);
+    ctx.fillStyle = "#b07dff"; ctx.fillRect(x0 + 8, qy + 20, (qw - 16) * f, 6);
+    ctx.font = "9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc"; ctx.fillText(`${Math.min(questProg(), q.n)} / ${q.n}`, x0 + 8, qy + 35);
+  }
+  const rn = riskyItems().length;
+  if (rn) {
+    const ry = y0 + (q ? 94 : 50);
+    ctx.fillStyle = "rgba(60,20,10,0.75)"; ctx.fillRect(x0, ry, Math.min(190, W * 0.46), 18);
+    ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#ffb070";
+    ctx.fillText(`⚠ 未帶回 ${rn} 件（死了會掉）`, x0 + 6, ry + 12.5);
+  }
+  if (W0.recall > 0) {
+    const rw = 140, rx = W / 2 - rw / 2, ry = H * 0.62;
+    ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(rx - 2, ry - 2, rw + 4, 12);
+    ctx.fillStyle = "#9fe8ff"; ctx.fillRect(rx, ry, rw * (1 - W0.recall / 3), 8);
+    ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff"; ctx.fillText("回城中…", W / 2, ry - 6);
+  }
+  // 經驗條（最下面一整條）
+  const ef = w.exp / expNext(w.lv);
+  ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, H - 6, W, 6);
+  ctx.fillStyle = "#e0c040"; ctx.fillRect(0, H - 5, W * ef, 4);
+  ctx.textAlign = "center"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffe9a0";
+  ctx.fillText(`經驗 ${Math.floor(ef * 100)}%　丹藥 ${w.potions}　靈石 ${save.stone}`, W / 2, H - 10);
   // 地區名稱
   if (W0.bannerT > 0) {
     const z = ZONES[W0.zone];
@@ -689,15 +803,19 @@ function drawWorldHud() {
     ctx.textAlign = "center"; ctx.font = "900 22px 'Noto Sans TC', sans-serif";
     ctx.fillStyle = "#1b1424"; ctx.fillText(z.n, W / 2 + 2, H * 0.3 + 2); ctx.fillStyle = "#ffe0b0"; ctx.fillText(z.n, W / 2, H * 0.3);
     ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc";
-    ctx.fillText(W0.zone === "town" ? "安全區・找 NPC 換裝、補給" : `妖獸 Lv.${z.lv[0]}–${z.lv[1]}`, W / 2, H * 0.3 + 22);
+    ctx.fillText(W0.zone === "town" ? "安全區・補滿丹藥、帶回裝備" : `妖獸 Lv.${z.lv[0]}–${z.lv[1]}`, W / 2, H * 0.3 + 22);
     ctx.globalAlpha = 1;
   }
   if (time < 6 && w.lv === 1 && w.exp === 0) {
     ctx.textAlign = "center"; ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff";
     ctx.fillText("左邊拖曳移動，右下按鈕出招（電腦：WASD＋J／K／U／空白／H）", W / 2, H * 0.62);
-    ctx.fillText("出城往北走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
+    ctx.fillText("照左上角的任務走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
   }
   // 搖桿
+  if (stick.id === null && TOUCH) {
+    ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(80, H - 90, 50, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.beginPath(); ctx.arc(80, H - 90, 22, 0, Math.PI * 2); ctx.fill();
+  }
   if (stick.id !== null) {
     ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(stick.ox, stick.oy, 50, 0, Math.PI * 2); ctx.stroke();
     const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy), kk = d > 50 ? 50 / d : 1;
@@ -713,3 +831,128 @@ function drawWorldHud() {
   const cnt = pad.querySelector(".count"); if (cnt) cnt.textContent = w.potions;
   if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.5, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }
 }
+
+const TOUCH = window.matchMedia("(pointer: coarse)").matches;
+
+// ───────── 任務：主線一路帶到世界王，做完之後是無限懸賞 ─────────
+const QUESTS = [
+  { t: "出城往北，斬妖 8 隻", k: "kill", z: "grass", n: 8, item: 1, wt: "staff" },
+  { t: "找到靈草原傳送陣", k: "wp", id: "grass", n: 1, item: 1, wt: "bow" },
+  { t: "升到 Lv.5（右上角配點）", k: "lv", n: 5, item: 1 },
+  { t: "斬殺一隻精英妖獸", k: "elite", n: 1, item: 1 },
+  { t: "幽暗森林斬妖 15 隻", k: "kill", z: "forest", n: 15 },
+  { t: "找到幽暗森林傳送陣", k: "wp", id: "forest", n: 1 },
+  { t: "升到 Lv.11", k: "lv", n: 11, item: 1 },
+  { t: "亂石荒原斬妖 20 隻", k: "kill", z: "waste", n: 20 },
+  { t: "找到亂石荒原傳送陣", k: "wp", id: "waste", n: 1 },
+  { t: "升到 Lv.16", k: "lv", n: 16, item: 1 },
+  { t: "焚天火山斬妖 20 隻", k: "kill", z: "volcano", n: 20 },
+  { t: "找到焚天火山傳送陣", k: "wp", id: "volcano", n: 1 },
+  { t: "火山北邊祭壇：打倒焚天石魔", k: "boss", n: 1, item: 2 },
+];
+function curQuest() {
+  const w = save.w;
+  if (!w) return null;
+  w.q = w.q || 0; w.qp = w.qp || 0;
+  if (w.q < QUESTS.length) return { ...QUESTS[w.q], main: true };
+  // 懸賞：在適合自己等級的地區斬妖
+  const z = ["volcano", "waste", "forest", "grass"].find((k) => w.lv >= ZONES[k].lv[0]) || "grass";
+  if (!w.bounty) w.bounty = { z, n: 25 };
+  return { t: `${ZONES[w.bounty.z].n}斬妖 ${w.bounty.n} 隻`, k: "kill", z: w.bounty.z, n: w.bounty.n, main: false };
+}
+function questProg() {
+  const q = curQuest(), w = save.w;
+  if (!q) return 0;
+  if (q.k === "lv") return w.lv;
+  if (q.k === "wp") return w.wp.includes(q.id) ? 1 : 0;
+  return w.qp;
+}
+function questEvent(k, z) {
+  const q = curQuest();
+  if (!q) return;
+  if (q.k === k && (!q.z || q.z === z)) save.w.qp++;
+  else if (k === "elite" && q.k === "kill" && q.z === z) save.w.qp++; // 精英也算一隻
+}
+function questTarget() { // 小地圖上標任務地點
+  const q = curQuest();
+  if (!q) return null;
+  if (q.k === "wp") return WAYPOINTS.find((p) => p.id === q.id);
+  if (q.k === "boss") return ALTAR;
+  if (q.z) return WAYPOINTS.find((p) => p.id === q.z);
+  return null;
+}
+function checkQuest() {
+  const q = curQuest(), w = save.w;
+  if (!q || questProg() < q.n) return;
+  const exp = Math.round(expNext(w.lv) * (q.main ? 0.35 : 0.5)), st = 10 + w.lv * 2;
+  w.q < QUESTS.length ? w.q++ : (w.bounty = null);
+  w.qp = 0;
+  save.stone += st;
+  floatText(W0.x, W0.y - 46, `任務完成！靈石 +${st}`, "#ffe066", true);
+  sfx("win");
+  if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) floatText(W0.x, W0.y - 60, `得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b", true); }
+  gainExp(exp);
+}
+
+// 一鍵換武器：換成背包裡下一種武器（同種挑最強的），戰鬥中也能換
+function quickSwap() {
+  const order = ["sword", "staff", "bow"], cur = curWeapon();
+  for (let i = 1; i <= 2; i++) {
+    const t = order[(order.indexOf(cur) + i) % 3];
+    const best = save.bag.filter((b) => wtOf(b) === t).sort((a, b) => itemCP(b) - itemCP(a))[0];
+    if (best) {
+      equipItem(best); writeSave();
+      B = worldStats(); W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp);
+      setPadLabels(true);
+      floatText(W0.x, W0.y - 26, `換成${best.name}（${WEAPONS[t].job}）`, "#ffcf6b", true); sfx("arrive");
+      burst(W0.x, W0.y, "#ffcf6b", 14, 60);
+      return;
+    }
+  }
+  floatText(W0.x, W0.y - 26, "背包裡沒有別種武器", "#cfc4dc");
+}
+// ───────── 右上角按鈕：背包、角色、傳送 ─────────
+const hudEl = document.getElementById("hud");
+function updateWorldButtons() {
+  const on = state === "world";
+  hudEl.classList.toggle("hidden", !on);
+  if (!on || !save.w) return;
+  hudEl.querySelector('[data-h="bag"]').classList.toggle("dot", save.bag.some((b) => sameWt(b) && itemCP(b) > itemCP(save.eq[b.slot])));
+  hudEl.querySelector('[data-h="ap"]').classList.toggle("dot", save.w.free > 0);
+}
+const riskyItems = () => save.bag.filter((b) => b.risk).concat(SLOT_KEYS.map((k) => save.eq[k]).filter((b) => b && b.risk));
+function bankLoot(why) { // 撤離成功：未帶回的裝備變成永久的
+  const r = riskyItems();
+  if (!r.length) return;
+  r.forEach((b) => delete b.risk); writeSave();
+  floatText(W0.x, W0.y - 40, `${why}：${r.length} 件裝備安全帶回！`, "#7dff8a", true); sfx("win");
+}
+function openTeleport() {
+  const atWp = W0.zone === "town" || WAYPOINTS.some((wp) => save.w.wp.includes(wp.id) && dist(wp, W0) < 40);
+  if (!atWp) {
+    if (W0.recall > 0) return;
+    W0.recall = 3; floatText(W0.x, W0.y - 26, "回城符：原地不動 3 秒", "#9fe8ff", true); return;
+  }
+  pausedFrom = "world"; state = "pick";
+  keys.clear(); stick.id = null; pad.classList.add("hidden");
+  const w = save.w;
+  const btns = WAYPOINTS.filter((wp) => w.wp.includes(wp.id)).map((wp) => `<button class="big alt tp" data-wp="${wp.id}">${wp.n}<small>${wp.id === "town" ? "安全區" : `Lv.${ZONES[wp.id].lv.join("–")}`}</small></button>`).join("");
+  screenEl.innerHTML = `<div class="panel"><h1 class="pick-title">傳送</h1>
+    <div class="result">傳送會把還沒帶回的裝備一起帶回<br><small>走到各地區的傳送陣就會解鎖；在野外按傳送會用回城符（原地不動 3 秒）</small></div><div class="btns">${btns}<button id="close" class="big">取消</button></div></div>`;
+  screenEl.classList.remove("hidden");
+  document.getElementById("close").onclick = worldReturn;
+  screenEl.querySelectorAll(".tp").forEach((b) => b.addEventListener("click", () => {
+    const wp = WAYPOINTS.find((x) => x.id === b.dataset.wp);
+    W0.x = wp.x; W0.y = wp.y + 22; W0.npcCool = "wp-" + wp.id; cam.x = W0.x; cam.y = W0.y;
+    burst(W0.x, W0.y, "#9fe8ff", 30, 100); sfx("arrive");
+    worldReturn(); bankLoot("傳送陣");
+  }));
+}
+hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+  if (state !== "world") return;
+  sfx("click");
+  if (b.dataset.h === "bag") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); eqSel = null; renderEquip(); }
+  else if (b.dataset.h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
+  else if (b.dataset.h === "swap") quickSwap();
+  else openTeleport();
+}));
