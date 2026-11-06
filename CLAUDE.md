@@ -66,3 +66,8 @@
 - 快捷鍵：I/B 背包、O 角色、T 傳送、R 排行、Q 換武器（`openHud(h)`）。
 - 掉落：仙品以上有衝天光柱、底色標籤；凡品灰字。
 - 營地每營 4～7 隻，重生 15～22 秒。
+
+## v2.5 手機註冊修正
+- 加入主畫面提示、自動全螢幕、轉方向提示（`body.playing`）都只在進到仙界後才出現，不擋登入／註冊／建立角色。
+- 所有 input 可選字（iOS 打字）；`.screen` 可捲動（鍵盤跳出來時按得到按鈕）；矮螢幕登入畫面縮小。
+- 測真的登入流程：headless 的 virtual-time 會卡住 Firebase，要用真實時間跑 Edge，頁面用 fetch 把結果送到本機 node 小伺服器（8091）。測完記得刪測試帳號（identitytoolkit batchDelete＋Firestore users＋RTDB lb）。

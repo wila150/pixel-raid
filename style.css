@@ -164,8 +164,8 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
 #rotate p { font-size: 20px; } #rotate b { color: #ffe066; }
 #rotate button { padding: 10px 18px; border-radius: 10px; border: 2px solid #4a4060; background: #2a2040; color: #cfc4dc; font-family: inherit; font-size: 15px; }
 @keyframes rotIc { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(90deg); } }
-@media (orientation: portrait) { body.touch.want-land #rotate { display: flex; } }
-@media (orientation: landscape) { body.touch.want-port #rotate { display: flex; } body.touch.want-port #rotate .rot-ic { animation-direction: reverse; } }
+@media (orientation: portrait) { body.touch.playing.want-land #rotate { display: flex; } }
+@media (orientation: landscape) { body.touch.playing.want-port #rotate { display: flex; } body.touch.want-port #rotate .rot-ic { animation-direction: reverse; } }
 #a2hs { position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 80; width: min(560px, calc(100vw - 24px)); }
 #a2hs.hidden { display: none; }
 .a2hs-box { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-radius: 14px; border: 2px solid #ffcf6b; background: rgba(20,14,34,0.96); box-shadow: 0 6px 24px rgba(0,0,0,0.6); }
@@ -203,3 +203,7 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
 .hbtn { width: 48px; height: 48px; background: linear-gradient(#3a2a58, #221836); box-shadow: inset 0 -3px 0 rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.5); }
 .hbtn small { font-size: 9px; margin-top: 1px; color: #ffe9b0; font-weight: 700; }
 .hbtn:active { transform: translateY(1px); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.35); }
+/* 手機打字：所有輸入框都要能選字；鍵盤跳出來時畫面要能捲動，不然按不到註冊 */
+input, textarea { user-select: text; -webkit-user-select: text; touch-action: manipulation; }
+.screen { overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; place-items: safe center; }
+@media (max-height: 500px) { .login h1 { font-size: 34px; line-height: 1.05; margin: 0; } .login form { margin-top: 10px; gap: 8px; } .login input { padding: 9px 12px; } .login .keys { display: none; } }

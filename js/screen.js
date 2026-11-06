@@ -19,8 +19,10 @@ function setOrient(o) {
 }
 
 // 點一下畫面就全螢幕（Android 有效；iPhone Safari 不支援，要加入主畫面才會滿版）
-function goFull() {
+function goFull(e) {
   if (!isTouch || isStandalone() || document.fullscreenElement) return;
+  if (typeof state === "undefined" || state !== "world") return; // 只在遊戲中切全螢幕，登入、打字時不要動畫面
+  if (e && e.target && e.target.closest && e.target.closest("input, form")) return;
   const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
   if (!f) return;
   try { const r = f.call(el, { navigationUI: "hide" }); if (r && r.then) r.then(applyOrient, () => {}); } catch { /* 不支援就算了 */ }
@@ -38,6 +40,7 @@ function updateRotHint() {
 }
 updateRotHint();
 applyOrient();
+setInterval(() => document.body.classList.toggle("playing", typeof inWorld !== "undefined" && inWorld && state === "world"), 500); // 只有在遊戲中才提醒轉方向
 
 // ───────── 加入主畫面 ─────────
 let installEvt = null;
@@ -53,6 +56,7 @@ function a2hsSteps() {
 }
 function showA2hs(force) {
   if (isStandalone() || !isTouch) return;
+  if (!force && (typeof state === "undefined" || state !== "world")) { setTimeout(() => showA2hs(), 3000); return; } // 等進到遊戲再跳，不擋登入／註冊
   if (!force && Date.now() - (+localStorage.getItem("pr_a2hs_t") || 0) < 3 * 864e5) return; // 關掉後 3 天內不再跳
   a2hsEl.innerHTML = `<div class="a2hs-box"><img src="icons/icon-192.png" alt=""><div class="a2hs-txt"><b>加入主畫面，玩起來更順</b><small>全螢幕、不會被網址列擋住，像 App 一樣打開</small>${a2hsSteps()}</div>
     <div class="a2hs-btns">${installEvt ? `<button id="a2hsGo" class="big">加入主畫面</button>` : ""}<button id="a2hsNo" class="alt">${installEvt ? "之後再說" : "知道了"}</button></div></div>`;
