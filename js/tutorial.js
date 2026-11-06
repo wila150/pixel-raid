@@ -3,10 +3,10 @@
 
 const TUT = [
   { t: () => (TOUCH ? "按住畫面左半邊拖曳，走走看" : "用 WASD 走走看"), ev: "move", n: 80 },
-  { t: () => `按「${WSKILL.attack.n}」攻擊（${TOUCH ? "右下大按鈕" : "J"}）`, ev: "attack", n: 3, hi: "attack" },
-  { t: () => `放技能「${WSKILL.spin.n}」（${TOUCH ? "按鈕" : "K"}），會花真氣（藍條）`, ev: "spin", n: 1, hi: "spin" },
+  { t: () => `按「${WSKILL.attack.n}」攻擊（${TOUCH ? "右下大按鈕" : "滑鼠左鍵"}）`, ev: "attack", n: 3, hi: "attack" },
+  { t: () => `放技能「${WSKILL.spin.n}」（${TOUCH ? "按鈕" : "Q"}），會花真氣（能量球外圈的藍弧）`, ev: "spin", n: 1, hi: "spin" },
   { t: () => `按「閃身」（${TOUCH ? "按鈕" : "空白鍵"}）：閃身的瞬間不會受傷，看到紅圈就閃`, ev: "roll", n: 1, hi: "roll" },
-  { t: () => "打開右上角「背包」：撿到的裝備、寶石都在這裡", ev: "bag", n: 1, hiHud: "bag" },
+  { t: () => `打開行囊（${TOUCH ? "右上角 ☰ → 行囊" : "按 I"}）：撿到的裝備、寶石都在這裡`, ev: "bag", n: 1, hiHud: "bag" },
   { t: () => "照左上角的主線任務，出城打第一隻妖獸", ev: "kill", n: 1 },
 ];
 let tutCnt = 0, tutLast = null, tutDoneT = 0, tutHiOnce = false;
@@ -32,6 +32,7 @@ function tutHighlight() { // 讓該按的按鈕閃
   const s = tutOn() ? TUT[save.w.tut] : null;
   pad.querySelectorAll(".btn").forEach((b) => b.classList.toggle("tut-hi", !!s && b.dataset.act === s.hi));
   document.querySelectorAll("#hud .hbtn").forEach((b) => b.classList.toggle("tut-hi", !!s && b.dataset.h === s.hiHud));
+  pauseBtn.classList.toggle("tut-hi", !!s && !!s.hiHud);
 }
 function drawTut() {
   if (tutDoneT > 0) tutDoneT -= 1 / 60;

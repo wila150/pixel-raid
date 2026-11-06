@@ -71,3 +71,14 @@
 - 加入主畫面提示、自動全螢幕、轉方向提示（`body.playing`）都只在進到仙界後才出現，不擋登入／註冊／建立角色。
 - 所有 input 可選字（iOS 打字）；`.screen` 可捲動（鍵盤跳出來時按得到按鈕）；矮螢幕登入畫面縮小。
 - 測真的登入流程：headless 的 virtual-time 會卡住 Firebase，要用真實時間跑 Edge，頁面用 fetch 把結果送到本機 node 小伺服器（8091）。測完記得刪測試帳號（identitytoolkit batchDelete＋Firestore users＋RTDB lb）。
+
+## v3.0 介面與世界重構（11/07，使用者貼了完整企劃書：英勇之地＋暗黑＋PoE＋我的勇者，只借玩法）
+- 新檔 `js/inv.js`（screen.js 後、main.js 前）：雙球 HUD `drawOrbs`（左下紅血球、右下天罰能量球＋外圈藍弧＝真氣；電腦在球左邊畫招式冷卻；手機球畫在透明的普攻按鈕底下）、`drawCamps`／`drawShield`、覆蓋層 `#ov`（`ovOpen/ovClose`，毛玻璃、左中右 3:4:3，點空白處或再按快捷鍵收起，沒有 X）、背包 `renderEquip`（覆蓋 equip.js 舊版：左角色剪影＋星芒裝備位、中瀑布流 `.loot` 卡片〔長按 450ms 直接穿〕、右詞條對比綠↑紅↓）、星盤 `openStarMap`（也取代 `openTeleport`；地形縮圖＋戰爭迷霧 `save.w.fog` 64px 一格字串，`fogTick` 走過就打開；點飛劍符文 → 左邊資訊＋「一鍵御劍傳送」`flyTo`，野外要原地 3 秒 `W0.recallTo`）、選單 `openMenu`（右上 ☰／Esc：行囊、角色、星盤、排行、換武器、音效、自動丹藥、半自動割草 `save.w.autoAtk`、畫面方向、登出）。舊 `#hud` 按鈕列永遠隱藏。
+- 安全營地（world.js）：每個傳送點半徑 `CAMP_R`=72，`safeAt()`：怪物被推出去、子彈進不來、`hurtW` 不扣血，走進去就 `bankLoot`；怪物營地不會生在附近。傳送點不再走上去就跳視窗。
+- 太極護罩 `W0.shield`：進世界／復活／傳送落地 3 秒，移動或出招就解除。
+- 死亡：未帶回裝備掉一半在倒下處（`corpse` 掉落物 10 分鐘、`W0.grave` 魂火標記），另一半還在身上。
+- 天罰能量 `W0.en`（`EN_FULL`=100）：殺怪 +6、精英／獵寶妖 +25、王 +100；E（或 U）集滿才能放，放武器大招＋`tianfa()` 劈整個畫面。大招不再花真氣。
+- 鍵位：WASD、滑鼠左鍵普攻（按住連打、朝游標，`mouse`／`mouseAim`／`mouseTarget`，core.js 滑鼠不當搖桿）、Q 劍陣、E 天罰、空白 閃身、1 丹藥、F 換武器、I/B 行囊、C/O 角色、M/Tab/T 星盤、R 排行。電腦（pointer:fine）不顯示 #pad。
+- 深夜配色：style.css 最後一段（玄武黑、墨玉毛玻璃、暗木色線，按鈕不再是亮色）。暴擊黃字會閃。
+- 測試：複製到 scratchpad、firebase-config 改 null、加 test.js 用 `?t=hud|bag|map|menu|death|camp` 跑，Edge headless 截圖。
+- **還沒做（下一批）**：PoE 掉落（白藍紫橘、傳奇 2 倍基礎＋1–4 詞條、數值指數成長、掉落過濾器、天罰碎屑＋營地鐵匠保底）、會改招式型態的傳說裝（使用者給了 poedb 傳奇裝備頁當參考）、手機技能長按拉方向、連線招式同步＋隊友特效淡化設定、野外隨機世界王、採集資源。AOI／分流要真的伺服器，RTDB 做不到。

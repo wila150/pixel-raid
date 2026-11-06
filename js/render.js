@@ -281,7 +281,7 @@ function drawFx() {
     ctx.font = `${f.num && f.big ? 900 : "bold"} ${Math.round((f.num && f.big ? 14 : f.big ? 12 : f.num ? 8 : 9) * pop)}px "Noto Sans TC", sans-serif`;
     if (f.num && f.big) { ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.strokeStyle = f.color === "#ff4a3a" ? "#3a0808" : "#5a2a00"; ctx.strokeText(f.text, f.x, f.y); }
     ctx.fillStyle = "#1b1424"; ctx.fillText(f.text, f.x + 1, f.y + 1);
-    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+    ctx.fillStyle = f.num && f.big && f.color === "#ffd84a" && Math.floor(f.age * 16) % 2 ? "#fff6c0" : f.color; ctx.fillText(f.text, f.x, f.y); // 暴擊黃字閃爍
   }
   ctx.globalAlpha = 1;
 }

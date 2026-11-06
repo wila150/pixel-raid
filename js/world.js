@@ -12,6 +12,7 @@ const ZONES = {
   volcano: { n: "焚天火山", lv: [16, 24], g: ["#3a2424", "#342020"], mobs: ["crow", "lava", "bomber"] },
   snow: { n: "寒霜雪域", lv: [22, 30], g: ["#c4d0de", "#b8c6d6"], mobs: ["frostwolf", "frostwolf", "icewisp", "yeti"] },
 };
+const EN_FULL = 100; // 天罰能量
 const SNOW_X = 2400, SNOW_PASS = { x: 2400, y: 640 }; // 雪域在東邊，只有一個山口能過去
 function zoneAt(x, y) {
   if (Math.hypot(x - TOWN.x, y - TOWN.y) < TOWN.r + 10) return "town";
@@ -212,9 +213,10 @@ function applyWeapon() {
   const u = curUq(); if (u) WSKILL.ult = { n: WUQ[u][0], cd: WUQ[u][1], mp: WUQ[u][2], uq: u };
   const cdm = Math.max(0.4, 1 - 0.07 * gemLv("haste")), mpm = Math.max(0.3, 1 - 0.1 * gemLv("thrift")); // 寶石：疾風、省元
   for (const k of ["attack", "spin", "ult"]) { WSKILL[k].cd *= cdm; WSKILL[k].mp = Math.round(WSKILL[k].mp * mpm); }
+  WSKILL.ult.mp = 0; WSKILL.ult.cd = 1; // 天罰：不吃真氣，改成集滿天罰能量才能放
 }
 applyWeapon();
-const PAD_KEYS = { attack: "J", spin: "K", roll: "空白", ult: "U", potion: "H" };
+const PAD_KEYS = { attack: "左鍵", spin: "Q", roll: "空白", ult: "E", potion: "1" };
 const padOrig = {};
 pad.querySelectorAll(".btn").forEach((b) => { padOrig[b.dataset.act] = b.innerHTML; });
 function setPadLabels(world) {
@@ -226,6 +228,10 @@ function setPadLabels(world) {
   });
 }
 
+// 安全營地：每個傳送點周圍一圈結界，怪物進不來、子彈打不進來，踏進去就算把裝備帶回
+const CAMP_R = 72;
+const campAt = (x, y) => WAYPOINTS.find((wp) => wp.id !== "town" && Math.hypot(x - wp.x, y - wp.y) < CAMP_R);
+const safeAt = (x, y) => zoneAt(x, y) === "town" || !!campAt(x, y);
 function enterWorld() {
   if (!wmap) buildWorld();
   // 第一次進來：先建立角色（取名、選初始武器）；舊存檔已經練過的直接當作建好了
@@ -243,7 +249,7 @@ function enterWorld() {
     W0 = { camps: [], mobs: [], pshots: [], eshots: [], fires: [], rings: [], tornados: [], spinT: 0, spinTick: 0, drops: [], npcCool: null, zone: "", bannerT: 0, saveT: 5, combatT: 0, lastAggro: 0 };
     makeCamps();
   }
-  Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0,
+  Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0, shield: 3, en: W0.en || 0,
     roll: 0, rollDir: 0, cds: { attack: 0, spin: 0, ult: 0, roll: 0, potion: 0 }, regenAcc: 0, lavaT: 0 });
   if (W0.keepHp) { W0.hp = Math.min(B.maxHp, W0.keepHp); W0.keepHp = 0; }
   particles = []; floaters = []; shake = 0; flashT = 0; hitstop = 0;
@@ -276,7 +282,7 @@ function makeCamps() {
     let n = 0, tries = 0;
     while (n < want[z] && tries++ < 4000) {
       const x = 40 + r() * (TW * TS - 80), y = 40 + r() * (TH * TS - 80);
-      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || Math.hypot(x - SNOW_PASS.x, y - SNOW_PASS.y) < 150) continue;
+      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || Math.hypot(x - SNOW_PASS.x, y - SNOW_PASS.y) < 150 || WAYPOINTS.some((wp) => Math.hypot(x - wp.x, y - wp.y) < CAMP_R + 90)) continue;
       if (W0.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 120)) continue;
       const lo = ZONES[z].lv[0], hi = ZONES[z].lv[1];
       const far = clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 1300, 0, 1);
@@ -342,6 +348,8 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
 }
 function killMob(m) {
   m.dead = true; tutEvent("kill");
+  W0.en = Math.min(EN_FULL, (W0.en || 0) + (m.boss ? 100 : m.elite || m.hunter ? 25 : 6)); // 吸取魂屑
+  if (W0.en >= EN_FULL && !W0.enFullFx) { W0.enFullFx = true; floatText(W0.x, W0.y - 36, "天罰能量已滿！按 E", "#ffd84a", true); sfx("arrive"); }
   W0.kc = (W0.kcT > 0 ? W0.kc || 0 : 0) + 1; W0.kcT = KC_WIN; W0.kcPop = 0.25;
   if (W0.kc > (W0.kcBest || 0)) W0.kcBest = W0.kc;
   if (W0.kc % 25 === 0) { floatText(W0.x, W0.y - 34, `${W0.kc} 連斬！`, "#ff8a3d", true); sfx("crit"); }
@@ -382,9 +390,18 @@ function gainExp(n) {
   }
   writeSave();
 }
+// 天罰：能量集滿放出，除了武器本身的大招，整個畫面的妖獸都被天雷劈一次
+function tianfa() {
+  const p = W0; W0.enFullFx = false;
+  for (const m of W0.mobs) if (!m.dead && Math.abs(m.x - p.x) < 260 && Math.abs(m.y - p.y) < 170) { bolts.push({ x: m.x, y: m.y, life: 0.35 }); hitMob(m, wDmg(30), 50, p, true); }
+  shake = Math.max(shake, 10); flashT = 0.18; flashColor = "255,215,120"; sfx("crit");
+  W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.5, r: 120, c: "255,210,110" });
+  floatText(p.x, p.y - 30, "天罰！", "#ffd84a", true);
+}
 let chillHit = false; // 冰靈的冰彈打中時設成 true
 function hurtW(dmg, from) {
   const p = W0;
+  if (p.shield > 0 || safeAt(p.x, p.y)) return; // 太極護罩、營地結界：完全不受傷
   if (p.iframe > 0 || !(state === "world" || ((state === "paused" || state === "pick") && pausedFrom === "world"))) return;
   dmg = dmg * B.dmgTaken * (B.uq.vajra && p.hp < p.maxHp * 0.3 ? 0.5 : 1);
   dmg = Math.max(1, Math.round(dmg));
@@ -398,24 +415,27 @@ function hurtW(dmg, from) {
 }
 function showWorldDead() {
   const w = save.w, lose = Math.round(w.exp * 0.1);
-  const lost = riskyItems(); lost.forEach(ungem);
-  save.bag = save.bag.filter((b) => !b.risk);
-  for (const k of SLOT_KEYS) if (save.eq[k] && save.eq[k].risk) delete save.eq[k];
+  // 死掉：還沒帶回的裝備掉一半在倒下的地方（10 分鐘內回去撿得回來），另一半還在身上
+  const risky = riskyItems().sort(() => Math.random() - 0.5), lost = risky.slice(0, Math.ceil(risky.length / 2));
+  lost.forEach(ungem);
+  save.bag = save.bag.filter((b) => !lost.includes(b));
+  for (const k of SLOT_KEYS) if (lost.includes(save.eq[k])) delete save.eq[k];
+  for (const it of lost) wDrop({ kind: "item", it, corpse: true }, W0);
+  if (lost.length) W0.grave = { x: W0.x, y: W0.y, t: 600 };
   w.exp -= lose; w.x = 1200; w.y = 1530; writeSave();
   pad.classList.add("hidden");
   screenEl.innerHTML = `<div class="panel"><h1>你倒下了…</h1>
-    <div class="result">損失經驗 ${lose}<br>${lost.length ? `還沒帶回的 ${lost.length} 件裝備掉光了：${lost.map((it) => `<b style="color:${RARITY[it.q].c}">${it.name}</b>`).join("、")}` : "沒有掉裝備（都已經帶回了）"}<br><small>野外撿到的裝備要回城、走傳送陣，或用回城符才算帶回</small></div>
-    <div class="btns"><button id="revive" class="big">在青雲城復活</button><button id="home" class="big alt">回主畫面</button></div></div>`;
+    <div class="result">損失經驗 ${lose}<br>${lost.length ? `還沒帶回的裝備掉了 ${lost.length} 件在倒下的地方：${lost.map((it) => `<b style="color:${RARITY[it.q].c}">${it.name}</b>`).join("、")}<br><small>10 分鐘內回去撿得回來（地圖上有魂火標記）</small>` : "沒有掉裝備（都已經帶回了）"}<br><small>野外撿到的裝備要走進安全營地、回城，或用回城符才算帶回</small></div>
+    <div class="btns"><button id="revive" class="big">在青雲城復活</button></div></div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("revive").onclick = () => { W0.x = 1200; W0.y = 1530; enterWorld(); };
-  document.getElementById("home").onclick = renderTitle;
 }
 
 // ───────── 每幀更新 ─────────
 function updateWorld(dt) {
   const inMenu = state !== "world"; // 連線時開著選單：世界照跑，但角色不接受操作
   if (inMenu) { keys.clear(); pressed.clear(); padAct.clear(); stick.id = null; }
-  updateWFx(dt);
+  updateWFx(dt); fogTick(dt);
   updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
   if (typeof netTick === "function") netTick(dt);
   if (!inMenu) tutTick();
@@ -436,6 +456,10 @@ function updateWorld(dt) {
   if (stick.id !== null) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 8) { mx = dx / Math.max(d, 50); my = dy / Math.max(d, 50); } }
   const ml = Math.hypot(mx, my);
   if (ml > 1) { mx /= ml; my /= ml; }
+  if (p.shield > 0) { // 太極護罩：3 秒，或一移動／出招就解除
+    p.shield -= dt;
+    if (ml > 0.1 || padAct.size || mouse.down || ["j", "k", "u", "e", "q", "1", "h", " ", "z", "x"].some((k) => pressed.has(k))) p.shield = 0;
+  }
   if (ml > 0.1) { p.face = Math.atan2(my, mx); p.walk += dt * 10; }
   if (Math.cos(p.face) < -0.2) p.flip = true; else if (Math.cos(p.face) > 0.2) p.flip = false;
   if (p.roll > 0) {
@@ -451,7 +475,7 @@ function updateWorld(dt) {
   // 熔岩會燙
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6); } }
 
-  const near = (max) => { let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
+  const near = (max) => { if (mouseAim()) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
   const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : 1); p.mp -= WSKILL[k].mp; tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
@@ -463,7 +487,8 @@ function updateWorld(dt) {
   };
   const gp = gemLv("pierce");
   const shoot = (a, o) => { if (gp) { o.pierce = true; o.dmg *= 1 + gp * 0.05; } W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o)); };
-  if ((act("attack", "j", "z") || (keys.has("j") && p.cds.attack <= 0)) && useSkill("attack")) {
+  const autoAtk = w.autoAtk && !inMenu && p.cds.attack <= 0 && W0.mobs.some((m) => !m.dead && !m.noTarget && dist(m, p) < 70); // 設定：半自動割草
+  if ((act("attack", "j", "z") || autoAtk || ((keys.has("j") || mouse.down) && p.cds.attack <= 0)) && useSkill("attack")) {
     if (wt === "sword") { // 劍擊：前方扇形
       const t = near(50); if (t) p.face = angTo(p, t);
       p.swing = p.swingMax = 0.18; p.swingR = 22; sfx("dash");
@@ -510,12 +535,15 @@ function updateWorld(dt) {
       W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 1.6, tick: 0 }); sfx("volley");
     }
   };
-  if (act("spin", "k", "x") && useSkill("spin")) {
+  if (act("spin", "k", "x", "q") && useSkill("spin")) {
     doSpin(); fxCast(WPN_FX[wt]);
     const gm = gemLv("multi"); if (gm && Math.random() < 0.25 + gm * 0.1) W0.recastT = 0.2; // 連發寶石
   }
   if (W0.recastT > 0 && (W0.recastT -= dt) <= 0) { W0.recastT = 0; doSpin(); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
-  if (act("ult", "u", "i") && p.cds.ult <= 0 && p.mp >= WSKILL.ult.mp) {
+  const ultCd0 = p.cds.ult;
+  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
+  if (p.enMsgT > 0) p.enMsgT = Math.max(0, p.enMsgT - dt) || 0;
+  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
     if (WSKILL.ult.uq) { if (useSkill("ult")) uniqueUlt(WSKILL.ult.uq, near); }
     else if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
       const t = near(150);
@@ -549,11 +577,12 @@ function updateWorld(dt) {
       sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6);
     }
   }
+  if (p.cds.ult > ultCd0) { p.en = 0; tianfa(); }
   if (act("roll", " ", "l", "shift") && useSkill("roll")) { p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash"); }
   if (W0.kcT > 0) { W0.kcT -= dt; if (W0.kcT <= 0) W0.kc = 0; }
   if (W0.kcPop > 0) W0.kcPop -= dt;
   const autoPot = w.autoPot !== false && p.hp < p.maxHp * 0.3 && !inMenu; // 設定：低血量自動喝藥（預設開）
-  if ((act("potion", "h", "c") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
+  if ((act("potion", "h", "1") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
     w.potions--; const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); sfx("heal"); writeSave();
   }
@@ -598,7 +627,7 @@ function updateWorld(dt) {
 
   // 怪物：只更新玩家附近的
   let aggro = false;
-  const inTown = zoneAt(p.x, p.y) === "town";
+  const inTown = safeAt(p.x, p.y);
   for (const m of W0.mobs) {
     if (m.boss && !m.dead) { aggro = true; updateWBoss(m, dt, p); continue; }
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
@@ -674,11 +703,18 @@ function updateWorld(dt) {
   for (const c of W0.camps) {
     for (let i = c.respawn.length - 1; i >= 0; i--) { c.respawn[i] -= dt; if (c.respawn[i] <= 0) { c.respawn.splice(i, 1); spawnWMob(c); } }
   }
+  for (const m of W0.mobs) { // 驅怪結界：怪物被推出營地
+    if (m.dead || m.boss) continue;
+    for (const wp of WAYPOINTS) {
+      const c = wp.id === "town" ? TOWN : wp, dx = m.x - c.x, dy = m.y - c.y, d = Math.hypot(dx, dy), R = (wp.id === "town" ? TOWN.r + 10 : CAMP_R) + WMOBS[m.type].r;
+      if (d < R) { const a = d > 0.1 ? Math.atan2(dy, dx) : rand(0, 6.28); m.x = c.x + Math.cos(a) * R; m.y = c.y + Math.sin(a) * R; if (m.st === "chase") m.st = "home"; }
+    }
+  }
   W0.mobs = W0.mobs.filter((m) => !m.dead);
   // 敵人的子彈
   for (const s of W0.eshots) {
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
-    if (solid(s.x, s.y)) s.life = 0;
+    if (solid(s.x, s.y) || safeAt(s.x, s.y)) s.life = 0;
     if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg); chillHit = false; }
   }
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
@@ -699,13 +735,16 @@ function updateWorld(dt) {
       writeSave();
     }
   }
-  W0.drops = W0.drops.filter((o) => !o.got && o.t < 120);
+  W0.drops = W0.drops.filter((o) => !o.got && o.t < (o.corpse ? 600 : 120));
+  if (W0.grave && ((W0.grave.t -= dt) <= 0 || !W0.drops.some((o) => o.corpse))) W0.grave = null;
 
   // 地區切換提示、傳送陣解鎖
   const z = zoneAt(p.x, p.y);
   if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); bankLoot("回到青雲城"); } }
   W0.bannerT = Math.max(0, W0.bannerT - dt);
-  for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < 40) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `解鎖傳送陣：${wp.n}`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
+  for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮飛劍符文：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
+  const cp = campAt(p.x, p.y), cid = cp ? cp.id : null;
+  if (cid !== (W0.camp || null)) { W0.camp = cid; if (cid) { floatText(p.x, p.y - 44, `進入安全營地・${cp.n}`, "#ffe9a0", true); bankLoot("安全營地"); } else if (W0.zone !== "town") floatText(p.x, p.y - 44, "踏出結界，小心妖獸", "#ff9a7a"); }
 
   // NPC、傳送陣、祭壇：走過去自動打開
   const spots = worldSpots();
@@ -714,15 +753,14 @@ function updateWorld(dt) {
   if (!hitSpot) W0.npcCool = null;
   else if (W0.npcCool !== hitSpot.id && !inMenu) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
 
-  if (pressed.has("q")) quickSwap();
+  if (pressed.has("f")) quickSwap();
   spawnHunter(dt);
-  if (pressed.has("t")) openTeleport();
   if (W0.recall > 0) { // 回城符：原地不動 3 秒
     if (ml > 0.1 || p.hurt > 0) { W0.recall = 0; floatText(p.x, p.y - 26, "回城被打斷", "#ff8a7a"); }
     else {
       W0.recall -= dt;
       if (Math.random() < 0.5) particles.push({ x: p.x + rand(-8, 8), y: p.y + 4, vx: 0, vy: -40, life: 0.5, max: 0.5, color: "#9fe8ff", size: 2 });
-      if (W0.recall <= 0) { W0.recall = 0; bankLoot("回城符"); W0.x = 1200; W0.y = 1530; cam.x = W0.x; cam.y = W0.y; burst(W0.x, W0.y, "#9fe8ff", 30, 100); sfx("arrive"); }
+      if (W0.recall <= 0) { const to = W0.recallTo || { x: 1200, y: 1530 }; W0.recallTo = null; W0.recall = 0; bankLoot("御劍"); W0.x = to.x; W0.y = to.y; W0.shield = 3; cam.x = W0.x; cam.y = W0.y; burst(W0.x, W0.y, "#9fe8ff", 30, 100); sfx("arrive"); }
     }
   }
   checkQuest();
@@ -740,7 +778,6 @@ for (const n of NPCS) NPC_IMG[n.id] = sprite([...HERO_TOP, "...kwk.kwk..", "...k
 function worldSpots() {
   return [
     ...NPCS.map((n) => ({ ...n, kind: "npc" })),
-    ...WAYPOINTS.filter((wp) => save.w.wp.includes(wp.id)).map((wp) => ({ id: "wp-" + wp.id, kind: "wp", x: wp.x, y: wp.y, r: 12, wp })),
     { id: "altar", kind: "altar", x: ALTAR.x, y: ALTAR.y, r: 20 },
   ];
 }
@@ -831,13 +868,8 @@ function renderWorld() {
     else if (t === 5) drawWallTile(x, y);
     else if (t === 6) drawHouseTile(x, y, tx, ty);
   }
-  // 傳送陣、祭壇
-  for (const wp of WAYPOINTS) {
-    const on = save.w.wp.includes(wp.id);
-    ctx.strokeStyle = on ? `rgba(120,220,255,${0.6 + Math.sin(time * 3) * 0.3})` : "rgba(150,150,170,0.4)"; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.ellipse(wp.x, wp.y, 12, 6, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(wp.x, wp.y, 7, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
-  }
+  // 安全營地、祭壇
+  drawCamps();
   ctx.fillStyle = "#4a2a2a"; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 26, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = `rgba(255,80,40,${0.5 + Math.sin(time * 4) * 0.3})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 20, 10, 0, 0, Math.PI * 2); ctx.stroke();
   drawFxUnder();
@@ -954,6 +986,7 @@ function renderWorld() {
     if (s.big) { glow(s.x, s.y, 9, "255,110,40", 0.7); ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); continue; }
     ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2);
   }
+  drawShield();
   drawFxOver();
   drawFx();
   drawWorldHud();
@@ -993,7 +1026,7 @@ let miniRect = null;
 cvs.addEventListener("pointerdown", (e) => { // 點小地圖：開／關大地圖
   if (state !== "world") return;
   if (bigMap) { bigMap = false; return; }
-  const r = miniRect; if (r && e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h + 16) bigMap = true;
+  const r = miniRect; if (r && e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h + 16) openStarMap();
 });
 function drawBigMap() { // 半透明大地圖蓋在畫面中間，邊打邊看
   const p = W0, w = save.w, bw = Math.min(W - 40, (H - 150) * TW / TH), bh = bw * TH / TW, bx = (W - bw) / 2, by = 50 + SAFE.t, sc = bw / (TW * TS);
@@ -1061,8 +1094,7 @@ function drawWorldHud() {
   };
   ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
   ctx.fillText(`${REALMS[realmIdx()].n}期修士　戰力 ${totalCP()}`, bx, y0 + 8);
-  bar(y0 + 14, p.hp / p.maxHp, p.hp / p.maxHp < 0.3 ? "#ff5a4a" : "#d83a3a", `${Math.ceil(p.hp)}/${p.maxHp}`);
-  bar(y0 + 29, p.mp / B.maxMp, "#3a7ad8", `${Math.floor(p.mp)}/${B.maxMp}`);
+  ctx.font = "9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a99bb8"; ctx.fillText(`靈石 ${save.stone}　丹藥 ${w.potions}`, bx, y0 + 22);
   // 任務欄
   const q = curQuest();
   if (q) {
@@ -1094,7 +1126,8 @@ function drawWorldHud() {
   ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, H - 6, W, 6);
   ctx.fillStyle = "#e0c040"; ctx.fillRect(0, H - 5, W * ef, 4);
   ctx.textAlign = "center"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffe9a0";
-  ctx.fillText(`經驗 ${Math.floor(ef * 100)}%　丹藥 ${w.potions}　靈石 ${save.stone}`, W / 2, H - 10);
+  ctx.fillText(`經驗 ${Math.floor(ef * 100)}%`, W / 2, H - 10);
+  drawOrbs();
   // 地區名稱
   if (W0.bannerT > 0) {
     const z = ZONES[W0.zone];
@@ -1131,10 +1164,6 @@ function drawWorldHud() {
     ctx.fillText(W < 500 ? "照左上角的任務走" : "照左上角的任務走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
   }
   // 搖桿
-  if (stick.id === null && TOUCH) {
-    ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(80, H - 90, 50, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.2)"; ctx.beginPath(); ctx.arc(80, H - 90, 22, 0, Math.PI * 2); ctx.fill();
-  }
   if (stick.id !== null) {
     ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(stick.ox, stick.oy, 50, 0, Math.PI * 2); ctx.stroke();
     const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy), kk = d > 50 ? 50 / d : 1;
@@ -1280,7 +1309,7 @@ function quickSwap() {
 const hudEl = document.getElementById("hud");
 function updateWorldButtons() {
   const on = state === "world";
-  hudEl.classList.toggle("hidden", !on);
+  hudEl.classList.add("hidden"); // 功能都收進右上角「☰」和快捷鍵
   if (!on || !save.w) return;
   hudEl.querySelector('[data-h="bag"]').classList.toggle("dot", save.bag.some((b) => sameWt(b) && itemCP(b) > itemCP(save.eq[b.slot])));
   hudEl.querySelector('[data-h="ap"]').classList.toggle("dot", save.w.free > 0);
@@ -1316,19 +1345,20 @@ function openTeleport() {
 hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => openHud(b.dataset.h)));
 // 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
 window.addEventListener("keydown", (e) => {
-  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", t: "tp", r: "rank", q: "swap" };
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
   if (k === "tab") e.preventDefault();
   if (state !== "world" || e.repeat) return;
   if (map[k]) openHud(map[k]);
-  if (k === "tab" || k === "m") bigMap = !bigMap;
+
 });
 let bigMap = false;
 function openHud(h) {
   if (state !== "world") return;
   sfx("click");
-  if (h === "bag") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); eqSel = null; renderEquip(); }
+  if (h === "bag") { eqSel = null; renderEquip(); }
   else if (h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
   else if (h === "swap") quickSwap();
   else if (h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
-  else openTeleport();
+  else if (h === "menu") openMenu();
+  else openStarMap();
 }

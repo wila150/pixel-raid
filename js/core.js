@@ -74,9 +74,15 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 window.addEventListener("blur", () => keys.clear());
 
+// 滑鼠：左鍵普攻、朝游標方向出招（電腦）
+const mouse = { x: 0, y: 0, down: false, t: -99 };
+window.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse") { mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now(); } });
+window.addEventListener("pointerup", (e) => { if (e.pointerType === "mouse" && e.button === 0) mouse.down = false; });
+window.addEventListener("blur", () => { mouse.down = false; });
 // 虛擬搖桿：左半邊螢幕按住拖曳
 const stick = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
 cvs.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "mouse" && state === "world") { if (e.button === 0) { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = performance.now(); } return; }
   if ((e.clientX < W * 0.55 || state === "hunt") && stick.id === null) { // 斬妖試煉整個畫面都能當搖桿
     stick.id = e.pointerId;
     stick.ox = stick.x = e.clientX;
