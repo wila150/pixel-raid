@@ -162,7 +162,7 @@ function ovClose() {
 }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"] };
@@ -177,6 +177,8 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ───────── 背包：左 星芒裝備位／中 瀑布流／右 詞條對比 ─────────
+const EQ_CELL = { crown: [2, 1], charm: [4, 2], robe: [1, 3], sword: [4, 3], boots: [2, 5] };
+const EQ_LOCK = [["耳飾", 3, 2], ["戒指", 4, 1], ["護手", 1, 4], ["坐騎", 4, 5]]; // 之後開放的部位，先留格子
 const STAR_POS = { sword: [-0.95, -0.2], crown: [0, -1], charm: [0.95, -0.2], robe: [-0.62, 0.86], boots: [0.62, 0.86] };
 const statVal = (k, v) => (AFFIX[k].dec || k === "crit" ? Math.round(v * 10) / 10 : Math.round(v));
 function cmpRows(sel, cur) {
@@ -249,17 +251,44 @@ function apHtml() {
     <div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>護甲 <b>${Math.round(b.armor)}</b></span><span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>元素抗性 <b>${Math.round(b.res * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
 }
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
+// 背包分頁＋格子（每格一件；道具分頁是丹藥、碎屑、精髓、寶石、超技能）
+const BAG_TABS = [["all", "全部"], ["wpn", "武器"], ["arm", "防具"], ["acc", "飾品"], ["use", "道具"]];
+let bagTab = "all", propSel = null;
+const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" ? "acc" : "arm");
+function propList() {
+  const L = [], w = save.w;
+  if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
+  if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；工藝台用來換超技能寶石" });
+  for (const k in save.ess || {}) if (save.ess[k] > 0) L.push({ k: "ess:" + k, g: "精", c: "#7fd890", n: save.ess[k], name: essName(k), d: `點選裝備後注入：保底「${AFFIX[k].n}」詞條，直接變紫裝（要在營地）` });
+  for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: GEMS[k].d(+l) + "（左邊「技能寶石」點一下就鑲到武器）" }); }
+  for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
+  return L;
+}
+function propInfo(k) { const p = propList().find((x) => x.k === k); return p && `<div class="cmp-item"><div class="big-ico prop" style="--c:${p.c}"><b>${p.g}</b></div><h3 style="color:${p.c}">${p.name}</h3><small>持有 ${p.n}</small><p class="sub">${p.d}</p></div>`; }
+function bagCells(bag) {
+  let cells;
+  if (bagTab === "use") cells = propList().map((p) => `<button class="bcell prop${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
+  else cells = bag.filter((it) => bagTab === "all" || tabOf(it) === bagTab).map((it) => {
+    const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]);
+    return `<div class="loot bcell q${it.q}${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" title="${it.name}・戰 ${itemCP(it)}" style="--c:${RARITY[it.q].c}">${itemIcon(it)}${it.en ? `<span class="en">+${it.en}</span>` : ""}${better ? '<em class="up">↑</em>' : ""}${it.risk ? '<em class="risk">!</em>' : ""}</div>`;
+  });
+  const n = Math.max(24, Math.ceil(cells.length / 6) * 6);
+  while (cells.length < n) cells.push('<span class="bcell empty"></span>');
+  return cells.join("");
+}
 function renderEquip(msg = "") {
   if (typeof tutEvent === "function") tutEvent("bag");
   if (ovKind !== "bag" && !ovOpen("bag")) return;
   if (msg) ovMsg = msg;
   const bag = save.bag.slice().sort((a, b) => b.q - a.q || itemCP(b) - itemCP(a));
   const selItem = eqSel && eqSel.startsWith("eq:") ? save.eq[eqSel.slice(3)] : save.bag.find((b) => b.id === eqSel);
-  const stars = SLOT_KEYS.map((k) => {
-    const it = save.eq[k], [sx, sy] = STAR_POS[k], c = it ? RARITY[it.q].c : "#6a6078";
-    return `<button class="star${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}" data-eq="${k}" style="left:${50 + sx * 38}%;top:${46 + sy * 34}%;--c:${c}">${it ? itemIcon(it) : "<i></i>"}<small>${SLOTS[k].n}${it && it.en ? ` +${it.en}` : ""}</small></button>`;
-  }).join("");
+  // 裝備視窗：人物在中間，格子圍一圈，空格寫部位名稱
+  const eqCells = SLOT_KEYS.map((k) => {
+    const it = save.eq[k], [cx, cy] = EQ_CELL[k], c = it ? RARITY[it.q].c : "#6a6078";
+    return `<button class="eqc${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="grid-column:${cx};grid-row:${cy};--c:${c}">${it ? itemIcon(it) + (it.en ? `<span class="en">+${it.en}</span>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
+  }).join("") + EQ_LOCK.map(([n, cx, cy]) => `<span class="eqc lock" style="grid-column:${cx};grid-row:${cy}" title="${n}（尚未開放）"><small>${n}</small></span>`).join("");
   let right = craftHtml();
+  if (propSel && !selItem) right = propInfo(propSel) || right;
   const camp = atCamp(), essK = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
   if (selItem) {
     const worn = eqSel.startsWith("eq:"), cur = save.eq[selItem.slot], diff = itemCP(selItem) - itemCP(cur);
@@ -281,14 +310,13 @@ function renderEquip(msg = "") {
       ${!selItem.u ? `<div class="essbar"><small>${camp ? "精髓注入（保底詞條，直接變紫裝）" : "回營地才能注入精髓"}</small>${essK.map((k) => `<button data-ess="${k}" ${camp ? "" : "disabled"}>${essName(k)}<small>${AFFIX[k].n}・剩 ${save.ess[k]}</small></button>`).join("") || `<span class="dim">沒有精髓</span>`}</div>` : ""}
       ${camp ? "" : `<p class="warn">精煉、洗練、點金、精髓要在安全營地</p>`}</div>`;
   }
-  ov.innerHTML = `<div class="col l"><div class="hero-wrap"><img class="hero-big" src="${heroURL()}" alt="">${stars}</div>
+  ov.innerHTML = `<div class="col l"><div class="eqwin"><div class="winhead">裝備</div><div class="eqgrid"><img class="eqhero" src="${heroURL()}" alt="">${eqCells}</div></div>
       <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
       ${wsetHtml()}${cardChips()}${apHtml()}${gemHtml()}</div>
-    <div class="col c"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
-      <div class="flow">${bag.length ? bag.map((it) => {
-        const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]), aff = Object.keys(it.aff || {});
-        return `<div class="loot q${it.q}${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" style="--c:${RARITY[it.q].c}">${itemIcon(it)}<div><b>${it.name}</b><small>${SLOTS[it.slot].n}・${it.il} 級・戰 ${itemCP(it)}${better ? ' <em class="up">↑</em>' : ""}</small>${aff.slice(0, it.q).map((k) => `<i>${fmtAff(k, it.aff[k])}</i>`).join("")}${it.risk ? '<em class="risk">未帶回</em>' : ""}</div></div>`;
-      }).join("") : `<p class="dim">行囊是空的。到野外斬妖撿裝備吧</p>`}</div>
+    <div class="col c"><div class="bagwin"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
+      <div class="btabs">${BAG_TABS.map(([k, n]) => `<button class="btab${bagTab === k ? " on" : ""}" data-bt="${k}">${n}</button>`).join("")}</div>
+      <div class="bgrid">${bagCells(bag)}</div>
+      <div class="bmoney"><span class="coin"></span><b>${save.stone}</b><small>靈石</small></div></div>
       <div class="acts row"><button id="autoEq" class="gold">一鍵換最強</button><button id="sellJunk">賣掉凡品、靈品</button></div></div>
     <div class="col r">${right}</div>
     ${ovMsg ? `<div class="toast">${ovMsg}</div>` : ""}`;
@@ -297,15 +325,17 @@ function renderEquip(msg = "") {
 }
 function bindEquip(selItem) {
   const again = (m) => renderEquip(m);
+  ov.querySelectorAll("[data-bt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagTab = b.dataset.bt; propSel = null; again(); }));
+  ov.querySelectorAll("[data-prop]").forEach((b) => b.addEventListener("click", () => { sfx("click"); eqSel = null; propSel = propSel === b.dataset.prop ? null : b.dataset.prop; again(); }));
   ov.querySelectorAll(".loot").forEach((c) => {
     let t = null, long = false;
     c.addEventListener("pointerdown", () => { long = false; t = setTimeout(() => { long = true; const it = save.bag.find((b) => b.id === c.dataset.id); if (it) { equipItem(it); eqSel = null; again(`穿上了 ${it.name}`); } }, 450); });
     const stop = () => clearTimeout(t);
     c.addEventListener("pointerup", stop); c.addEventListener("pointerleave", stop); c.addEventListener("pointercancel", stop);
     c.addEventListener("contextmenu", (e) => e.preventDefault());
-    c.addEventListener("click", () => { if (long) return; sfx("click"); eqSel = eqSel === c.dataset.id ? null : c.dataset.id; again(); });
+    c.addEventListener("click", () => { if (long) return; sfx("click"); propSel = null; eqSel = eqSel === c.dataset.id ? null : c.dataset.id; again(); });
   });
-  ov.querySelectorAll(".star").forEach((b) => b.addEventListener("click", () => { sfx("click"); if (cardSel) { again(insertCard(cardSel, b.dataset.eq)); return; } eqSel = save.eq[b.dataset.eq] && eqSel !== "eq:" + b.dataset.eq ? "eq:" + b.dataset.eq : null; again(); }));
+  ov.querySelectorAll(".eqc[data-eq]").forEach((b) => b.addEventListener("click", () => { sfx("click"); if (cardSel) { again(insertCard(cardSel, b.dataset.eq)); return; } eqSel = save.eq[b.dataset.eq] && eqSel !== "eq:" + b.dataset.eq ? "eq:" + b.dataset.eq : null; again(); }));
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = () => { sfx("click"); fn(); }; };
   on("equip", () => { equipItem(selItem); eqSel = null; again(`穿上了 ${selItem.name}`); });
   // 魔物卡片：拖曳到星芒裝備位，或點卡片再點裝備
@@ -319,7 +349,7 @@ function bindEquip(selItem) {
       const up = (ev) => {
         window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up);
         if (!ghost) { sfx("click"); cardSel = cardSel === c.dataset.card ? null : c.dataset.card; again(cardSel ? `選了${CARDS[cardSel].n}，點${CARDS[cardSel].slot === "sword" ? "武器" : "道袍"}插進去` : ""); return; }
-        ghost.remove(); const t = document.elementFromPoint(ev.clientX, ev.clientY), st = t && t.closest(".star");
+        ghost.remove(); const t = document.elementFromPoint(ev.clientX, ev.clientY), st = t && t.closest(".eqc[data-eq]");
         if (st) again(insertCard(c.dataset.card, st.dataset.eq)); else again("拖到左上的武器或道袍上");
       };
       window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
