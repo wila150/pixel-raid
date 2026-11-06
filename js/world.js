@@ -136,7 +136,7 @@ const AP = {
   wis: { n: "悟性", d: "真氣 +6、回氣 +4%" },
 };
 const blankW = () => ({ lv: 1, exp: 0, x: 1200, y: 1530, wp: ["town"], ap: { str: 0, vit: 0, agi: 0, wis: 0 }, free: 0, potions: 3 });
-const expNext = (lv) => Math.round(30 * Math.pow(lv, 1.6));
+const expNext = (lv) => Math.round(36 * Math.pow(lv, 1.7));
 let W0 = null; // 大世界執行中的資料
 let inWorld = false;
 function worldStats() {
@@ -247,12 +247,19 @@ function makeCamps() {
 function spawnWMob(camp) {
   const types = ZONES[camp.z].mobs, type = types[Math.floor(Math.random() * types.length)], d = WMOBS[type];
   const lv = Math.max(1, camp.lv + Math.floor(Math.random() * 3) - 1), elite = Math.random() < 0.08;
-  const hp = d.hp * (1 + 0.3 * (lv - 1)) * (elite ? 3 : 1);
+  const hp = d.hp * 1.2 * (1 + 0.35 * (lv - 1)) * (elite ? 4 : 1);
+  const mod = elite ? ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)] : null;
   let x = camp.x, y = camp.y;
   for (let i = 0; i < 10; i++) { const tx = camp.x + rand(-40, 40), ty = camp.y + rand(-40, 40); if (!blockedCircle(tx, ty, d.r)) { x = tx; y = ty; break; } }
-  W0.mobs.push({ type, lv, elite, camp, x, y, hp, max: hp, st: "idle", wt: rand(0, 2), wx: x, wy: y, atkT: 0, flash: 0, kb: 0, ka: 0, fuse: 0 });
+  W0.mobs.push({ type, lv, elite, mod, camp, x, y, hp, max: hp, st: "idle", wt: rand(0, 2), wx: x, wy: y, atkT: 0, flash: 0, kb: 0, ka: 0, fuse: 0 });
 }
 
+// 精英詞綴：狂暴（快、出手快）、鐵壁（很硬）、召喚（半血叫小弟）
+const ELITE_MODS = ["狂暴", "鐵壁", "召喚"];
+const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1);
+function packAggro(m) { // 打一隻，整個營地一起衝過來
+  for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
+}
 // ───────── 傷害 ─────────
 const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power"));
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
@@ -262,9 +269,10 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (crit) dmg *= B.critDmg;
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
+  if (m.mod === "鐵壁") dmg *= 0.55;
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1)));
   m.hp -= dmg; m.flash = 0.08;
-  if (m.st === "idle" || m.st === "home") m.st = "chase";
+  if (m.st === "idle" || m.st === "home") { m.st = "chase"; packAggro(m); }
   if (kb && from && !m.elite) { m.kb = kb; m.ka = angTo(from, m); }
   const lch = B.leech + 0.005 * gemLv("blood");
   if (lch > 0) W0.regenAcc += dmg * lch;
@@ -279,6 +287,10 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
   burst(m.x, m.y, crit ? "#ffd84a" : "#ffb070", crit ? 10 : 5, 60);
   fxHit(m.x + rand(-2, 2), m.y - 2 + rand(-2, 2), crit, WPN_FX[curWeapon()]);
+  if (m.mod === "召喚" && !m.summoned && m.hp > 0 && m.hp < m.max * 0.5) {
+    m.summoned = true; floatText(m.x, m.y - 18, "召喚妖群！", "#ff6b6b", true);
+    for (let i = 0; i < 3; i++) { spawnWMob(m.camp); const n = W0.mobs[W0.mobs.length - 1]; n.elite = false; n.mod = null; n.hp = n.max = n.max / 4; n.x = m.x + rand(-15, 15); n.y = m.y + rand(-15, 15); n.st = "chase"; n.noRespawn = true; burst(n.x, n.y, "#b07dff", 10, 60); }
+  }
   if (m.hp <= 0) killMob(m);
 }
 function killMob(m) {
@@ -297,14 +309,14 @@ function killMob(m) {
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   const zl = ZONE_LOOT[m.camp.z] || 1;
-  if (m.hunter) { for (let i = 0; i < 3; i++) wDrop({ kind: "item", it: rollItem(1, il + 1) }, m); wDrop({ kind: "stone", v: 10 + m.lv }, m); floatText(m.x, m.y - 20, "獵寶妖被斬了！", "#ffe066", true); }
-  else if (Math.random() < (m.elite ? 0.6 : 0.045) * zl) wDrop({ kind: "item", it: rollItem(m.elite || zl >= 2 ? 1 : 0, il) }, m);
+  if (m.hunter) { for (let i = 0; i < 2; i++) wDrop({ kind: "item", it: rollItem(1, il + 1) }, m); wDrop({ kind: "stone", v: 10 + m.lv }, m); floatText(m.x, m.y - 20, "獵寶妖被斬了！", "#ffe066", true); }
+  else if (Math.random() < (m.elite ? 0.4 : 0.028) * zl) wDrop({ kind: "item", it: rollItem(m.elite ? 1 : 0, il) }, m); // 越深掉越多件，但只有精英掉好東西
   if (m.hunter) { wDrop({ kind: "gem", g: randGem(1) }, m); wDrop({ kind: "gem", g: randGem(1) }, m); }
   else if (Math.random() < (m.elite ? 0.25 : 0.012 * zl)) wDrop({ kind: "gem", g: randGem(1) }, m);
   if (Math.random() < (m.elite ? 0.8 : 0.15)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
   if (Math.random() < 0.03) wDrop({ kind: "potion" }, m);
   if (m.elite && Math.random() < 0.15) wDrop({ kind: "key", k: makeKey(Math.max(1, Math.ceil(m.lv / 4))) }, m);
-  if (!m.hunter) m.camp.respawn.push(22 + Math.random() * 10);
+  if (!m.hunter && !m.noRespawn) m.camp.respawn.push(22 + Math.random() * 10);
 }
 function wDrop(o, at) { o.x = at.x + rand(-12, 12); o.y = at.y + rand(-8, 8); o.t = 0; W0.drops.push(o); }
 function gainExp(n) {
@@ -527,13 +539,13 @@ function updateWorld(dt) {
   const inTown = zoneAt(p.x, p.y) === "town";
   for (const m of W0.mobs) {
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
-    const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1);
+    const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
     if (m.slowT > 0) { m.slowT -= dt; spd *= 0.45; }
     if (m.kb > 0) { moveBody(m, Math.cos(m.ka) * m.kb * dt * 3, Math.sin(m.ka) * m.kb * dt * 3, d.r); m.kb = Math.max(0, m.kb - dt * 400); continue; }
     const homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
     if (m.st === "idle") {
-      if (dp < 75 && !inTown) m.st = "chase";
+      if (dp < 100 && !inTown) { m.st = "chase"; packAggro(m); }
       m.wt -= dt;
       if (m.wt <= 0) { m.wt = rand(1.5, 4); m.wx = m.camp.x + rand(-50, 50); m.wy = m.camp.y + rand(-50, 50); }
       const a = Math.atan2(m.wy - m.y, m.wx - m.x);
@@ -553,17 +565,17 @@ function updateWorld(dt) {
         const want = d.range * 0.75;
         const dir = dp > want + 10 ? 1 : dp < want - 15 ? -0.7 : 0;
         moveBody(m, Math.cos(a) * spd * dir * dt, Math.sin(a) * spd * dir * dt, d.r);
-        if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.35; m.atkT = 99; }
+        if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.3; m.atkT = 99; }
         if (m.wind > 0 && (m.wind -= dt) <= 0) {
-          m.wind = 0; m.atkT = 1.8;
-          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1), c: m.type === "crow" ? "#ff7a2e" : "#9fe07a" });
+          m.wind = 0; m.atkT = m.mod === "狂暴" ? 0.9 : 1.4;
+          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff7a2e" : "#9fe07a" });
         }
       } else if (d.ai === "bomber") {
         if (m.fuse > 0) {
           m.fuse -= dt;
           if (m.fuse <= 0) { // 爆炸
             burst(m.x, m.y, "#ff8a2e", 30, 140, 0.6); shake = Math.max(shake, 8); sfx("break");
-            if (dist(m, p) < 30) hurtW(d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1));
+            if (dist(m, p) < 30) hurtW(mobDmg(m, d));
             m.hp = 0; killMob(m);
           }
         } else {
@@ -575,7 +587,7 @@ function updateWorld(dt) {
         if (m.wind > 0) {
           m.wind -= dt;
           if (m.wind <= 0) {
-            const dmg = d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1);
+            const dmg = mobDmg(m, d);
             if (d.heavy) { // 重擊：砸地一圈
               const cx = m.x + Math.cos(m.wa) * 8, cy = m.y + Math.sin(m.wa) * 8;
               fxBoom(cx, cy, 28, "255,170,90"); shake = Math.max(shake, 4); sfx("break");
@@ -585,11 +597,11 @@ function updateWorld(dt) {
               const diff = Math.abs(((angTo(m, p) - m.wa + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
               if (dist(m, p) < d.r + 13 && diff < 1.1) hurtW(dmg, m);
             }
-            m.atkT = d.heavy ? 1.6 : 1.1;
+            m.atkT = (d.heavy ? 1.3 : 0.85) * (m.mod === "狂暴" ? 0.65 : 1);
           }
         } else {
           if (dp > d.r + 4) moveBody(m, Math.cos(a) * spd * dt, Math.sin(a) * spd * dt, d.r);
-          if (dp < d.r + (d.heavy ? 20 : 15) && m.atkT <= 0) { m.wind = m.windMax = d.heavy ? 0.7 : m.elite ? 0.38 : 0.45; m.wa = a; }
+          if (dp < d.r + (d.heavy ? 20 : 15) && m.atkT <= 0) { m.wind = m.windMax = (d.heavy ? 0.6 : m.elite ? 0.3 : 0.36) * (m.mod === "狂暴" ? 0.75 : 1); m.wa = a; }
         }
         if (m.lunge > 0) m.lunge -= dt;
       }
@@ -890,7 +902,7 @@ function drawWMob(m) {
   const gap = m.lv - save.w.lv;
   ctx.fillStyle = m.elite ? "#6fb8ff" : gap >= 4 ? "#ff6b6b" : gap <= -5 ? "#a99bb8" : "#f3eada";
   ctx.fillStyle = m.hunter ? "#ff6b6b" : ctx.fillStyle;
-  ctx.fillText(`${m.elite && !m.hunter ? "精英 " : ""}${d.n} Lv.${m.lv}`, m.x, m.y - d.r * sc - 9);
+  ctx.fillText(`${m.elite && !m.hunter ? (m.mod || "") + "精英 " : ""}${d.n} Lv.${m.lv}`, m.x, m.y - d.r * sc - 9);
 }
 function drawWorldHud() {
   const p = W0, w = save.w;

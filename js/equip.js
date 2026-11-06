@@ -111,7 +111,7 @@ function rollAffixes(it, n) {
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
 function rollItem(boost = 0, ilv = null, wt = null) {
   const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
-  const r = Math.random() * 100, w = boost ? [30, 42, 22, 6] : [58, 30, 10, 2];
+  const r = Math.random() * 100, w = boost ? [48, 37, 13.5, 1.5] : [72, 23, 4.7, 0.3]; // 凡／靈／玄／傳說（%）
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
   let slot = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], u = null;

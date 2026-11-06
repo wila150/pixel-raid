@@ -109,7 +109,7 @@ function renderTitle() {
   state = "title";
   screenEl.innerHTML = `<div class="panel">
     <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v1.6</p>
+    <p class="sub">PIXEL RAID · 原型 v1.7</p>
     <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
     <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;
