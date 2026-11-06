@@ -109,7 +109,7 @@ function renderTitle() {
   state = "title";
   screenEl.innerHTML = `<div class="panel">
     <h1>萬劍<br>仙途</h1>
-    <p class="sub">PIXEL RAID · 原型 v2.1</p>
+    <p class="sub">PIXEL RAID · 原型 v2.2</p>
     <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
     <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;
@@ -217,9 +217,11 @@ function pauseGame() {
     <h1>${pausedFrom === "world" && liveWorld() ? "選單" : "暫停"}</h1>
     <div class="btns"><button id="resume" class="big">${pausedFrom === "world" && liveWorld() ? "回到遊戲" : "繼續"}</button><button id="home" class="big alt">${typeof AUTH_ON !== "undefined" && AUTH_ON ? "登出" : inWorld ? "回標題（會存檔）" : "放棄，回主畫面"}</button></div>
     <p class="sub">${pausedFrom === "world" && liveWorld() ? "連線中，遊戲不會暫停，小心附近的妖獸" : "按 Esc／P 也可以繼續"}</p>
+    ${typeof screenSettingsHtml === "function" ? screenSettingsHtml() : ""}
   </div>`;
   screenEl.classList.remove("hidden");
   document.getElementById("resume").onclick = resumeGame;
+  if (typeof bindScreenSettings === "function") bindScreenSettings();
   document.getElementById("home").onclick = () => (typeof AUTH_ON !== "undefined" && AUTH_ON ? logout() : renderTitle());
 }
 function resumeGame() {

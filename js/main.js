@@ -23,7 +23,7 @@ function startBoss(swords) {
 // ───────── 主迴圈 ─────────
 let last = performance.now();
 function frame(now) {
-  let dt = Math.min(0.05, (now - last) / 1000);
+  let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); // 換畫面時 last 可能比這幀還晚，不能變負的
   last = now;
   if (state === "paused" || state === "pick") {
     if (pausedFrom === "world" && liveWorld() && W0) { time += dt; updateWorld(dt); updateFx(dt); } // 連線中：開選單時仙界照常進行

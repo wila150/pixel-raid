@@ -8,8 +8,15 @@ const VIEW_H = 175; // 畫面高度大約看得到多少世界單位（越小越
 const cvs = document.getElementById("game");
 const ctx = cvs.getContext("2d");
 let W = 0, H = 0, SCALE = 3, DPR = 1;
+const SAFE = { l: 0, r: 0, t: 0, b: 0 }; // 手機瀏海／圓角要避開的距離（畫在 canvas 上的介面用）
+const safeProbe = document.createElement("div");
+safeProbe.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
+document.body.appendChild(safeProbe);
 
 function resize() {
+  const cs = getComputedStyle(safeProbe);
+  SAFE.l = parseFloat(cs.paddingLeft) || 0; SAFE.r = parseFloat(cs.paddingRight) || 0;
+  SAFE.t = parseFloat(cs.paddingTop) || 0; SAFE.b = parseFloat(cs.paddingBottom) || 0;
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
   H = window.innerHeight;
@@ -18,6 +25,7 @@ function resize() {
   SCALE = Math.max(1.8, Math.min(H / VIEW_H, W / 240));
 }
 window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => setTimeout(resize, 300));
 resize();
 
 const rand = (a, b) => a + Math.random() * (b - a);

@@ -928,7 +928,7 @@ function drawWorldHud() {
   const p = W0, w = save.w;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   // 小地圖（右上，在按鈕列下面）
-  const mw = Math.min(104, W * 0.26), mh = mw * (TH / TW), mx0 = W - mw - 12, my0 = W <= 600 ? 112 : 66, sc = mw / (TW * TS);
+  const mw = Math.min(104, W * 0.26), mh = mw * (TH / TW), mx0 = W - mw - 12 - SAFE.r, my0 = (W <= 600 ? 112 : 66) + SAFE.t, sc = mw / (TW * TS);
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(mx0 - 2, my0 - 2, mw + 4, mh + 4);
   for (let j = 0; j < 14; j++) for (let i = 0; i < 20; i++) {
     const z = zoneAt((i + 0.5) / 20 * TW * TS, (j + 0.5) / 14 * TH * TS);
@@ -945,7 +945,7 @@ function drawWorldHud() {
   ctx.fillText(ZONES[W0.zone || "town"].n, mx0 + mw, my0 + mh + 13);
   if (typeof NET_ON !== "undefined" && NET_ON) { ctx.textAlign = "left"; ctx.fillStyle = "#7dff8a"; ctx.fillText(`● 線上 ${ol.length + 1} 人`, mx0, my0 + mh + 13); }
   // 左上：頭像、等級、生命、真氣
-  const x0 = 10, y0 = 10;
+  const x0 = 10 + SAFE.l, y0 = 10 + SAFE.t;
   ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x0, y0, 40, 40);
   ctx.strokeStyle = "#ffcf6b"; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, 40, 40);
   ctx.imageSmoothingEnabled = false; ctx.drawImage(HERO, 0, 0, 12, 10, x0 + 4, y0 + 6, 32, 27);
@@ -1005,8 +1005,8 @@ function drawWorldHud() {
   }
   if (time < 6 && w.lv === 1 && w.exp === 0) {
     ctx.textAlign = "center"; ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff";
-    ctx.fillText("左邊拖曳移動，右下按鈕出招（電腦：WASD＋J／K／U／空白／H）", W / 2, H * 0.62);
-    ctx.fillText("照左上角的任務走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
+    ctx.fillText(TOUCH ? "左邊拖曳移動，右下按鈕出招" : "WASD 移動　J／K／U 出招　空白 閃身　H 丹藥", W / 2, H * 0.62);
+    ctx.fillText(W < 500 ? "照左上角的任務走" : "照左上角的任務走，越北邊的妖獸越強", W / 2, H * 0.62 + 20);
   }
   // 搖桿
   if (stick.id === null && TOUCH) {

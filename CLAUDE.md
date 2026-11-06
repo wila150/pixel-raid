@@ -41,3 +41,10 @@
 ## 規則
 - 角色與美術一律原創，不能用 Pokémon 等既有遊戲的角色、名字、圖。光序的小蛇吉祥物是客戶的，不能拿來用。
 - commit：`git -c user.name=XieChengFang -c user.email=114204364+wila150@users.noreply.github.com commit`。GitHub：https://github.com/wila150/pixel-raid （私人，分支 master）；push 要用 Windows GCM（見記憶 wsl-machine-setup-gaps）。
+
+## v2.2 手機畫面
+- `manifest.json`（display fullscreen、orientation landscape）＋ `icons/`（icon-192、icon-512、apple-touch-icon；圖示是用 Edge 截圖 canvas 畫的）。
+- `js/screen.js`（main.js 前載入）：點畫面自動全螢幕（Android）；橫向／直向設定存 localStorage `pr_orient`（預設橫向），方向不對時蓋 `#rotate` 提示；加入主畫面引導 `#a2hs`（Android 用 beforeinstallprompt，iPhone 顯示教學；關掉 3 天內不再跳，`pr_a2hs_t`）；暫停選單裡 `screenSettingsHtml()`。
+- core.js `SAFE {l,r,t,b}`：瀏海安全區，world.js 左上 HUD 與小地圖已避開。
+- main.js dt 加 Math.max(0)：換畫面時 last 可能比 rAF 時間晚，dt 變負會讓飄字越長越大。
+- 測試直向：headless Edge 視窗最小寬度約 500，要用 iframe 包 390px 寬。
