@@ -69,10 +69,10 @@ const WMOBS = {
   imp: { n: "小妖", img: () => MOB, hp: 30, spd: 34, dmg: 6, r: 6, exp: 4, ai: "melee" },
   wolf: { n: "狼妖", img: () => WOLF, hp: 42, spd: 64, dmg: 7, r: 6, exp: 6, ai: "melee" },
   treant: { n: "樹妖", img: () => TREANT, hp: 40, spd: 24, dmg: 7, r: 7, exp: 7, ai: "ranged", range: 95, shot: 85 },
-  golem: { n: "石甲妖", img: () => GOLEM, hp: 140, spd: 22, dmg: 13, r: 8, exp: 14, ai: "melee", armor: 0.3 },
+  golem: { n: "石甲妖", img: () => GOLEM, hp: 140, spd: 22, dmg: 16, r: 8, exp: 14, ai: "melee", armor: 0.3, heavy: true },
   bomber: { n: "爆石靈", img: () => BOMBER, hp: 32, spd: 58, dmg: 26, r: 6, exp: 10, ai: "bomber" },
   crow: { n: "火鴉", img: () => CROW, hp: 55, spd: 72, dmg: 9, r: 6, exp: 14, ai: "ranged", range: 115, shot: 120 },
-  lava: { n: "熔岩獸", img: () => LAVA, hp: 230, spd: 30, dmg: 18, r: 9, exp: 26, ai: "melee", armor: 0.3 },
+  lava: { n: "熔岩獸", img: () => LAVA, hp: 230, spd: 30, dmg: 22, r: 9, exp: 26, ai: "melee", armor: 0.3, heavy: true },
   hunter: { n: "獵寶妖", img: () => WOLF, hp: 70, spd: 70, dmg: 12, r: 7, exp: 30, ai: "melee" }, // 身上寶物多時會來追殺
 };
 const ZONE_LOOT = { town: 1, grass: 1, forest: 1.3, waste: 1.6, volcano: 2 }; // 越深的地方掉越多
@@ -539,6 +539,7 @@ function updateWorld(dt) {
       const a = Math.atan2(m.wy - m.y, m.wx - m.x);
       if (Math.hypot(m.wx - m.x, m.wy - m.y) > 4) moveBody(m, Math.cos(a) * spd * 0.35 * dt, Math.sin(a) * spd * 0.35 * dt, d.r);
     } else if (m.st === "home") { // 追太遠就回營地、回滿血
+      m.wind = 0; if (m.atkT > 5) m.atkT = 0;
       const a = Math.atan2(m.camp.y - m.y, m.camp.x - m.x);
       moveBody(m, Math.cos(a) * spd * 1.2 * dt, Math.sin(a) * spd * 1.2 * dt, d.r);
       m.hp = Math.min(m.max, m.hp + m.max * 0.3 * dt);
@@ -552,8 +553,9 @@ function updateWorld(dt) {
         const want = d.range * 0.75;
         const dir = dp > want + 10 ? 1 : dp < want - 15 ? -0.7 : 0;
         moveBody(m, Math.cos(a) * spd * dir * dt, Math.sin(a) * spd * dir * dt, d.r);
-        if (dp < d.range && m.atkT <= 0) {
-          m.atkT = 1.8;
+        if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.35; m.atkT = 99; }
+        if (m.wind > 0 && (m.wind -= dt) <= 0) {
+          m.wind = 0; m.atkT = 1.8;
           W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1), c: m.type === "crow" ? "#ff7a2e" : "#9fe07a" });
         }
       } else if (d.ai === "bomber") {
@@ -569,8 +571,27 @@ function updateWorld(dt) {
           if (dp < 18) { m.fuse = 0.7; floatText(m.x, m.y - 12, "！", "#ff5a4a", true); }
         }
       } else {
-        if (dp > d.r + 4) moveBody(m, Math.cos(a) * spd * dt, Math.sin(a) * spd * dt, d.r);
-        if (dp < d.r + 7 && m.atkT <= 0) { m.atkT = 1.0; hurtW(d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1), m); }
+        // 近戰：先蓄力（地上出現紅色範圍）再出手，可以閃身躲開
+        if (m.wind > 0) {
+          m.wind -= dt;
+          if (m.wind <= 0) {
+            const dmg = d.dmg * (1 + 0.15 * (m.lv - 1)) * (m.elite ? 1.5 : 1);
+            if (d.heavy) { // 重擊：砸地一圈
+              const cx = m.x + Math.cos(m.wa) * 8, cy = m.y + Math.sin(m.wa) * 8;
+              fxBoom(cx, cy, 28, "255,170,90"); shake = Math.max(shake, 4); sfx("break");
+              if (Math.hypot(p.x - cx, p.y - cy) < 28) hurtW(dmg, m);
+            } else { // 撲咬：往前衝一下
+              moveBody(m, Math.cos(m.wa) * 12, Math.sin(m.wa) * 12, d.r); m.lunge = 0.15;
+              const diff = Math.abs(((angTo(m, p) - m.wa + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+              if (dist(m, p) < d.r + 13 && diff < 1.1) hurtW(dmg, m);
+            }
+            m.atkT = d.heavy ? 1.6 : 1.1;
+          }
+        } else {
+          if (dp > d.r + 4) moveBody(m, Math.cos(a) * spd * dt, Math.sin(a) * spd * dt, d.r);
+          if (dp < d.r + (d.heavy ? 20 : 15) && m.atkT <= 0) { m.wind = m.windMax = d.heavy ? 0.7 : m.elite ? 0.38 : 0.45; m.wa = a; }
+        }
+        if (m.lunge > 0) m.lunge -= dt;
       }
     }
   }
@@ -788,9 +809,10 @@ function renderWorld() {
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
         const wt = curWeapon(), behind = Math.sin(p.face) < -0.3;
+        drawHeroAura(p);
         if (behind) drawHeldWeapon(p, wt);
         ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y)); if (p.flip) ctx.scale(-1, 1);
-        ctx.drawImage(Math.floor(p.walk) % 2 ? HERO_WALK : HERO, -6, -9); ctx.restore();
+        ctx.drawImage(heroImg(Math.floor(p.walk) % 2), -6, -9); ctx.restore();
         if (!behind) drawHeldWeapon(p, wt);
         drawSlash(p, wt);
       }
@@ -845,11 +867,14 @@ function renderWorld() {
 }
 function drawWMob(m) {
   const d = WMOBS[m.type], img = d.img(), sc = m.hunter ? 1.7 : m.elite ? 1.4 : 1;
+  if (m.wind > 0) drawTelegraph(m, d);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * sc, d.r * 0.3 * sc, 0, 0, Math.PI * 2); ctx.fill();
   ctx.save();
-  ctx.translate(Math.round(m.x), Math.round(m.y + Math.sin(time * 7 + m.x) * 0.6));
+  const wq = m.wind > 0 ? 1 - m.wind / m.windMax : 0, step = Math.sin(time * 12 + m.x) ; // 走路一跳一跳、蓄力時抖動
+  ctx.translate(Math.round(m.x + (wq ? rand(-1, 1) * wq : 0)), Math.round(m.y - Math.abs(step) * (m.st === "chase" ? 1.2 : 0.5)));
+  if (wq) ctx.scale(1 + wq * 0.15, 1 - wq * 0.12); else if (m.lunge > 0) ctx.scale(1.15, 0.9);
   if (m.x > W0.x) ctx.scale(-1, 1);
-  if (m.fuse > 0 && Math.floor(time * 16) % 2) ctx.globalCompositeOperation = "lighter";
+  if ((m.fuse > 0 || wq > 0.5) && Math.floor(time * 16) % 2) ctx.globalCompositeOperation = "lighter";
   ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc);
   if (m.flash > 0) { ctx.globalCompositeOperation = "lighter"; ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); }
   ctx.restore();

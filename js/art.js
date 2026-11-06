@@ -333,3 +333,49 @@ function drawArrow(s, sc) { // 箭：箭身＋箭頭＋尾羽
   ctx.fillStyle = "#ff6b6b"; ctx.fillRect(-9, -1.5, 2, 1); ctx.fillRect(-9, 0.5, 2, 1);
   ctx.restore();
 }
+
+// ───────── 怪物出手預警 ─────────
+function drawTelegraph(m, d) {
+  const q = 1 - m.wind / m.windMax;
+  ctx.save();
+  if (d.ai === "ranged") { glow(m.x, m.y - 3, 6 + q * 6, "255,90,60", 0.5 + q * 0.4); ctx.restore(); return; }
+  if (d.heavy) {
+    const cx = m.x + Math.cos(m.wa) * 8, cy = m.y + Math.sin(m.wa) * 8;
+    ctx.fillStyle = `rgba(255,60,40,${0.12 + q * 0.18})`; ctx.beginPath(); ctx.ellipse(cx, cy, 28, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `rgba(255,80,50,${0.35})`; ctx.beginPath(); ctx.ellipse(cx, cy, 28 * q, 14 * q, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,90,60,0.8)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(cx, cy, 28, 14, 0, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    const R = d.r + 13;
+    ctx.fillStyle = `rgba(255,60,40,${0.12 + q * 0.15})`; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.arc(m.x, m.y, R, m.wa - 1.1, m.wa + 1.1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(255,80,50,0.35)"; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.arc(m.x, m.y, R * q, m.wa - 1.1, m.wa + 1.1); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  if (q < 0.35) { ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#1b1424"; ctx.fillText("!", m.x + 0.5, m.y - d.r - 11.5); ctx.fillStyle = "#ff5a4a"; ctx.fillText("!", m.x, m.y - d.r - 12); }
+}
+
+// ───────── 穿什麼裝看得到：袍子顏色、頭冠、靴子跟著裝備品質變 ─────────
+const ROBE_C = [["#eef2fa", "#a9bcd8", "#3c8fd1"], ["#cfe4ff", "#6fa0e0", "#2a5ab8"], ["#fff1c0", "#e0b850", "#b0402a"], ["#ffd8b0", "#ff8a3d", "#7a1e1e"]];
+const CROWN_C = ["#9a8a70", "#6fb8ff", "#ffd84a", "#ff8a3d"];
+const BOOT_C = ["#a9bcd8", "#5a8ad8", "#d8a040", "#ff6a3a"];
+const heroCache = {};
+function heroImg(walk) {
+  const e = save.eq, rq = e.robe ? e.robe.q : -1, cq = e.crown ? e.crown.q : -1, bq = e.boots ? e.boots.q : -1, key = `${rq}${cq}${bq}${walk}`;
+  if (heroCache[key]) return heroCache[key];
+  const rc = rq < 0 ? ["#c8bca8", "#8a8070", "#6a5a4a"] : ROBE_C[rq];
+  const pal = Object.assign({}, HERO_PAL, { W: rc[0], w: rc[1], B: rc[2], C: CROWN_C[Math.max(0, cq)], b: bq < 0 ? "#3a2f4a" : BOOT_C[bq] });
+  const top = HERO_TOP.slice();
+  if (cq >= 0) { top[0] = cq >= 2 ? "...kCkCk...." : "....kCCk...."; top[1] = cq >= 2 ? "...kCCCCk..." : "...kHCCHk..."; }
+  const legs = walk ? ["..kbk..kbk..", "..kk.....k.."] : ["...kbk.kbk..", "...kk...kk.."];
+  return (heroCache[key] = sprite([...top, ...legs], pal));
+}
+function drawHeroAura(p) { // 穿傳說裝：腳下光環；武器強化 +7 以上：武器旁邊閃光
+  const n = SLOT_KEYS.filter((k) => save.eq[k] && save.eq[k].q === 3).length, en = save.eq.sword ? save.eq.sword.en || 0 : 0;
+  if (n) {
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = `rgba(255,150,60,${0.35 + 0.15 * Math.sin(time * 3) + n * 0.05})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 9, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < n + 1; i++) { const a = time * 1.5 + i * 2.3, y = p.y + 6 - ((time * 12 + i * 7) % 18); ctx.fillStyle = "rgba(255,180,80,0.7)"; ctx.fillRect(p.x + Math.cos(a) * 7, y, 1, 1); }
+    ctx.restore();
+  }
+  if (en >= 7 && Math.random() < 0.3) particles.push({ x: p.x + rand(-8, 8), y: p.y + rand(-10, 4), vx: 0, vy: -12, life: 0.4, max: 0.4, color: en >= 10 ? "#ff8a3d" : "#ffe066", size: 1 });
+}
