@@ -378,3 +378,12 @@ body.inworld #wbar { pointer-events: auto; }
 .job.done { opacity: 1; border-color: rgba(255, 224, 102, 0.5); } .job.done b { color: #ffe066; } .job.next { opacity: 1; }
 .cchar { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.75); color: var(--txt); text-align: left; font-family: inherit; }
 .cchar.on { border-color: #ffe066; } .cchar small { display: block; font-size: 11px; color: var(--dim); } .cchar.new { border-style: dashed; }
+
+/* 右上快捷列：行囊、角色、星盤、聊天、排行、換武器（只在仙界出現）＋齒輪設定 */
+#quick { display: none; gap: 6px; }
+body.inworld #quick { display: flex; }
+.qbtn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(230, 210, 170, 0.45); background: rgba(10, 10, 10, 0.45); color: #e8dcc0; display: grid; place-items: center; align-content: center; padding: 0; cursor: pointer; font-family: inherit; font-size: 16px; line-height: 1; }
+.qbtn .uico { width: 20px; height: 20px; }
+.qbtn small { font-size: 9px; margin-top: 1px; color: #e8dcc0; }
+.qbtn:active { transform: translateY(1px); }
+@media (max-width: 700px) { .qbtn { width: 34px; height: 34px; } .qbtn small { display: none; } #quick { gap: 4px; } }

@@ -559,13 +559,21 @@ function drawStarMap(cv) {
   g.fillStyle = "#fff"; g.beginPath(); g.arc(x0 + W0.x * s, y0 + W0.y * s, 3 + Math.sin(t * 5), 0, Math.PI * 2); g.fill();
 }
 
-// ───────── 功能選單（☰）─────────
-const MENU_TILES = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["map", "星盤", "M"], ["social", "好友聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"], ["mute", "音效", ""]];
+// ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["swap", "換武器", "F"]];
+const quickEl = document.getElementById("quick");
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : ""; };
+quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
+quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
+  const m = b.dataset.q;
+  const go = () => { if (state !== "world") return; if (m === "map") { sfx("click"); openStarMap(); } else if (m === "social") { sfx("click"); openSocial(); } else openHud(m); };
+  if (state !== "world" && ovKind) { ovClose(); setTimeout(go, 0); } else go();
+}));
 function openMenu() {
   if (ovKind !== "menu" && !ovOpen("menu")) return;
   const w = save.w, ap = w.autoPot !== false, aa = !!w.autoAtk;
-  ov.innerHTML = `<div class="col l"></div><div class="col c menu"><h2>選單</h2>
-    <div class="tiles">${MENU_TILES.map(([k, n, key]) => `<button class="tile" data-m="${k}">${typeof UI_ICON !== "undefined" && UI_ICON[k === "map" ? "tp" : k === "mute" ? (muted ? "mute" : "sound") : k] ? uiIcon(k === "map" ? "tp" : k === "mute" ? (muted ? "mute" : "sound") : k) : ""}<span>${k === "mute" ? (muted ? "音效：關" : "音效：開") : n}</span>${key && !TOUCH ? `<small>${key}</small>` : ""}</button>`).join("")}</div>
+  ov.innerHTML = `<div class="col l"></div><div class="col c menu"><h2>設定</h2>
+    <div class="setrow"><span>音效</span><button class="tab${!muted ? " on" : ""}" data-mu="0">開</button><button class="tab${muted ? " on" : ""}" data-mu="1">關</button></div>
     <h3>防疲勞</h3>
     <div class="setrow"><span>血量低於 30% 自動吃丹藥</span><button class="tab${ap ? " on" : ""}" data-ap="1">開</button><button class="tab${!ap ? " on" : ""}" data-ap="0">關</button></div>
     <div class="setrow"><span>半自動朝最近的敵人割草</span><button class="tab${aa ? " on" : ""}" data-aa="1">開</button><button class="tab${!aa ? " on" : ""}" data-aa="0">關</button></div>
@@ -575,15 +583,8 @@ function openMenu() {
     <div class="setrow"><span>畫面方向</span><button class="tab${orient === "land" ? " on" : ""}" data-o="land">橫向</button><button class="tab${orient === "port" ? " on" : ""}" data-o="port">直向</button></div>
     <div class="acts row"><button id="logout" class="red">${typeof AUTH_ON !== "undefined" && AUTH_ON ? "登出" : "回標題（會存檔）"}</button></div>
     <p class="dim">${liveWorld() ? "連線中，遊戲不會暫停" : ""}　點空白處回到戰鬥</p></div><div class="col r"></div>`;
-  ov.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", () => {
-    sfx("click"); const m = b.dataset.m;
-    if (m === "mute") { setMuted(!muted); openMenu(); return; }
-    if (m === "bag") { ovKind = null; renderEquip(); return; }
-    if (m === "map") { ovKind = null; openStarMap(); return; }
-    if (m === "social") { ovKind = null; openSocial(); return; }
-    ovClose(); setTimeout(() => openHud(m), 0);
-  }));
   const tog = (attr, fn) => ov.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener("click", () => { sfx("click"); fn(b.dataset[attr]); writeSave(); openMenu(); }));
+  tog("mu", (v) => { setMuted(v === "1"); });
   tog("ap", (v) => { w.autoPot = v === "1"; });
   tog("aa", (v) => { w.autoAtk = v === "1"; });
   tog("fl", (v) => { w.filt = +v; });
@@ -592,9 +593,9 @@ function openMenu() {
   document.getElementById("logout").onclick = () => { ovKind = null; ov.className = "ov hidden"; typeof AUTH_ON !== "undefined" && AUTH_ON ? logout() : renderTitle(); };
 }
 
-// 右上角「☰」：極細線圓形漢堡選單
-pauseBtn.innerHTML = '<span class="burger"><i></i><i></i><i></i></span>';
-pauseBtn.setAttribute("aria-label", "選單");
+// 右上角小齒輪：設定
+pauseBtn.innerHTML = '<svg class="gear" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#e8dcc0" stroke-width="1.4"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.5"/></svg>';
+pauseBtn.setAttribute("aria-label", "設定");
 // 背包、角色等舊畫面（screenEl）也一樣：點背景空白處就回到戰鬥
 screenEl.addEventListener("click", (e) => { if (e.target === screenEl && state === "pick" && pausedFrom === "world") worldReturn(); });
 setInterval(() => document.body.classList.toggle("inworld", typeof inWorld !== "undefined" && inWorld && (state === "world" || pausedFrom === "world")), 300);
