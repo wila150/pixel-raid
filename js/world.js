@@ -273,7 +273,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1)));
   m.hp -= dmg; m.flash = 0.08;
   if (m.st === "idle" || m.st === "home") { m.st = "chase"; packAggro(m); }
-  if (kb && from && !m.elite) { m.kb = kb; m.ka = angTo(from, m); }
+  if (kb && from && !m.elite && !m.boss) { m.kb = kb; m.ka = angTo(from, m); }
   const lch = B.leech + 0.005 * gemLv("blood");
   if (lch > 0) W0.regenAcc += dmg * lch;
   const gf = gemLv("frost"); if (gf && Math.random() < 0.15 + gf * 0.1) m.slowT = Math.max(m.slowT || 0, 1.5);
@@ -306,6 +306,7 @@ function killMob(m) {
   gainExp(exp);
   questEvent(m.elite ? "elite" : "kill", m.camp.z);
   save.xiuwei += Math.max(1, Math.round(exp / 6));
+  if (m.boss) { wbKilled(m); return; }
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   const zl = ZONE_LOOT[m.camp.z] || 1;
@@ -361,6 +362,7 @@ function showWorldDead() {
 // ───────── 每幀更新 ─────────
 function updateWorld(dt) {
   updateWFx(dt);
+  updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
   if (typeof netTick === "function") netTick(dt);
   const p = W0, w = save.w;
   for (const k in p.cds) p.cds[k] = Math.max(0, p.cds[k] - dt);
@@ -539,6 +541,7 @@ function updateWorld(dt) {
   let aggro = false;
   const inTown = zoneAt(p.x, p.y) === "town";
   for (const m of W0.mobs) {
+    if (m.boss && !m.dead) { aggro = true; updateWBoss(m, dt, p); continue; }
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
     const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
@@ -617,7 +620,7 @@ function updateWorld(dt) {
   for (const s of W0.eshots) {
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
     if (solid(s.x, s.y)) s.life = 0;
-    if (Math.hypot(s.x - p.x, s.y - p.y) < 6 && p.iframe <= 0) { s.life = 0; hurtW(s.dmg); }
+    if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; hurtW(s.dmg); }
   }
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
   W0.combatT = aggro ? W0.combatT + dt : 0;
@@ -629,7 +632,7 @@ function updateWorld(dt) {
     if (o.kind !== "item" && o.kind !== "key" && o.kind !== "gem" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
     if (d < 10) {
       o.got = true;
-      if (o.kind === "item") { if (W0.zone !== "town") o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
+      if (o.kind === "item") { if (W0.zone !== "town" && !o.safe) o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
       else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
       else if (o.kind === "potion") { w.potions = Math.min(B.potMax, w.potions + 1); floatText(p.x, p.y - 16, "丹藥 +1", "#7dff8a"); sfx("heal"); }
       else if (o.kind === "gem") { addGem(o.g); floatText(p.x, p.y - 16, `◆ ${gemName(o.g)}`, GEMS[o.g.split(":")[0]].c, true); sfx("arrive"); }
@@ -647,7 +650,8 @@ function updateWorld(dt) {
 
   // NPC、傳送陣、祭壇：走過去自動打開
   const spots = worldSpots();
-  const hitSpot = spots.find((s) => dist(s, p) < (s.r || 16));
+  const bossOn = W0.mobs.some((m) => m.boss);
+  const hitSpot = spots.find((s) => dist(s, p) < (s.r || 16) && !(bossOn && s.kind === "altar"));
   if (!hitSpot) W0.npcCool = null;
   else if (W0.npcCool !== hitSpot.id) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
 
@@ -696,7 +700,7 @@ function openSpot(s) {
     btns = WAYPOINTS.filter((wp) => w.wp.includes(wp.id) && wp.id !== s.wp.id).map((wp) => `<button class="big alt tp" data-wp="${wp.id}">${wp.n}<small>Lv.${ZONES[wp.id].lv.join("–")}</small></button>`).join("");
     if (!btns) body = "還沒有解鎖其他傳送陣。走到各地區的傳送陣就會解鎖。";
   } else if (s.kind === "altar") {
-    body = `焚天石魔的祭壇。<br>建議 Lv.18 以上（你現在 Lv.${w.lv}）。<br>打贏會掉一堆高級裝備。`;
+    body = `焚天石魔的祭壇。<br>建議 Lv.18 以上（你現在 Lv.${w.lv}）。<br>石魔會在這裡現身，用你自己的招式打倒它；看到紅色範圍就閃開。<br>打贏掉 4 件好裝（直接安全）＋寶石。`;
     btns = `<button id="fight" class="big">挑戰焚天石魔</button>`;
   }
   screenEl.innerHTML = `<div class="panel"><h1 class="pick-title">${s.n || (s.kind === "wp" ? `傳送陣・${s.wp.n}` : "祭壇")}</h1>
@@ -710,7 +714,7 @@ function openSpot(s) {
     worldReturn();
   }));
   const f = document.getElementById("fight");
-  if (f) f.onclick = startWorldBoss;
+  if (f) f.onclick = () => { worldReturn(); startWorldBossField(); };
 }
 function worldReturnTo() { /* renderEquip／renderMaps 的「返回」會看 inWorld 回到大世界 */ }
 function renderAP() {
@@ -721,6 +725,7 @@ function renderAP() {
     <div class="cpline small">招式跟著武器走：現在拿${WEAPONS[curWeapon()].n}（${WEAPONS[curWeapon()].d}）</div>
     <div class="cards">${Object.keys(AP).map((k) => `<button class="card ap" data-k="${k}" ${w.free ? "" : "disabled"}><b>${AP[k].n} ${w.ap[k]}</b><span class="desc">每點 ${AP[k].d}</span><i>＋1</i></button>`).join("")}</div>
     <div class="cpline small">生命 ${B.maxHp}　攻擊 ×${B.atk.toFixed(2)}　真氣 ${B.maxMp}　爆擊 ${Math.round(B.crit * 100)}%</div>
+    ${fashionHtml()}
     <div class="btns"><button id="apReset" class="big alt">重新配點（−${20 * w.lv} 靈石）</button><button id="close" class="big">離開</button></div></div>`;
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".ap").forEach((b) => b.addEventListener("click", () => { if (!w.free) return; w.free--; w.ap[b.dataset.k]++; writeSave(); sfx("good"); renderAP(); }));
@@ -729,6 +734,7 @@ function renderAP() {
     save.stone -= c; for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); renderAP();
   };
   document.getElementById("close").onclick = worldReturn;
+  bindFashion();
 }
 // 世界王：進入原本的打王場地，數值用大世界的等級和裝備
 function startWorldBoss() {
@@ -775,6 +781,7 @@ function renderWorld() {
   ctx.fillStyle = "#4a2a2a"; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 26, 13, 0, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = `rgba(255,80,40,${0.5 + Math.sin(time * 4) * 0.3})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 20, 10, 0, 0, Math.PI * 2); ctx.stroke();
   drawFxUnder();
+  drawWBZones();
   // 掉落物
   for (const o of W0.drops) {
     if (Math.abs(o.x - cam.x) > hw || Math.abs(o.y - cam.y) > hh) continue;
@@ -830,6 +837,7 @@ function renderWorld() {
         ctx.drawImage(heroImg(Math.floor(p.walk) % 2), -6, -9); ctx.restore();
         if (!behind) drawHeldWeapon(p, wt);
         drawSlash(p, wt);
+        drawMyName(p);
       }
     }
   }
@@ -875,12 +883,17 @@ function renderWorld() {
     ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, r.r * q * 1.1, r.r * q * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
   for (const m of W0.mobs) if (!m.dead && m.slowT > 0) { ctx.fillStyle = "rgba(160,220,255,0.35)"; ctx.fillRect(m.x - 5, m.y - 2, 10, 3); }
-  for (const s of W0.eshots) { ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); }
+  for (const s of W0.eshots) {
+    if (s.big) { glow(s.x, s.y, 9, "255,110,40", 0.7); ctx.fillStyle = s.c; ctx.beginPath(); ctx.arc(s.x, s.y, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2); continue; }
+    ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); ctx.fillStyle = "#fff6c0"; ctx.fillRect(s.x - 1, s.y - 1, 2, 2);
+  }
   drawFxOver();
   drawFx();
   drawWorldHud();
+  drawWBossBar();
 }
 function drawWMob(m) {
+  if (m.boss) { drawWBoss(m); return; }
   const d = WMOBS[m.type], img = d.img(), sc = m.hunter ? 1.7 : m.elite ? 1.4 : 1;
   if (m.wind > 0) drawTelegraph(m, d);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * sc, d.r * 0.3 * sc, 0, 0, Math.PI * 2); ctx.fill();

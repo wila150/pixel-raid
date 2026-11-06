@@ -120,3 +120,11 @@ details.minis { margin-top: 14px; } details.minis summary { cursor: pointer; col
 .gmerge { margin-top: 3px; padding: 3px 4px; border-radius: 6px; background: linear-gradient(#ffcf6b, #ff9d2e); color: #241307; font-size: 11px; font-weight: 700; text-align: center; }
 .icon { width: 28px; height: 28px; image-rendering: pixelated; filter: drop-shadow(0 1px 0 #000); }
 .ihead .icon { width: 32px; height: 32px; vertical-align: middle; margin-right: 4px; }
+/* 角色畫面：暱稱、時裝 */
+.nickrow { display: flex; gap: 6px; margin-top: 6px; }
+.nickrow input { flex: 1; padding: 8px; border-radius: 8px; border: 2px solid #4a4060; background: rgba(20,14,34,0.9); color: #f3eada; font-family: inherit; font-size: 15px; }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; margin-top: 6px; }
+.skin { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border: 2px solid #4a4060; border-radius: 8px; background: rgba(20,14,34,0.8); color: #f3eada; font-family: inherit; cursor: pointer; }
+.skin img { width: 42px; height: 48px; image-rendering: pixelated; }
+.skin b { font-size: 11px; } .skin small { font-size: 10px; color: #a99bb8; }
+.skin.sel { border-color: #ffd84a; background: rgba(80,60,130,0.8); }

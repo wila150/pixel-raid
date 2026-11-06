@@ -51,7 +51,7 @@ function settle(win, rank, ranFail = false) {
     const k = todayKey(), old = save.daily[k] || 0;
     if (score > old) save.daily[k] = score;
     html += `<div class="drop">每日渡劫得分 <b>${score}</b>${score > old ? "（今日新紀錄！）" : `（今日最佳 ${old}）`}</div>`;
-    lastShare = `御劍渡劫・每日渡劫 ${k}：${score} 分（飛劍 ${player.swords} 把${win ? `，${time.toFixed(1)} 秒渡劫成功` : ""}）`;
+    lastShare = `萬劍仙途・每日渡劫 ${k}：${score} 分（飛劍 ${player.swords} 把${win ? `，${time.toFixed(1)} 秒渡劫成功` : ""}）`;
   }
   writeSave();
   return html;
@@ -108,8 +108,8 @@ function renderTitle() {
   pad.classList.add("hidden");
   state = "title";
   screenEl.innerHTML = `<div class="panel">
-    <h1>御劍<br>渡劫</h1>
-    <p class="sub">PIXEL RAID · 原型 v1.8</p>
+    <h1>萬劍<br>仙途</h1>
+    <p class="sub">PIXEL RAID · 原型 v1.9</p>
     <div class="btns title-tap"><button id="world" class="big hero">${save.w ? `繼續冒險<small>Lv.${save.w.lv}・戰力 ${totalCP()}</small>` : "開始冒險"}</button></div>
     <p class="keys">手機：左邊拖曳移動、右下按鈕出招<br>電腦：WASD 移動　J／K／U 出招　空白 閃身　H 丹藥</p>
   </div>`;

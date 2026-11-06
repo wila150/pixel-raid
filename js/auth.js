@@ -25,7 +25,7 @@ const AUTH_ERR = {
 function renderLogin(msg = "") {
   state = "title"; pad.classList.add("hidden");
   screenEl.innerHTML = `<div class="panel login">
-    <h1>御劍<br>渡劫</h1>
+    <h1>萬劍<br>仙途</h1>
     <p class="sub">PIXEL RAID · 原型 v1.3</p>
     <form id="lf">
       <input id="lu" placeholder="帳號名稱" autocomplete="username" maxlength="20">
@@ -56,7 +56,7 @@ function renderLogin(msg = "") {
   };
 }
 function renderLoading(t) {
-  screenEl.innerHTML = `<div class="panel"><h1>御劍<br>渡劫</h1><p class="sub">${t}</p></div>`;
+  screenEl.innerHTML = `<div class="panel"><h1>萬劍<br>仙途</h1><p class="sub">${t}</p></div>`;
   screenEl.classList.remove("hidden");
 }
 // 登入後：讀雲端存檔（新帳號就把這台裝置原本的進度帶上去），然後直接進仙界

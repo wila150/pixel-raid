@@ -38,7 +38,7 @@ function netSend(force) {
   if (!netRef || !W0) return;
   const p = W0, d = {
     x: Math.round(p.x), y: Math.round(p.y), f: Math.round(p.face * 100) / 100, wt: curWeapon(), g: gearKey(),
-    lv: save.w.lv, n: (fbUser.displayName || "修士").slice(0, 12), s: netSwing, r: p.roll > 0 ? 1 : 0,
+    lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0,
   };
   const key = JSON.stringify(d);
   if (!force && key === netLast) return;
@@ -67,14 +67,14 @@ function netTick(dt) {
 }
 const othersList = () => Object.keys(others).map((k) => others[k]);
 function drawOther(o) {
-  const d = o.d, [r, c, b] = String(d.g || "-1,-1,-1").split(",").map(Number);
+  const d = o.d, g = String(d.g || "-1,-1,-1,none").split(","), r = +g[0], c = +g[1], b = +g[2], sk = SKINS[g[3]] ? g[3] : "none";
   const fake = { x: o.x, y: o.y, face: d.f || 0, flip: Math.cos(d.f || 0) < 0, swing: o.swing, swingMax: o.swingMax, swingR: d.wt === "blade" ? 34 : d.wt === "fist" ? 14 : 22 };
   ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(o.x, o.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
   if (d.r) ctx.globalAlpha = 0.5;
   const behind = Math.sin(fake.face) < -0.3;
   if (behind) drawHeldWeapon(fake, d.wt);
   ctx.save(); ctx.translate(Math.round(o.x), Math.round(o.y)); if (fake.flip) ctx.scale(-1, 1);
-  ctx.drawImage(heroImgFor(r, c, b, Math.floor(o.walk) % 2), -6, -9); ctx.restore();
+  ctx.drawImage(heroImgFor(r, c, b, Math.floor(o.walk) % 2, sk), -6, -9); ctx.restore();
   if (!behind) drawHeldWeapon(fake, d.wt);
   drawSlash(fake, d.wt);
   ctx.globalAlpha = 1;

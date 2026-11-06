@@ -358,13 +358,25 @@ const ROBE_C = [["#eef2fa", "#a9bcd8", "#3c8fd1"], ["#cfe4ff", "#6fa0e0", "#2a5a
 const CROWN_C = ["#9a8a70", "#6fb8ff", "#ffd84a", "#ff8a3d"];
 const BOOT_C = ["#a9bcd8", "#5a8ad8", "#d8a040", "#ff6a3a"];
 const heroCache = {};
-const gearKey = () => { const e = save.eq; return `${e.robe ? e.robe.q : -1},${e.crown ? e.crown.q : -1},${e.boots ? e.boots.q : -1}`; };
-function heroImg(walk) { const [r, c, b] = gearKey().split(",").map(Number); return heroImgFor(r, c, b, walk); }
-function heroImgFor(rq, cq, bq, walk) {
-  const key = `${rq}${cq}${bq}${walk}`;
+// 時裝：蓋掉袍子和頭髮的顏色（只是外觀，不影響數值）
+const SKINS = {
+  none: { n: "跟著裝備", price: 0 },
+  snow: { n: "白雪道袍", price: 0, W: "#ffffff", w: "#c8d8f0", B: "#9fc8ff", H: "#e8e8f0", h: "#b0b8d0" },
+  ink: { n: "墨夜劍客", price: 150, W: "#3a3450", w: "#24203a", B: "#ff5a6a", H: "#121018", h: "#3a3050" },
+  jade: { n: "青竹隱士", price: 150, W: "#9fe0b0", w: "#5aa070", B: "#2a6a4a", H: "#2a3a2a", h: "#4a6a4a" },
+  crimson: { n: "赤焰狂徒", price: 300, W: "#ff7a5a", w: "#c03a2a", B: "#ffd84a", H: "#ff5a2a", h: "#ffb030" },
+  sakura: { n: "落櫻仙子", price: 300, W: "#ffd0e0", w: "#f090b0", B: "#c04a80", H: "#f8f0ff", h: "#e0b0d0" },
+  gold: { n: "金蓮聖者", price: 800, W: "#fff1b0", w: "#e0b040", B: "#ff8a3d", H: "#fff6d0", h: "#ffd84a" },
+  void: { n: "虛空魔君", price: 800, W: "#6a3a9a", w: "#3a1a5a", B: "#ff3a5a", H: "#d8d0ff", h: "#9a8ad8" },
+};
+const gearKey = () => { const e = save.eq; return `${e.robe ? e.robe.q : -1},${e.crown ? e.crown.q : -1},${e.boots ? e.boots.q : -1},${(save.w && save.w.skin) || "none"}`; };
+function heroImg(walk) { const g = gearKey().split(","); return heroImgFor(+g[0], +g[1], +g[2], walk, g[3]); }
+function heroImgFor(rq, cq, bq, walk, skin = "none") {
+  const key = `${rq}${cq}${bq}${walk}${skin}`;
   if (heroCache[key]) return heroCache[key];
   const rc = rq < 0 ? ["#c8bca8", "#8a8070", "#6a5a4a"] : ROBE_C[rq];
   const pal = Object.assign({}, HERO_PAL, { W: rc[0], w: rc[1], B: rc[2], C: CROWN_C[Math.max(0, cq)], b: bq < 0 ? "#3a2f4a" : BOOT_C[bq] });
+  const sk = SKINS[skin]; if (sk && skin !== "none") for (const c of ["W", "w", "B", "H", "h"]) if (sk[c]) pal[c] = sk[c];
   const top = HERO_TOP.slice();
   if (cq >= 0) { top[0] = cq >= 2 ? "...kCkCk...." : "....kCCk...."; top[1] = cq >= 2 ? "...kCCCCk..." : "...kHCCHk..."; }
   const legs = walk ? ["..kbk..kbk..", "..kk.....k.."] : ["...kbk.kbk..", "...kk...kk.."];
@@ -380,4 +392,49 @@ function drawHeroAura(p) { // 穿傳說裝：腳下光環；武器強化 +7 以�
     ctx.restore();
   }
   if (en >= 7 && Math.random() < 0.3) particles.push({ x: p.x + rand(-8, 8), y: p.y + rand(-10, 4), vx: 0, vy: -12, life: 0.4, max: 0.4, color: en >= 10 ? "#ff8a3d" : "#ffe066", size: 1 });
+}
+
+// 自己頭上的名字（金色），別人是綠色
+const myName = () => ((save.w && save.w.nick) || (typeof fbUser !== "undefined" && fbUser && fbUser.displayName) || "我").slice(0, 12);
+function drawMyName(p) {
+  ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
+  const t = `${myName()} Lv.${save.w.lv}`;
+  ctx.fillStyle = "#1b1424"; ctx.fillText(t, p.x + 0.5, p.y - 12.5); ctx.fillStyle = "#ffe066"; ctx.fillText(t, p.x, p.y - 13);
+  ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.moveTo(p.x - 2, p.y - 20); ctx.lineTo(p.x + 2, p.y - 20); ctx.lineTo(p.x, p.y - 17.5); ctx.fill(); // 小箭頭：這是你
+}
+// 角色畫面：改暱稱、換時裝
+function fashionHtml() {
+  const w = save.w, own = w.skins || ["none", "snow"], cur = w.skin || "none";
+  return `<div class="fashion">
+    <div class="baghead">暱稱（別的玩家看到的名字）</div>
+    <div class="nickrow"><input id="nick" maxlength="10" value="${myName().replace(/"/g, "")}" placeholder="2～10 個字"><button id="nickOk" class="sbtn gold">改名</button></div>
+    <div class="baghead">時裝（只改外觀，不影響數值）　靈石 <b class="stone">${save.stone}</b></div>
+    <div class="skins">${Object.keys(SKINS).map((k) => { const s = SKINS[k], has = own.includes(k) || !s.price;
+      return `<button class="skin${cur === k ? " sel" : ""}" data-k="${k}"><img src="${skinIcon(k)}" alt=""><b>${s.n}</b><small>${cur === k ? "穿著中" : has ? "點一下換上" : `${s.price} 靈石`}</small></button>`; }).join("")}</div>
+  </div>`;
+}
+const skinIconCache = {};
+function skinIcon(k) {
+  const g = gearKey().split(","), ck = k + g.slice(0, 3).join("");
+  if (skinIconCache[ck]) return skinIconCache[ck];
+  const img = heroImgFor(+g[0], +g[1], +g[2], 0, k), c = document.createElement("canvas");
+  c.width = 14; c.height = 16; c.getContext("2d").drawImage(img, 1, 1);
+  return (skinIconCache[ck] = c.toDataURL());
+}
+function bindFashion() {
+  const w = save.w;
+  const ok = document.getElementById("nickOk");
+  if (ok) ok.onclick = () => {
+    const v = document.getElementById("nick").value.trim().replace(/[<>&"]/g, "");
+    if (v.length < 2) { floatText(W0.x, W0.y - 30, "暱稱至少 2 個字", "#ff8a7a"); return; }
+    w.nick = v; writeSave(); sfx("good"); renderAP();
+  };
+  screenEl.querySelectorAll(".skin").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.k, s = SKINS[k]; w.skins = w.skins || ["none", "snow"];
+    if (!w.skins.includes(k) && s.price) {
+      if (save.stone < s.price) { sfx("bad"); b.querySelector("small").textContent = "靈石不夠"; return; }
+      save.stone -= s.price; w.skins.push(k);
+    }
+    w.skin = k; writeSave(); sfx("arrive"); renderAP();
+  }));
 }
