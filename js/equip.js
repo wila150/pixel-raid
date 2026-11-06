@@ -51,9 +51,10 @@ const AFFIX = {
 // 詞綴名字：前綴放在名字前面、後綴放在後面（靈品一個、玄品兩個）
 const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", def: "堅石", spd: "迅捷", crit: "致命", critD: "破軍", leech: "嗜血", thorns: "荊棘", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
 function nameItem(it) {
-  if (it.u) { it.name = UNIQUES[it.u].n; return; }
+  const en = it.en ? ` +${it.en}` : "";
+  if (it.u) { it.name = UNIQUES[it.u].n + en; return; }
   const base = (it.slot === "sword" ? WEAPONS[wtOf(it)].names : SLOTS[it.slot].names)[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
-  it.name = it.q === 0 || !ks.length ? base : `${AFF_WORD[ks[0]]}${base}${it.q >= 2 && ks[1] ? `・${AFF_WORD[ks[1]]}` : ""}`;
+  it.name = (it.q === 0 || !ks.length ? base : `${AFF_WORD[ks[0]]}${base}${it.q >= 2 && ks[1] ? `・${AFF_WORD[ks[1]]}` : ""}`) + en;
 }
 const BASE_VAL = { atk: [8, 4], hp: [30, 15], def: [6, 3], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
 const RARITY = [
@@ -76,6 +77,30 @@ const UNIQUES = {
   heart: { slot: "charm", n: "劍心玉佩", d: "渡劫時飛劍數量 ×1.3" },
 };
 const BAG_MAX = 40;
+// ───────── 強化（+1～+10，每級全部數值 +10%，越高越容易失敗，失敗只扣靈石）─────────
+const EN_MAX = 10;
+const EN_RATE = [1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+const enCost = (it) => Math.round(12 * ((it.en || 0) + 1) * (1 + it.il * 0.3));
+// ───────── 技能寶石（鑲在武器上，影響這把武器的全部招式；3 顆同級合成高一級，最高 5 級）─────────
+const GEMS = {
+  multi: { n: "連發", c: "#ffb347", d: (l) => `K 招有 ${25 + l * 10}% 機率連放兩次` },
+  power: { n: "巨力", c: "#ff6b6b", d: (l) => `招式傷害 +${l * 10}%` },
+  haste: { n: "疾風", c: "#7dffb0", d: (l) => `招式冷卻 −${l * 7}%` },
+  thrift: { n: "省元", c: "#6fb8ff", d: (l) => `招式耗真氣 −${l * 10}%` },
+  frost: { n: "寒霜", c: "#bfefff", d: (l) => `打中時 ${15 + l * 10}% 機率讓妖獸變慢` },
+  chain: { n: "連鎖", c: "#e0d0ff", d: (l) => `打中時 ${8 + l * 5}% 機率引雷打旁邊另一隻` },
+  burst: { n: "爆裂", c: "#ff8a3d", d: (l) => `斬殺妖獸時炸開，傷害周圍（威力 ${l} 級）` },
+  pierce: { n: "穿透", c: "#d8d2e0", d: (l) => `飛出去的招式全部穿透，傷害 +${l * 5}%` },
+  blood: { n: "嗜血", c: "#c0304a", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%` },
+};
+const GEM_KEYS = Object.keys(GEMS);
+const GEM_MAX = 5;
+const SOCKETS = [1, 2, 2, 3]; // 依品質（凡、靈、玄、傳說）
+const gemName = (g) => { const [k, l] = g.split(":"); return `${GEMS[k].n}寶石 ${l} 級`; };
+const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":")) n += +g.split(":")[1]; return n; };
+const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
+const randGem = (lv = 1) => `${GEM_KEYS[Math.floor(Math.random() * GEM_KEYS.length)]}:${lv}`;
+function ungem(it) { if (it && it.so) { for (const g of it.so) if (g) addGem(g); it.so = []; } } // 賣掉、弄丟武器前先把寶石拆回袋子
 const fmtAff = (k, v) => `${AFFIX[k].n} +${AFFIX[k].dec ? v.toFixed(1) : v}${AFFIX[k].pct ? "%" : ""}`;
 const rollAffVal = (k, il) => { const a = AFFIX[k], v = (a.lo + Math.random() * (a.hi - a.lo)) * (1 + 0.35 * il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
 function rollAffixes(it, n) {
@@ -103,7 +128,12 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   return it;
 }
 // 戰力
-const itemStats = (it) => { const st = Object.assign({}, it.aff); st[SLOTS[it.slot].base] = (st[SLOTS[it.slot].base] || 0) + it.base; return st; };
+const itemStats = (it) => {
+  const st = Object.assign({}, it.aff), m = 1 + 0.1 * (it.en || 0);
+  st[SLOTS[it.slot].base] = (st[SLOTS[it.slot].base] || 0) + it.base;
+  if (m > 1) for (const k in st) st[k] = AFFIX[k].dec || k === "crit" ? Math.round(st[k] * m * 10) / 10 : Math.round(st[k] * m);
+  return st;
+};
 function itemCP(it) {
   if (!it) return 0;
   const st = itemStats(it);
@@ -164,7 +194,7 @@ function grantLoot(it, x, y) {
     let worst = 0;
     save.bag.forEach((b, i) => { if (itemCP(b) < itemCP(save.bag[worst])) worst = i; });
     save.stone += sellPrice(save.bag[worst]);
-    save.bag.splice(worst, 1);
+    ungem(save.bag[worst]); save.bag.splice(worst, 1);
   }
   save.bag.push(it);
   loot.push(it);
@@ -223,8 +253,9 @@ function renderEquip(msg = "") {
           ${worn ? `<button id="unequip" class="sbtn">卸下</button>` : `<button id="equip" class="sbtn gold">裝備</button><button id="sell" class="sbtn red">出售 +${sellPrice(selItem)}</button>`}
           ${!selItem.u && selItem.q > 0 ? `<button id="reroll" class="sbtn">洗練 −${rerollCost(selItem)}</button>` : ""}
           ${selItem.q < 2 ? `<button id="upq" class="sbtn">點金 −${upCost(selItem)}</button>` : ""}
+          ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="sbtn gold">強化 +${(selItem.en || 0) + 1}（${Math.round(EN_RATE[selItem.en || 0] * 100)}%）−${enCost(selItem)}</button>` : `<span class="sbtn">已強化到頂</span>`}
         </div>
-        <small class="hint">洗練：重新隨機詞綴　點金：品質升一級、多一條詞綴</small>
+        <small class="hint">洗練：重新隨機詞綴　點金：品質升一級、多一條詞綴　強化：每級全部數值 +10%，失敗只扣靈石</small>
       </div></div>`;
   }
   screenEl.innerHTML = `<div class="panel wide equip">
@@ -233,6 +264,7 @@ function renderEquip(msg = "") {
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="slots">${SLOT_KEYS.map(cell).join("")}</div>
     ${detail}
+    ${gemHtml()}
     <div class="baghead">背包 ${save.bag.length} / ${BAG_MAX}</div>
     <div class="bag">${bag.length ? bag.map((it) => {
       const better = itemCP(it) > itemCP(save.eq[it.slot]);
@@ -254,7 +286,31 @@ function renderEquip(msg = "") {
     if (save.bag.length >= BAG_MAX) { renderEquip("背包滿了，先賣掉一些"); return; }
     save.bag.push(selItem); delete save.eq[selItem.slot]; eqSel = null; writeSave(); renderEquip();
   });
-  on("sell", () => { save.stone += sellPrice(selItem); save.bag = save.bag.filter((b) => b !== selItem); eqSel = null; writeSave(); renderEquip(`賣掉 ${selItem.name}，靈石 +${sellPrice(selItem)}`); });
+  on("enh", () => {
+    const c = enCost(selItem);
+    if (save.stone < c) { renderEquip("靈石不夠"); return; }
+    save.stone -= c;
+    if (Math.random() < EN_RATE[selItem.en || 0]) { selItem.en = (selItem.en || 0) + 1; nameItem(selItem); writeSave(); sfx("arrive"); renderEquip(`強化成功！${selItem.name}`); }
+    else { writeSave(); sfx("hurt"); renderEquip(`強化失敗⋯⋯靈石 −${c}（裝備沒事）`); }
+  });
+  screenEl.querySelectorAll(".gsock").forEach((b) => b.addEventListener("click", () => { // 拆下寶石
+    const w = save.eq.sword, i = +b.dataset.i, g = w.so[i];
+    if (!g) return; addGem(g); w.so[i] = null; writeSave(); renderEquip(`拆下 ${gemName(g)}`);
+  }));
+  screenEl.querySelectorAll(".gem").forEach((b) => b.addEventListener("click", () => { // 鑲上寶石
+    const w = save.eq.sword, g = b.dataset.g;
+    if (!w) { renderEquip("先裝備一把武器"); return; }
+    w.so = w.so || []; const n = SOCKETS[w.q];
+    let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
+    if (i < 0) { renderEquip(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }
+    w.so[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; writeSave(); sfx("good"); renderEquip(`鑲上 ${gemName(g)}`);
+  }));
+  screenEl.querySelectorAll(".gmerge").forEach((b) => b.addEventListener("click", (e) => {
+    e.stopPropagation(); const g = b.dataset.g, [k, l] = g.split(":");
+    if ((save.gems[g] || 0) < 3) return;
+    save.gems[g] -= 3; if (!save.gems[g]) delete save.gems[g]; const ng = `${k}:${+l + 1}`; addGem(ng); writeSave(); sfx("arrive"); renderEquip(`合成出 ${gemName(ng)}！`);
+  }));
+  on("sell", () => { ungem(selItem); save.stone += sellPrice(selItem); save.bag = save.bag.filter((b) => b !== selItem); eqSel = null; writeSave(); renderEquip(`賣掉 ${selItem.name}，靈石 +${sellPrice(selItem)}`); });
   on("reroll", () => {
     const c = rerollCost(selItem);
     if (save.stone < c) { renderEquip("靈石不夠"); return; }
@@ -283,10 +339,18 @@ function renderEquip(msg = "") {
   });
   on("sellJunk", () => {
     const junk = save.bag.filter((b) => b.q <= 1 && sameWt(b) && itemCP(b) <= itemCP(save.eq[b.slot]));
-    const gain = junk.reduce((s, b) => s + sellPrice(b), 0);
+    const gain = junk.reduce((s, b) => s + sellPrice(b), 0); junk.forEach(ungem);
     save.bag = save.bag.filter((b) => !junk.includes(b)); save.stone += gain; eqSel = null; writeSave();
     renderEquip(junk.length ? `賣掉 ${junk.length} 件，靈石 +${gain}（比身上好的會留著）` : "沒有可以賣的");
   });
+}
+function gemHtml() {
+  const w = save.eq.sword, gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort();
+  const n = w ? SOCKETS[w.q] : 0, so = (w && w.so) || [];
+  const socks = w ? Array.from({ length: n }, (_, i) => { const g = so[i]; return g ? `<button class="gsock" data-i="${i}" style="border-color:${GEMS[g.split(":")[0]].c}"><b style="color:${GEMS[g.split(":")[0]].c}">◆ ${gemName(g)}</b><small>${GEMS[g.split(":")[0]].d(+g.split(":")[1])}</small></button>` : `<span class="gsock empty">空孔</span>`; }).join("") : `<span class="sub">沒有武器</span>`;
+  return `<div class="gems"><div class="baghead">技能寶石（武器 ${n} 孔，效果作用在全部招式上；點孔裡的寶石拆下）</div>
+    <div class="gsocks">${socks}</div>
+    <div class="gbag">${gs.length ? gs.map((g) => { const [k, l] = g.split(":"); return `<button class="gem" data-g="${g}" style="border-color:${GEMS[k].c}"><b style="color:${GEMS[k].c}">◆ ${gemName(g)} ×${save.gems[g]}</b><small>${GEMS[k].d(+l)}</small>${save.gems[g] >= 3 && +l < GEM_MAX ? `<span class="gmerge" data-g="${g}">3 顆合成 ${+l + 1} 級</span>` : ""}</button>`; }).join("") : `<p class="sub">還沒有寶石：精英怪、獵寶妖、任務會掉。點寶石就鑲到武器上</p>`}</div></div>`;
 }
 function equipItem(it) {
   const old = save.eq[it.slot];

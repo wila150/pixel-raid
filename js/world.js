@@ -169,6 +169,8 @@ function applyWeapon() {
   WSKILL = { roll: { cd: 1.1, mp: 0 }, potion: { cd: 1, mp: 0 } };
   for (const k in ws) WSKILL[k] = { n: ws[k][0], cd: ws[k][1], mp: ws[k][2] };
   const u = curUq(); if (u) WSKILL.ult = { n: WUQ[u][0], cd: WUQ[u][1], mp: WUQ[u][2], uq: u };
+  const cdm = Math.max(0.4, 1 - 0.07 * gemLv("haste")), mpm = Math.max(0.3, 1 - 0.1 * gemLv("thrift")); // 寶石：疾風、省元
+  for (const k of ["attack", "spin", "ult"]) { WSKILL[k].cd *= cdm; WSKILL[k].mp = Math.round(WSKILL[k].mp * mpm); }
 }
 applyWeapon();
 const PAD_KEYS = { attack: "J", spin: "K", roll: "空白", ult: "U", potion: "H" };
@@ -187,6 +189,7 @@ function enterWorld() {
   if (!wmap) buildWorld();
   if (!save.w) save.w = blankW();
   if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; nameItem(it); save.eq.sword = it; writeSave(); }
+  if (!save.gems) { save.gems = {}; addGem("multi:1"); addGem("power:1"); writeSave(); W0gift = true; }
   mode = "normal";
   inWorld = true;
   B = worldStats();
@@ -206,8 +209,10 @@ function enterWorld() {
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
   setPadLabels(true);
+  if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 50, "得到 2 顆技能寶石！打開背包鑲到武器上", "#ffb347", true); }
   last = performance.now();
 }
+let W0gift = false;
 function worldReturn() { // 從裝備、秘境等畫面回到大世界
   if (!inWorld) { renderTitle(); return; }
   B = worldStats();
@@ -249,7 +254,8 @@ function spawnWMob(camp) {
 }
 
 // ───────── 傷害 ─────────
-const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1);
+const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power"));
+let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead) return;
   const d = WMOBS[m.type], crit = Math.random() < B.crit;
@@ -260,7 +266,14 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   m.hp -= dmg; m.flash = 0.08;
   if (m.st === "idle" || m.st === "home") m.st = "chase";
   if (kb && from && !m.elite) { m.kb = kb; m.ka = angTo(from, m); }
-  if (B.leech > 0) W0.regenAcc += dmg * B.leech;
+  const lch = B.leech + 0.005 * gemLv("blood");
+  if (lch > 0) W0.regenAcc += dmg * lch;
+  const gf = gemLv("frost"); if (gf && Math.random() < 0.15 + gf * 0.1) m.slowT = Math.max(m.slowT || 0, 1.5);
+  const gc = gemLv("chain");
+  if (gc && !chainLock && Math.random() < 0.08 + gc * 0.05) {
+    let o = null, bd = 70; for (const n of W0.mobs) if (n !== m && !n.dead) { const dd = dist(n, m); if (dd < bd) { bd = dd; o = n; } }
+    if (o) { bolts.push({ x: o.x, y: o.y, life: 0.2 }); chainLock = true; hitMob(o, dmg * 0.6, 0, null, true); chainLock = false; }
+  }
   W0.mp = Math.min(B.maxMp, W0.mp + (quiet ? 0 : 1));
   floatText(m.x, m.y - 10, crit ? `${dmg}!` : `${dmg}`, crit ? "#ffd84a" : "#ffffff", crit);
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
@@ -269,6 +282,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
 }
 function killMob(m) {
   m.dead = true;
+  const gb = gemLv("burst"); if (gb) { W0.fires.push({ x: m.x, y: m.y, t: 0.08, r: 26 + gb * 2, dmg: 6 + gb * 4, c: "#ff8a3d" }); }
   const d = WMOBS[m.type], w = save.w;
   burst(m.x, m.y, m.elite ? "#6fb8ff" : "#b07dff", m.elite ? 30 : 12, 90);
   // 經驗：打比自己弱很多的怪，經驗變少
@@ -283,6 +297,8 @@ function killMob(m) {
   const zl = ZONE_LOOT[m.camp.z] || 1;
   if (m.hunter) { for (let i = 0; i < 3; i++) wDrop({ kind: "item", it: rollItem(1, il + 1) }, m); wDrop({ kind: "stone", v: 10 + m.lv }, m); floatText(m.x, m.y - 20, "獵寶妖被斬了！", "#ffe066", true); }
   else if (Math.random() < (m.elite ? 0.6 : 0.045) * zl) wDrop({ kind: "item", it: rollItem(m.elite || zl >= 2 ? 1 : 0, il) }, m);
+  if (m.hunter) { wDrop({ kind: "gem", g: randGem(1) }, m); wDrop({ kind: "gem", g: randGem(1) }, m); }
+  else if (Math.random() < (m.elite ? 0.25 : 0.012 * zl)) wDrop({ kind: "gem", g: randGem(1) }, m);
   if (Math.random() < (m.elite ? 0.8 : 0.15)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
   if (Math.random() < 0.03) wDrop({ kind: "potion" }, m);
   if (m.elite && Math.random() < 0.15) wDrop({ kind: "key", k: makeKey(Math.max(1, Math.ceil(m.lv / 4))) }, m);
@@ -315,7 +331,7 @@ function hurtW(dmg, from) {
 }
 function showWorldDead() {
   const w = save.w, lose = Math.round(w.exp * 0.1);
-  const lost = riskyItems();
+  const lost = riskyItems(); lost.forEach(ungem);
   save.bag = save.bag.filter((b) => !b.risk);
   for (const k of SLOT_KEYS) if (save.eq[k] && save.eq[k].risk) delete save.eq[k];
   w.exp -= lose; w.x = 1200; w.y = 1530; writeSave();
@@ -371,7 +387,8 @@ function updateWorld(dt) {
       if (d < range + WMOBS[m.type].r && diff < half) hitMob(m, wDmg(base), kb, p);
     }
   };
-  const shoot = (a, o) => W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o));
+  const gp = gemLv("pierce");
+  const shoot = (a, o) => { if (gp) { o.pierce = true; o.dmg *= 1 + gp * 0.05; } W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o)); };
   if ((act("attack", "j", "z") || (keys.has("j") && p.cds.attack <= 0)) && useSkill("attack")) {
     if (wt === "sword") { // 劍擊：前方扇形
       const t = near(50); if (t) p.face = angTo(p, t);
@@ -400,7 +417,7 @@ function updateWorld(dt) {
       shoot(p.face, { v: 200, life: 1.0, dmg: 8, kind: "wind", pierce: true, kb: 20, back: 0.5 }); sfx("dash");
     }
   }
-  if (act("spin", "k", "x") && useSkill("spin")) {
+  const doSpin = () => {
     const t = near(160); if (t) p.face = angTo(p, t);
     if (wt === "sword") { // 劍氣斬：三道穿透劍氣
       for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.22, { v: 230, life: 0.6, dmg: 14, kind: "sword", pierce: true, kb: 50 });
@@ -418,7 +435,12 @@ function updateWorld(dt) {
     } else { // 旋風：慢慢往前飄、一直打
       W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 1.6, tick: 0 }); sfx("volley");
     }
+  };
+  if (act("spin", "k", "x") && useSkill("spin")) {
+    doSpin();
+    const gm = gemLv("multi"); if (gm && Math.random() < 0.25 + gm * 0.1) W0.recastT = 0.2; // 連發寶石
   }
+  if (W0.recastT > 0 && (W0.recastT -= dt) <= 0) { W0.recastT = 0; doSpin(); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
   if (act("ult", "u", "i") && p.cds.ult <= 0 && p.mp >= WSKILL.ult.mp) {
     if (WSKILL.ult.uq) { if (useSkill("ult")) uniqueUlt(WSKILL.ult.uq, near); }
     else if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
@@ -566,12 +588,13 @@ function updateWorld(dt) {
   for (const o of W0.drops) {
     o.t += dt;
     const d = dist(o, p), mag = 26 * (1 + B.magnet);
-    if (o.kind !== "item" && o.kind !== "key" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
+    if (o.kind !== "item" && o.kind !== "key" && o.kind !== "gem" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
     if (d < 10) {
       o.got = true;
       if (o.kind === "item") { if (W0.zone !== "town") o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
       else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
       else if (o.kind === "potion") { w.potions = Math.min(B.potMax, w.potions + 1); floatText(p.x, p.y - 16, "丹藥 +1", "#7dff8a"); sfx("heal"); }
+      else if (o.kind === "gem") { addGem(o.g); floatText(p.x, p.y - 16, `◆ ${gemName(o.g)}`, GEMS[o.g.split(":")[0]].c, true); sfx("arrive"); }
       else if (o.kind === "key") { addKey(o.k); floatText(p.x, p.y - 16, `秘境鑰 第 ${o.k.tier} 層`, "#9fe8ff", true); sfx("arrive"); }
       writeSave();
     }
@@ -727,6 +750,12 @@ function renderWorld() {
     } else if (o.kind === "stone") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); }
     else if (o.kind === "potion") { ctx.fillStyle = "#ff6b8a"; ctx.fillRect(o.x - 2, o.y - 3, 4, 5); ctx.fillStyle = "#fff"; ctx.fillRect(o.x - 1, o.y - 4, 2, 1); }
     else if (o.kind === "key") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 3, o.y - 1, 6, 2); ctx.fillRect(o.x + 2, o.y - 3, 2, 6); }
+    else if (o.kind === "gem") { // 寶石：菱形＋光柱
+      const c = GEMS[o.g.split(":")[0]].c, by = o.y - 2 + Math.sin(time * 4 + o.x) * 1.5;
+      ctx.globalAlpha = 0.3; ctx.fillStyle = c; ctx.fillRect(o.x - 1, o.y - 18, 2, 18); ctx.globalAlpha = 1;
+      ctx.fillStyle = "#1b1424"; ctx.beginPath(); ctx.moveTo(o.x, by - 5); ctx.lineTo(o.x + 4, by); ctx.lineTo(o.x, by + 5); ctx.lineTo(o.x - 4, by); ctx.fill();
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(o.x, by - 4); ctx.lineTo(o.x + 3, by); ctx.lineTo(o.x, by + 4); ctx.lineTo(o.x - 3, by); ctx.fill();
+    }
   }
   // 依 y 排序畫：樹、石頭、怪、NPC、玩家
   const objs = [];
@@ -967,6 +996,7 @@ function checkQuest() {
   floatText(W0.x, W0.y - 46, `任務完成！靈石 +${st}`, "#ffe066", true);
   sfx("win");
   if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) floatText(W0.x, W0.y - 60, `得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b", true); }
+  if (!q.main && Math.random() < 0.5) { const g = randGem(1); addGem(g); floatText(W0.x, W0.y - 74, `◆ ${gemName(g)}`, GEMS[g.split(":")[0]].c, true); }
   gainExp(exp);
 }
 
