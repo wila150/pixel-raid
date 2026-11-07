@@ -76,9 +76,9 @@ function chCount(c) { let n = c === myCh() ? 1 : 0; for (const k in others) if (
 function setCh(c) { if (!save.w || c === myCh()) return; save.w.ch = c; writeSave(); netSend(true); if (W0) { W0.shield = 3; floatText(W0.x, W0.y - 30, `切換到 ${c} 服`, "#9fe8ff", true); } }
 // ───────── 招式同步：自己放招時記一筆，跟著位置一起送出；別人收到就在畫面上重播（只有特效，不會打怪）─────────
 let netCq = [], netCqI = 0;
-function netCast(k, a, x, y) {
+function netCast(k, a, x, y, o) {
   if (!NET_ON || !netRef) return;
-  netCq.push({ i: ++netCqI, k, a: Math.round(a * 100) / 100, x: Math.round(x), y: Math.round(y) });
+  netCq.push(Object.assign({ i: ++netCqI, k, a: Math.round(a * 100) / 100, x: Math.round(x), y: Math.round(y) }, o ? { o } : {}));
   if (netCq.length > 4) netCq.shift();
   netSendT = Math.min(netSendT, 0.06);
 }
@@ -93,7 +93,14 @@ function ghostCast(o, wt, c) {
     else if (wt === "bow") W0.pshots.push(Object.assign(P(c.a, 300), { life: 0.6, kind: "arrow" }));
     else if (wt === "fan") W0.pshots.push(Object.assign(P(c.a, 200), { life: 0.6, kind: "wind" }));
   } else if (c.k === "v") W0.voids.push({ x: c.x, y: c.y, t: 2.2, max: 2.2, tick: 0, ghost: true });
-  else if (c.k === "q") {
+  else if (c.k === "q" && c.o) { // 改招三選一
+    if (c.o === "wan") for (let i = -2; i <= 2; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.26, 230), { life: 0.6, kind: "sword" }));
+    else if (c.o === "boom") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.2, 230), { life: 0.5, kind: "sword" }));
+    else if (c.o === "rain") for (let i = 0; i < 8; i++) W0.fires.push({ x: c.x + rand(-26, 26), y: c.y + rand(-18, 18), t: 0.3 + i * 0.05, r: 16, dmg: 0, ghost: true });
+    else if (c.o === "refr") for (let i = -2; i <= 2; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.18, 280), { life: 0.55, kind: "arrow" }));
+    else if (c.o === "swal") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.15, 300), { life: 0.6, kind: "arrow" }));
+    else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 30, c: "190,225,255" });
+  } else if (c.k === "q") {
     if (wt === "sword") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.22, 230), { life: 0.6, kind: "sword" }));
     else if (wt === "staff") W0.fires.push({ x: c.x, y: c.y, t: 0.45, r: 34, dmg: 0, ghost: true });
     else if (wt === "bow") for (let i = -2; i <= 2; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.18, 280), { life: 0.55, kind: "arrow" }));

@@ -37,6 +37,13 @@ function renderSkills(msg = "") {
   const w = save.w, j = jobLv(), free = spFree();
   w.sk = w.sk || {};
   if (typeof B !== "undefined") B = worldStats();
+  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">招式${typeof triPending === "function" && triPending().length ? " ●" : ""}</button>${SKILL_TABS.map(([n, r], i) => `<button class="btab${i === skTab ? " on" : ""}" data-st="${i}">${n}${j < r ? " 🔒" : ""}</button>`).join("")}</div>`;
+  if (skTab === "tri") {
+    screenEl.innerHTML = `<div class="panel wide equip skwin"><div class="winhead">技能</div>${tabs}${renderTri(msg)}<div class="btns"><button id="close" class="big">離開</button></div></div>`;
+    screenEl.classList.remove("hidden");
+    screenEl.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st === "tri" ? "tri" : +b.dataset.st; renderSkills(); }));
+    bindTri(); document.getElementById("close").onclick = worldReturn; return;
+  }
   const [tn, need] = SKILL_TABS[skTab], locked = j < need;
   const list = Object.keys(SKT).filter((k) => SKT[k].t === need).map((k) => {
     const s = SKT[k], l = skLv(k), full = l >= SK_MAX;
@@ -46,7 +53,7 @@ function renderSkills(msg = "") {
       <button class="skup" data-sk="${k}" ${!locked && free > 0 && !full ? "" : "disabled"}>＋</button></div>`;
   }).join("");
   screenEl.innerHTML = `<div class="panel wide equip skwin"><div class="winhead">技能</div>
-    <div class="btabs">${SKILL_TABS.map(([n, r], i) => `<button class="btab${i === skTab ? " on" : ""}" data-st="${i}">${n}${j < r ? " 🔒" : ""}</button>`).join("")}</div>
+    ${tabs}
     <div class="skjob">${need ? (typeof JOBS !== "undefined" && JOBS[need - 1] ? JOBS[need - 1].n : tn) : "基礎心法"}${locked ? `<small>完成${tn}（Lv.${JOBS[need - 1].lv}）才能學</small>` : ""}</div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="sklist${locked ? " locked" : ""}">${list}</div>
@@ -54,7 +61,7 @@ function renderSkills(msg = "") {
     <p class="sub">每升 1 級得 1 點，每次轉職再 +3。招式本身跟著武器走，這裡學的是心法（全部武器都吃）。</p>
     <div class="btns"><button id="close" class="big">離開</button></div></div>`;
   screenEl.classList.remove("hidden");
-  screenEl.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = +b.dataset.st; renderSkills(); }));
+  screenEl.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st === "tri" ? "tri" : +b.dataset.st; renderSkills(); }));
   screenEl.querySelectorAll("[data-sk]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.sk; if (spFree() <= 0 || skLv(k) >= SK_MAX) return;
     w.sk[k] = skLv(k) + 1; writeSave(); sfx("good"); renderSkills(`${SKT[k].n} 升到 ${w.sk[k]} 級`);
@@ -71,5 +78,5 @@ setInterval(() => {
   const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
   const a = q("ap"), s = q("skill");
   if (a) a.classList.toggle("dot", (w.free || 0) > 0 || (!!J && w.lv >= J.lv));
-  if (s) s.classList.toggle("dot", spFree() > 0);
+  if (s) s.classList.toggle("dot", spFree() > 0 || (typeof triPending === "function" && triPending().length > 0));
 }, 1000);
