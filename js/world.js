@@ -601,22 +601,22 @@ function updateWorld(dt) {
       const ta = triOf("sword", "a"), t = near(ta === "ray" ? 90 : 50); if (t) p.face = angTo(p, t);
       if (W0.danceWt !== wt) { W0.danceWt = wt; W0.danceN = 0; }
       const third = ta === "dance" && (W0.danceN = ((W0.danceN || 0) + 1) % 3) === 0;
-      const R = third ? 42 : ta === "break" ? 34 : 30, half = third ? 1.5 : ta === "break" ? 0.45 : 1.1, base = third ? 25 : ta === "break" ? 16 : 10;
+      const R = third ? 42 : ta === "break" ? 34 : 30, half = third ? 1.5 : ta === "break" ? 0.45 : 1.1, base = third ? 16.5 : ta === "break" ? 12 : ta === "dance" ? 9 : ta === "ray" ? 7 : 10;
       p.swing = p.swingMax = 0.18; p.swingR = third ? 34 : 22; sfx(third ? "break" : "dash"); if (third) shake = Math.max(shake, 2);
       for (const m of W0.mobs) {
         if (m.dead) continue;
         const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
         if (d < R + WMOBS[m.type].r && diff < half) hitMob(m, wDmg(base) * (ta === "break" && (m.elite || m.boss) ? 1.3 : 1), third ? 160 : 80, p);
       }
-      if (ta === "ray") shoot(p.face, { v: 260, life: 0.31, dmg: 6, kind: "sword", pierce: false, kb: 20 });
+      if (ta === "ray") shoot(p.face, { v: 260, life: 0.31, dmg: 4.5, kind: "sword", pierce: false, kb: 20 });
     } else if (wt === "staff") { // 法球：遠程、打到第一隻就消失
       const t = near(150); if (t) p.face = angTo(p, t);
       shoot(p.face, { v: 170, life: 0.9, dmg: 12, kind: "orb", pierce: false, kb: 40 }); sfx("volley");
     } else if (wt === "bow") { // 連射：快、傷害低（改招：三連珠／追蹤箭／狙擊）
       const ta = triOf("bow", "a"), t = near(ta === "snipe" ? 250 : 170); if (t) p.face = angTo(p, t);
-      if (ta === "tri3") { W0.triN = ((W0.triN || 0) + 1) % 3; const big = W0.triN === 0; shoot(p.face + rand(-0.04, 0.04), { v: 300, life: 0.6, dmg: big ? 12 : 6, kind: "arrow", pierce: big, kb: big ? 40 : 15 }); }
-      else if (ta === "home") shoot(p.face + rand(-0.05, 0.05), { v: 280, life: 0.7, dmg: 6, kind: "arrow", pierce: false, kb: 15, home: true });
-      else if (ta === "snipe") shoot(p.face, { v: 380, life: 0.71, dmg: 13.2, kind: "arrow", pierce: false, kb: 50, critAdd: 0.1 });
+      if (ta === "tri3") { W0.triN = ((W0.triN || 0) + 1) % 3; const big = W0.triN === 0; shoot(p.face + rand(-0.04, 0.04), { v: 300, life: 0.6, dmg: big ? 9 : 6, kind: "arrow", pierce: big, kb: big ? 40 : 15 }); }
+      else if (ta === "home") shoot(p.face + rand(-0.05, 0.05), { v: 280, life: 0.7, dmg: 7, kind: "arrow", pierce: false, kb: 15, home: true });
+      else if (ta === "snipe") shoot(p.face, { v: 380, life: 0.71, dmg: 14, kind: "arrow", pierce: false, kb: 50, critAdd: 0.1 });
       else shoot(p.face + rand(-0.05, 0.05), { v: 300, life: 0.6, dmg: 6, kind: "arrow", pierce: false, kb: 15 }); sfx("dash");
     } else if (wt === "blade") { // 重斬：慢但很寬
       const t = near(55); if (t) p.face = angTo(p, t);
@@ -641,12 +641,12 @@ function updateWorld(dt) {
     }
     netCast("q", p.face, t ? t.x : p.x + Math.cos(p.face) * 60, t ? t.y : p.y + Math.sin(p.face) * 60, typeof triOf === "function" ? triOf(wt, "q") : null);
     const tq = triOf(wt, "q");
-    if (wt === "sword" && tq === "wan") { for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.26, { v: 230, life: 0.6, dmg: 9.8, kind: "sword", pierce: true, kb: 50 }); sfx("volley"); }
-    else if (wt === "sword" && tq === "boom") { for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.2, { v: 230, life: 0.8, dmg: 10, kind: "sword", pierce: true, kb: 30, back: 0.4 }); sfx("volley"); }
-    else if (wt === "sword" && tq === "rush") { p.roll = 0.24; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.3); p.dashHit = new Set(); p.dashDmg = 60; sfx("dash"); }
-    else if (wt === "bow" && tq === "rain") { const tx = t ? t.x : p.x + Math.cos(p.face) * 70, ty = t ? t.y : p.y + Math.sin(p.face) * 70; for (let i = 0; i < 8; i++) W0.fires.push({ x: tx + rand(-26, 26), y: ty + rand(-18, 18), t: 0.3 + i * 0.05, r: 16, dmg: 5, c: "#ffe9a0" }); sfx("volley"); }
-    else if (wt === "bow" && tq === "refr") { for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.18, { v: 280, life: 0.55, dmg: 12, kind: "arrow", pierce: false, kb: 30, bnAdd: 1 }); sfx("volley"); }
-    else if (wt === "bow" && tq === "swal") { p.roll = 0.2; p.rollDir = p.face + Math.PI; p.iframe = Math.max(p.iframe, 0.25); for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.15, { v: 300, life: 0.6, dmg: 11, kind: "arrow", pierce: false, kb: 30 }); sfx("volley"); }
+    if (wt === "sword" && tq === "wan") { for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.26, { v: 230, life: 0.6, dmg: 8.5, kind: "sword", pierce: true, kb: 50 }); sfx("volley"); }
+    else if (wt === "sword" && tq === "boom") { for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.2, { v: 230, life: 0.8, dmg: 8, kind: "sword", pierce: true, kb: 30, back: 0.4 }); sfx("volley"); }
+    else if (wt === "sword" && tq === "rush") { p.roll = 0.24; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.3); p.dashHit = new Set(); p.dashDmg = 50; sfx("dash"); }
+    else if (wt === "bow" && tq === "rain") { const tx = t ? t.x : p.x + Math.cos(p.face) * 70, ty = t ? t.y : p.y + Math.sin(p.face) * 70; for (let i = 0; i < 8; i++) W0.fires.push({ x: tx + rand(-26, 26), y: ty + rand(-18, 18), t: 0.3 + i * 0.05, r: 16, dmg: 3, c: "#ffe9a0" }); sfx("volley"); }
+    else if (wt === "bow" && tq === "refr") { for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.18, { v: 280, life: 0.55, dmg: 10, kind: "arrow", pierce: false, kb: 30, bnAdd: 1 }); sfx("volley"); }
+    else if (wt === "bow" && tq === "swal") { p.roll = 0.2; p.rollDir = p.face + Math.PI; p.iframe = Math.max(p.iframe, 0.25); for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.15, { v: 300, life: 0.6, dmg: 8, kind: "arrow", pierce: false, kb: 30 }); sfx("volley"); }
     else if (wt === "sword") { // 劍氣斬：三道穿透劍氣
       for (let i = -1; i <= 1; i++) shoot(p.face + i * 0.22, { v: 230, life: 0.6, dmg: 14, kind: "sword", pierce: true, kb: 50 });
       sfx("volley");
