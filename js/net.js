@@ -3,7 +3,7 @@
 "use strict";
 
 const NET_ON = typeof AUTH_ON !== "undefined" && AUTH_ON && typeof firebase !== "undefined" && firebase.database;
-let netRef = null, netAll = null, netUid = null, netSendT = 0, netBeatT = 0, netLast = "", netSwing = 0, netSwingSeen = 0;
+let netRef = null, netAll = null, netUid = null, netSendT = 0, netBeatT = 0, netLast = "", netLastD = null, netSwing = 0, netSwingSeen = 0;
 const others = {}; // uid → { d: 最新資料, x, y（畫面上平滑移動的位置）, buf（收到的位置紀錄）, walk, swing, swingMax }
 // 別人的位置：照伺服器時間記下來，畫「0.4 秒前」那一刻（前後兩筆之間等速內插），永遠有下一筆可走 → 不會走走停停
 const NET_DELAY = 400;
@@ -26,6 +26,7 @@ function netStart() {
   netRef.onDisconnect().remove();
   netAll = db.ref("presence");
   db.ref(".info/serverTimeOffset").on("value", (s) => { netOff = s.val() || 0; });
+  db.ref(".info/connected").on("value", (s) => { if (s.val() && netRef) { netRef.onDisconnect().remove(); netLastD = null; netSend(true); } }); // 斷線重連：伺服器那筆已被刪掉，要重送完整一包
   const upd = (snap) => {
     if (snap.key === netUid) return;
     const d = snap.val(); if (!d) return;
@@ -46,7 +47,8 @@ function netStart() {
 function netStop() {
   if (netAll) netAll.off();
   if (netRef) netRef.remove().catch(() => {});
-  netRef = netAll = null;
+  if (NET_ON) firebase.database().ref(".info/connected").off();
+  netRef = netAll = null; netLastD = null;
   for (const k in others) delete others[k];
 }
 function netSend(force) {
@@ -56,11 +58,20 @@ function netSend(force) {
     vx: Math.round(netVx), vy: Math.round(netVy), lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "",
   };
   if (netCq.length) d.cq = netCq;
-  const key = JSON.stringify(d);
-  if (!force && key === netLast) return;
-  netLast = key;
-  d.t = firebase.database.ServerValue.TIMESTAMP;
-  netRef.set(d).catch(() => {});
+  // 第一次、重連、心跳、切分流：送完整一包（set）；平常只送有變的欄位（update），走路時大約只剩 x、y、vx、vy、t
+  const prev = netLastD;
+  if (force || !prev || d.ch !== prev.ch) {
+    netLastD = d; netLast = JSON.stringify(d);
+    netRef.set(Object.assign({}, d, { t: firebase.database.ServerValue.TIMESTAMP })).catch(() => { netLastD = null; });
+    return;
+  }
+  const u = {};
+  for (const k in d) if (k === "cq" ? JSON.stringify(d.cq) !== JSON.stringify(prev.cq) : d[k] !== prev[k]) u[k] = d[k];
+  if (prev.cq && !d.cq) u.cq = null;
+  if (!Object.keys(u).length) return;
+  netLastD = d;
+  u.t = firebase.database.ServerValue.TIMESTAMP;
+  netRef.update(u).catch(() => { netLastD = null; });
 }
 // world.js 的 updateWorld 每幀呼叫
 function netTick(dt) {

@@ -404,6 +404,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   const L = curLines(); // 段數：一下打好幾行，總傷害 ×(1+0.3×(段數−1))
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1) * (L > 1 ? (1 + 0.3 * (L - 1)) / L : 1)));
   m.hp -= dmg * L; m.flash = 0.08;
+  if (!quiet || !W0.focusM || W0.focusM.dead || W0.focusT <= 0) { W0.focusM = m; W0.focusT = 3; } // 正在打的那隻：顯示名字
   if (m.st === "idle" || m.st === "home") { m.st = "chase"; packAggro(m); }
   if (kb && from && !m.elite && !m.boss) { m.kb = kb; m.ka = angTo(from, m); }
   const lch = B.leech + 0.005 * gemLv("blood") + (W0.invT > 0 ? 0.1 : 0);
@@ -580,7 +581,9 @@ function updateWorld(dt) {
   if (Math.cos(p.face) < -0.2) p.flip = true; else if (Math.cos(p.face) > 0.2) p.flip = false;
   if (p.roll > 0) {
     p.roll -= dt;
+    const ar = typeof wbArena === "function" ? wbArena() : null, wasIn = ar && Math.hypot(p.x - ar.x, p.y - ar.y) <= ar.r, ox = p.x, oy = p.y;
     moveBody(p, Math.cos(p.rollDir) * 250 * dt, Math.sin(p.rollDir) * 250 * dt, 5);
+    if (wasIn && Math.hypot(p.x - ar.x, p.y - ar.y) > ar.r) { p.x = ox; p.y = oy; p.roll = 0; } // 打王：衝刺／後跳撞到圈邊就停
     if (p.dashHit) for (const m of W0.mobs) if (!m.dead && !p.dashHit.has(m) && dist(m, p) < 14 + WMOBS[m.type].r) { p.dashHit.add(m); hitMob(m, wDmg(p.dashDmg || 16), 90, p); }
     if (p.ghostT !== undefined && (p.ghostT -= dt) <= 0 && p.ghostN > 0) { p.ghostT = 0.05; p.ghostN--; W0.fires.push({ x: p.x, y: p.y, t: 0.12, r: 16, dmg: 6, c: "#bfe6ff" }); } // 殘影
     if (p.roll <= 0) {
@@ -827,6 +830,7 @@ function updateWorld(dt) {
   for (const r of W0.rings) r.t += dt;
   W0.rings = W0.rings.filter((r) => r.t < r.max);
   if (W0.guardT > 0) W0.guardT -= dt;
+  if (W0.focusT > 0) W0.focusT -= dt;
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
     if (W0.spinTick <= 0) { W0.spinTick = 0.15; for (const m of W0.mobs) if (!m.dead && dist(m, p) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : 17) * (m.boss ? 0.8 : 1), 60, p, true); sfx("dash"); }
@@ -1288,7 +1292,7 @@ function drawWMob(m) {
     ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(m.x - bw / 2, m.y - d.r * sc - 7, bw, 3);
     ctx.fillStyle = m.elite ? "#6fb8ff" : "#ff6a3a"; ctx.fillRect(m.x - bw / 2, m.y - d.r * sc - 7, bw * Math.max(0, m.hp / m.max), 3);
   }
-  if (!(m.elite || m.st === "chase" || dist(m, W0) < 60)) return; // 名字只顯示精英、追你的、附近的
+  if (!(m.elite || m.boss || m.hunter || (m === W0.focusM && W0.focusT > 0))) return; // 名字只顯示精英、王、獵寶妖、正在打的那隻（一般怪擠在一起名字不會疊成一團）
   ctx.font = "bold 5px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const gap = m.lv - save.w.lv;
   ctx.fillStyle = m.elite ? "#6fb8ff" : gap >= 4 ? "#ff6b6b" : gap <= -5 ? "#a99bb8" : "#f3eada";

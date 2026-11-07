@@ -4,7 +4,9 @@
 
 WMOBS.wboss = { n: "焚天石魔", img: () => null, hp: 1, spd: 26, dmg: 30, r: 20, exp: 900, ai: "boss", armor: 0.15 };
 WMOBS.rbswamp = { n: "腐骨蟾王", img: () => RC.rbswamp || (RC.rbswamp = recolor(MOB, 150, 1.2, 0.6)), hp: 1, spd: 30, dmg: 30, r: 16, exp: 1500, ai: "boss", armor: 0.15, sz: "L", race: "B" };
-const WB_LV = 22, WB_ARENA = 170;
+const WB_LV = 22, WB_ARENA = 170, WB_EDGE = WB_ARENA + 20, WB_OUT = 3;
+// 打王中的場地（閃身／後跳／跳斬撞到圈邊會停）
+function wbArena() { const m = W0 && W0.mobs.find((x) => x.boss && !x.dead && x.rb); if (!m) return null; const R = rbOf(m); return { x: R.x, y: R.y, r: WB_EDGE, m }; }
 // 區域王資料表：等級、血量、掉落都看王，不看玩家
 const RBOSS = {
   volcano: { type: "wboss", n: "焚天石魔", lv: 22, x: ALTAR.x, y: ALTAR.y, hp: 9000, cool: 90, rec: 18, col: "255,80,40", bar: ["#ff8a2e", "#ff5a2a", "#ff2a1a"], shards: 20,
@@ -47,14 +49,17 @@ function updateWBoss(m, dt, p) {
   if (!m.seq) m.seq = [];
   for (const s of m.seq) if ((s.t -= dt) <= 0) s.f();
   m.seq = m.seq.filter((s) => s.t > 0);
+  { const hx = m.x - R.x, hy = m.y - R.y, hd = Math.hypot(hx, hy), lim = WB_ARENA - 40; if (hd > lim) { m.x = R.x + hx / hd * lim; m.y = R.y + hy / hd * lim; } } // 王自己不會走出場地
   const dp = dist(m, p), home = Math.hypot(p.x - R.x, p.y - R.y);
   // 玩家跑出祭壇範圍太遠：王回去睡覺、回滿血
-  if (home > WB_ARENA + 120 || state === "worldDead") {
+  // 出圈 3 秒內回來沒事，超過才離開（圈邊變紅倒數）；傳送走、死掉直接離開
+  if (home > WB_EDGE) { const s0 = Math.ceil(WB_OUT - (m.outT || 0)); m.outT = (m.outT || 0) + dt; const s1 = Math.ceil(WB_OUT - m.outT); if (s1 !== s0 || m.outT === dt) floatText(p.x, p.y - 30, `回到圈內！${Math.max(0, s1)} 秒後王會離開`, "#ff7a6a", true); }
+  else m.outT = 0;
+  if (m.outT > WB_OUT || home > WB_EDGE + 250 || state === "worldDead") {
     m.dead = true; wbZones = [];
     floatText(R.x, R.y - 30, R.sleep, "#cfc4dc", true);
     return;
   }
-  if (home > WB_ARENA + 40 && (m.warnT = (m.warnT || 0) - 1 / 60) <= 0) { m.warnT = 1.2; floatText(p.x, p.y - 30, "快回到圈內，跑太遠王會離開", "#ffb07a", true); } // 跑出虛線圈的警告
   // 階段
   const r = m.hp / m.max;
   if (m.phase === 1 && r < 0.5) { m.phase = 2; floatText(m.x, m.y - 40, R.p2, `rgb(${R.col})`, true); shake = 8; flashT = 0.1; flashColor = R.col; }
@@ -273,7 +278,7 @@ function drawWBZones() {
   }
   // 祭壇範圍
   const bm = W0.mobs.find((m) => m.boss && !m.dead);
-  if (bm) { const R = rbOf(bm); ctx.strokeStyle = `rgba(${R.col},${0.25 + 0.1 * Math.sin(time * 3)})`; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.ellipse(R.x, R.y, WB_ARENA, WB_ARENA * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
+  if (bm) { const R = rbOf(bm), out = bm.outT > 0; ctx.strokeStyle = out ? `rgba(255,70,50,${0.6 + 0.35 * Math.sin(time * 14)})` : `rgba(${R.col},${0.25 + 0.1 * Math.sin(time * 3)})`; ctx.lineWidth = out ? 2.5 : 1.5; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.arc(R.x, R.y, WB_EDGE, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
 }
 // 祭壇（地圖上每區一座，冷卻中變灰）
 function drawAltars() {
