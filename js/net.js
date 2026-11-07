@@ -4,7 +4,19 @@
 
 const NET_ON = typeof AUTH_ON !== "undefined" && AUTH_ON && typeof firebase !== "undefined" && firebase.database;
 let netRef = null, netAll = null, netUid = null, netSendT = 0, netBeatT = 0, netLast = "", netSwing = 0, netSwingSeen = 0;
-const others = {}; // uid → { d: 最新資料, x, y（畫面上平滑移動的位置）, walk, swing, swingMax }
+const others = {}; // uid → { d: 最新資料, x, y（畫面上平滑移動的位置）, buf（收到的位置紀錄）, walk, swing, swingMax }
+// 別人的位置：照伺服器時間記下來，畫「0.4 秒前」那一刻（前後兩筆之間等速內插），永遠有下一筆可走 → 不會走走停停
+const NET_DELAY = 400;
+let netOff = 0, netPx = null, netPy = 0, netVx = 0, netVy = 0; // netOff：伺服器時間 − 本機時間；netV：自己的速度（送給別人預測用）
+const srvNow = () => Date.now() + netOff;
+function netPush(o, d) {
+  const t = d.t || srvNow(), b = o.buf, last = b[b.length - 1];
+  if (last && t <= last.t) return;
+  if (last && Math.hypot(d.x - last.x, d.y - last.y) > 200) { b.length = 0; o.x = d.x; o.y = d.y; } // 傳送：直接跳過去
+  else if (last && t - last.t > 500 && !last.vx && !last.vy) b.push({ x: last.x, y: last.y, vx: 0, vy: 0, t: t - 250 }); // 站了很久才走：補一筆，免得一開始用跳的
+  b.push({ x: d.x, y: d.y, vx: d.vx || 0, vy: d.vy || 0, t });
+  while (b.length > 8) b.shift();
+}
 
 function netStart() {
   if (!NET_ON || !fbUser || netRef) return;
@@ -13,14 +25,16 @@ function netStart() {
   netRef = db.ref("presence/" + netUid);
   netRef.onDisconnect().remove();
   netAll = db.ref("presence");
+  db.ref(".info/serverTimeOffset").on("value", (s) => { netOff = s.val() || 0; });
   const upd = (snap) => {
     if (snap.key === netUid) return;
     const d = snap.val(); if (!d) return;
     const o = others[snap.key];
-    if (!o) others[snap.key] = { d, x: d.x, y: d.y, walk: 0, swing: 0, swingMax: 0.2, sw: d.s || 0, cqSeen: d.cq && d.cq.length ? d.cq[d.cq.length - 1].i : 0 };
+    if (!o) others[snap.key] = { d, x: d.x, y: d.y, buf: [{ x: d.x, y: d.y, vx: 0, vy: 0, t: d.t || srvNow() }], walk: 0, swing: 0, swingMax: 0.2, sw: d.s || 0, cqSeen: d.cq && d.cq.length ? d.cq[d.cq.length - 1].i : 0 };
     else {
       if (d.cq && (d.ch || 1) === myCh() && othersVisible(o)) for (const c of d.cq) if (c.i > o.cqSeen) { o.cqSeen = c.i; ghostCast(o, d.wt, c); }
       if ((d.s || 0) !== o.sw) { o.sw = d.s || 0; o.swing = o.swingMax = d.wt === "blade" ? 0.25 : d.wt === "fist" ? 0.08 : 0.18; }
+      if (d.x !== o.d.x || d.y !== o.d.y || d.t !== o.d.t) netPush(o, d);
       o.d = d;
     }
   };
@@ -39,7 +53,7 @@ function netSend(force) {
   if (!netRef || !W0) return;
   const p = W0, d = {
     x: Math.round(p.x), y: Math.round(p.y), f: Math.round(p.face * 100) / 100, wt: curWeapon(), g: gearKey(),
-    lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "",
+    vx: Math.round(netVx), vy: Math.round(netVy), lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "",
   };
   if (netCq.length) d.cq = netCq;
   const key = JSON.stringify(d);
@@ -55,16 +69,32 @@ function netTick(dt) {
   lbTick(dt);
   if (W0.swing > 0 && W0.swing === W0.swingMax && W0.swing !== netSwingSeen) netSwing++;
   netSwingSeen = W0.swing === W0.swingMax ? W0.swing : 0;
+  if (netPx === null || dt <= 0) { netPx = W0.x; netPy = W0.y; }
+  else { // 自己的速度：有動就平滑跟上，沒動就直接 0（停下那一包速度一定是 0，別人才不會滑過頭）
+    const mx = (W0.x - netPx) / dt, my = (W0.y - netPy) / dt; netPx = W0.x; netPy = W0.y;
+    if (Math.abs(mx) + Math.abs(my) < 1 || Math.hypot(mx, my) > 2000) netVx = netVy = 0;
+    else { const k = Math.min(1, dt * 12); netVx += (mx - netVx) * k; netVy += (my - netVy) * k; }
+  }
   netSendT -= dt; netBeatT -= dt;
   if (netSendT <= 0) { netSendT = 0.25; netSend(netBeatT <= 0); if (netBeatT <= 0) netBeatT = 20; } // 一秒 4 次（沒動就不送），20 秒心跳一次
-  const now = Date.now();
+  const now = srvNow(), rt = now - NET_DELAY;
   for (const k in others) {
-    const o = others[k], d = o.d;
+    const o = others[k], d = o.d, b = o.buf;
     if (d.t && now - d.t > 90000) { delete others[k]; continue; } // 當機沒清掉的
-    const dx = d.x - o.x, dy = d.y - o.y, dd = Math.hypot(dx, dy);
-    if (dd > 200) { o.x = d.x; o.y = d.y; } // 傳送：直接跳過去
-    else { const m = Math.min(1, dt * 10); o.x += dx * m; o.y += dy * m; }
-    o.walk = dd > 1 ? o.walk + dt * 8 : 0;
+    const ox = o.x, oy = o.y;
+    let tx, ty;
+    let i = b.length - 1; while (i > 0 && b[i - 1].t > rt) i--;
+    const B = b[i], A = b[i - 1];
+    if (A && B.t > rt) { const f = Math.max(0, (rt - A.t) / (B.t - A.t)); tx = A.x + (B.x - A.x) * f; ty = A.y + (B.y - A.y) * f; }
+    else if (B.t > rt) { tx = B.x; ty = B.y; }
+    else { // 網路卡、還沒收到下一筆：照最後的速度往前推（0.2 秒內原速，之後 0.2 秒慢慢停）
+      const e = Math.min(0.4, (rt - B.t) / 1000), s = e <= 0.2 ? e : 0.2 + (e - 0.2) - ((e - 0.2) ** 2) / 0.4;
+      tx = B.x + B.vx * s; ty = B.y + B.vy * s;
+    }
+    if (Math.hypot(tx - ox, ty - oy) > 200) { o.x = tx; o.y = ty; } // 傳送
+    else { const m = Math.min(1, dt * 15); o.x += (tx - ox) * m; o.y += (ty - oy) * m; } // 慢網路遲到的包：滑過去修正，不要用跳的
+    const sp = dt > 0 ? Math.hypot(o.x - ox, o.y - oy) / dt : 0;
+    o.walk = sp > 6 ? o.walk + dt * 8 : 0;
     o.swing = Math.max(0, o.swing - dt);
   }
 }
