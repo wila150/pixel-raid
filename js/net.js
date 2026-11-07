@@ -57,7 +57,7 @@ function netSend(force) {
     x: Math.round(p.x), y: Math.round(p.y), f: Math.round(p.face * 100) / 100, wt: curWeapon(), g: gearKey(),
     vx: Math.round(netVx), vy: Math.round(netVy), lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "",
   };
-  if (netCq.length) d.cq = netCq;
+  if (netCq.length) d.cq = netCq.slice(); // 複製一份：netCq 會原地變動，不複製的話跟上一包比永遠一樣、招式送不出去
   // 第一次、重連、心跳、切分流：送完整一包（set）；平常只送有變的欄位（update），走路時大約只剩 x、y、vx、vy、t
   const prev = netLastD;
   if (force || !prev || d.ch !== prev.ch) {
