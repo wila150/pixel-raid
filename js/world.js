@@ -500,7 +500,7 @@ function hurtW(dmg, from, kind) {
     if (r > 0.08) { burst(p.x + rand(-4, 4), p.y - 4, "#ffe9a0", 6, 70, 0.25); burst(p.x, p.y - 4, "#c8d0e0", 4, 40, 0.2); }
   }
   if (kind === "ele") dmg *= 1 - B.res;
-  dmg = dmg * (B.uq.vajra && p.hp < p.maxHp * 0.3 ? 0.5 : 1);
+  dmg = dmg * (B.uq.vajra && p.hp < p.maxHp * 0.3 ? 0.5 : 1) * (W0.guardT > 0 && curWeapon() === "fist" ? 0.85 : 1);
   dmg = Math.max(1, Math.round(dmg));
   p.esT = 3; // 脫戰 3 秒才回充護盾
   if (p.es > 0) { // 智慧：能量護盾先扣
@@ -628,7 +628,7 @@ function updateWorld(dt) {
       if (B.uq.wave) shoot(p.face, { v: 220, life: 0.55, dmg: 10, kind: "sword", pierce: true, kb: 30 });
     } else if (wt === "fist") { // 連拳：超快、超近
       const t = near(40); if (t) p.face = angTo(p, t);
-      p.swing = p.swingMax = 0.08; p.swingR = 14; sfx("hit");
+      p.swing = p.swingMax = 0.08; p.swingR = 14; sfx("hit"); W0.guardT = 0.4; // 連拳期間受傷 −15%
       arcHit(22, 0.8, 5, 30);
     } else { // 風刃：飛出去再飛回來，穿透
       const t = near(150); if (t) p.face = angTo(p, t);
@@ -655,14 +655,14 @@ function updateWorld(dt) {
       sfx("volley");
     } else if (wt === "staff") { // 火雨：在目標位置落下、範圍爆炸
       const tx = t ? t.x : p.x + Math.cos(p.face) * 60, ty = t ? t.y : p.y + Math.sin(p.face) * 60;
-      W0.fires.push({ x: tx, y: ty, t: 0.45, r: 34, dmg: 30 }); sfx("dash");
+      W0.fires.push({ x: tx, y: ty, t: 0.45, r: 34, dmg: 60 }); sfx("dash"); // 08-A：30→60
     } else if (wt === "bow") { // 散射：五支箭
       for (let i = -2; i <= 2; i++) shoot(p.face + i * 0.18, { v: 280, life: 0.55, dmg: 9, kind: "arrow", pierce: false, kb: 30 });
       sfx("volley");
     } else if (wt === "blade") { // 旋風斬：身邊轉三圈
       W0.spinT = 0.6; W0.spinTick = 0; sfx("volley");
     } else if (wt === "fist") { // 衝拳：往前衝、一路打
-      p.roll = 0.18; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); sfx("dash");
+      p.roll = 0.18; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); p.dashDmg = 45; sfx("dash"); // 08-A：16→45
     } else { // 旋風：慢慢往前飄、一直打
       W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 1.6, tick: 0 }); sfx("volley");
     }
@@ -771,15 +771,16 @@ function updateWorld(dt) {
   W0.fires = W0.fires.filter((f) => f.t > 0);
   for (const r of W0.rings) r.t += dt;
   W0.rings = W0.rings.filter((r) => r.t < r.max);
+  if (W0.guardT > 0) W0.guardT -= dt;
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
-    if (W0.spinTick <= 0) { W0.spinTick = 0.2; for (const m of W0.mobs) if (!m.dead && dist(m, p) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(12) * (m.boss ? 0.6 : 1), 60, p, true); sfx("dash"); }
+    if (W0.spinTick <= 0) { W0.spinTick = 0.15; for (const m of W0.mobs) if (!m.dead && dist(m, p) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(17) * (m.boss ? 0.8 : 1), 60, p, true); sfx("dash"); }
   }
   for (const t of W0.tornados) {
     t.t -= dt; t.tick -= dt;
     moveBody(t, t.vx * dt, t.vy * dt, 3);
     if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 40) { const a = angTo(m, t); moveBody(m, Math.cos(a) * 40 * dt, Math.sin(a) * 40 * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, t) < 22 + WMOBS[m.type].r) hitMob(m, wDmg(6), 0, t, true); }
+    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, t) < 22 + WMOBS[m.type].r) hitMob(m, wDmg(13), 0, t, true); } // 08-A：6→13
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }
   W0.tornados = W0.tornados.filter((t) => t.t > 0);
