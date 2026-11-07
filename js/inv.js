@@ -37,8 +37,7 @@ function drawCamps() {
     if (on) { ctx.rotate(time * 0.8); for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.fillStyle = "rgba(180,235,255,0.8)"; ctx.fillRect(7, -0.5, 5, 1); } }
     ctx.restore();
   }
-  ctx.fillStyle = "#4a2a2a"; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 26, 13, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = `rgba(255,80,40,${0.5 + Math.sin(time * 4) * 0.3})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 20, 10, 0, 0, Math.PI * 2); ctx.stroke();
+  drawAltars();
   const g = W0.grave;
   if (g) { // 遺落的戰利品：魂火
     const y = g.y - 10 + Math.sin(time * 3) * 2;
@@ -574,7 +573,7 @@ function drawStarMap(cv) {
   for (let i = 0; i <= 64; i++) { const a = (i / 64) * Math.PI * 2, wob = 1 + 0.025 * Math.sin(a * 5) + 0.015 * Math.sin(a * 11); { const c = Math.cos(a), sn = Math.sin(a); g.lineTo(cw / 2 + Math.sign(c) * Math.abs(c) ** 0.35 * mw * 0.515 * wob, ch / 2 + Math.sign(sn) * Math.abs(sn) ** 0.35 * mh * 0.52 * wob); } }
   g.closePath(); g.stroke();
   // 祭壇、魂火、飛劍符文、自己
-  if (fogSeen(ALTAR.x, ALTAR.y)) { g.fillStyle = `rgba(255,70,40,${0.6 + 0.3 * Math.sin(t * 4)})`; g.beginPath(); g.arc(x0 + ALTAR.x * s, y0 + ALTAR.y * s, 4, 0, Math.PI * 2); g.fill(); }
+  for (const k of RB_KEYS) { const R = RBOSS[k]; if (fogSeen(R.x, R.y)) { g.fillStyle = rbCool(k) > 0 ? "rgba(150,150,160,0.8)" : `rgba(${R.col},${0.6 + 0.3 * Math.sin(t * 4)})`; g.beginPath(); g.arc(x0 + R.x * s, y0 + R.y * s, 4, 0, Math.PI * 2); g.fill(); } }
   if (W0.grave) { g.fillStyle = "#bfe4ff"; g.beginPath(); g.arc(x0 + W0.grave.x * s, y0 + W0.grave.y * s, 3, 0, Math.PI * 2); g.fill(); }
   for (const wp of WAYPOINTS) {
     const on = save.w.wp.includes(wp.id), px = x0 + wp.x * s, py = y0 + wp.y * s;

@@ -103,6 +103,7 @@ const UNIQUES = {
   devour: { slot: "robe", n: "萬妖噬魂袍", d: "斬妖試煉每斬 30 隻妖，傷害 +3%；渡劫時吸血 +2%" },
   cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半，斬妖試煉移動 +25%" },
   heart: { slot: "charm", n: "劍心玉佩", d: "渡劫時飛劍數量 ×1.3" },
+  toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；站在毒池裡不扣血，反而回真氣" },
 };
 const BAG_MAX = 40;
 // ───────── 強化（+1～+10，每級全部數值 +10%，越高越容易失敗，失敗只扣靈石）─────────
@@ -158,6 +159,7 @@ const CARDS = {
   guardian: { n: "天兵石像卡", slot: "robe", st: { es: 200 } },
   jianling: { n: "劍靈卡", slot: "sword", st: { atkP: 15 } },
   wboss: { n: "焚天石魔卡", slot: "sword", st: { critL: 10, sizeL: 15 } },
+  rbswamp: { n: "腐骨蟾王卡", slot: "robe", st: { res: 20, hp: 500 } },
 };
 const CARD_SLOTS = ["sword", "robe"];
 const cardDesc = (c) => Object.keys(CARDS[c].st).map((k) => fmtAff(k, CARDS[c].st[k])).join("、");
@@ -180,8 +182,8 @@ function shardItem(slot, q) {
   const il = Math.floor(save.w.lv / 3) + 1;
   let it;
   if (q === 3) {
-    const us = Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && (slot !== "sword" || UNIQUES[u].wt === curWeapon()) && !["devour", "heart"].includes(u));
-    const pick = us.length ? us : Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot);
+    const us = Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb && (slot !== "sword" || UNIQUES[u].wt === curWeapon()) && !["devour", "heart"].includes(u));
+    const pick = us.length ? us : Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb);
     do { it = rollItem(1, il, slot === "sword" ? curWeapon() : null); } while (false);
     const u = pick[Math.floor(Math.random() * pick.length)], bv = BASE_VAL[SLOTS[slot].base];
     it.slot = slot; it.u = u; it.q = 3; it.wt = slot === "sword" ? UNIQUES[u].wt : undefined;
@@ -215,7 +217,7 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
   let slot = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], u = null;
-  if (q === 3) { u = Object.keys(UNIQUES)[Math.floor(Math.random() * Object.keys(UNIQUES).length)]; slot = UNIQUES[u].slot; }
+  if (q === 3) { const uk = Object.keys(UNIQUES).filter((k) => !UNIQUES[k].rb); u = uk[Math.floor(Math.random() * uk.length)]; slot = UNIQUES[u].slot; }
   else if (wt) slot = "sword";
   const s = SLOTS[slot], bv = BASE_VAL[s.base];
   const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, u,

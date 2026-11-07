@@ -18,9 +18,10 @@ function renderQuests() {
   const idx = QUESTS.map((_, i) => i).filter((i) => questCh[i] === qTab);
   if (qSel === null || questCh[qSel] !== qTab) qSel = idx.includes(cur) ? cur : idx[0];
   const sel = QUESTS[qSel], st = (i) => (i < cur ? "done" : i === cur ? "now" : "lock");
-  const list = idx.map((i) => `<button class="qrow ${st(i)}${i === qSel ? " sel" : ""}" data-qi="${i}"><i>${i < cur ? "✓" : i === cur ? "▶" : "・"}</i>${i > cur ? "？？？" : QUESTS[i].t}</button>`).join("");
+  let list = idx.map((i) => `<button class="qrow ${st(i)}${i === qSel ? " sel" : ""}" data-qi="${i}"><i>${i < cur ? "✓" : i === cur ? "▶" : "・"}</i>${i > cur ? "？？？" : QUESTS[i].t}</button>`).join("");
   let right;
-  if (qSel > cur) right = `<div class="qdet"><h3>？？？</h3><p class="sub">完成前面的任務才會出現</p></div>`;
+  if (qTab === "boss") right = "";
+  else if (qSel > cur) right = `<div class="qdet"><h3>？？？</h3><p class="sub">完成前面的任務才會出現</p></div>`;
   else {
     const prog = qSel === cur ? Math.min(questProg(), sel.n) : sel.n;
     right = `<div class="qdet"><h3>${sel.t}</h3>
@@ -31,9 +32,18 @@ function renderQuests() {
       <p class="sub">${qHow(sel)}</p>
       ${qSel === cur ? `<button id="qMap" class="sbtn">在星盤上看地點</button>` : ""}</div>`;
   }
+  if (qTab === "boss") { // 區域王分頁：冷卻、首殺
+    list = RB_KEYS.map((k) => { const R = RBOSS[k], cd = rbCool(k), kd = rbKilled(k);
+      return `<div class="qdet" style="margin-bottom:8px"><h3>${kd ? "✓ " : ""}${R.n}　Lv.${R.lv}</h3>
+        <div class="qtag ${cd > 0 ? "lock" : "now"}">${cd > 0 ? `沉睡中 ${Math.ceil(cd)} 秒` : "可以挑戰"}</div>
+        <div class="sr"><span>地點</span><b>${R.where}</b></div>
+        <div class="sr"><span>建議</span><b>Lv.${R.rec} 以上${kd ? `（已擊敗 ${(save.w.rbK || {})[k] || 1} 次）` : "（還沒擊敗過）"}</b></div>
+        <div class="sr"><span>掉落</span><b>${R.loot}</b></div></div>`; }).join("");
+    right = `<div class="qdet"><h3>區域王</h3><p class="sub">每區最深處有一座祭壇，走過去按「挑戰」。王的等級、掉落固定，不看你的等級。<br>打倒後要等王重新醒來（冷卻）才能再打。<br>星盤上的祭壇圖示：亮的＝可以打、灰的＝沉睡中。</p></div>`;
+  }
   const bq = done || (typeof curQuest === "function" && curQuest() && !curQuest().main) ? curQuest() : null;
   screenEl.innerHTML = `<div class="panel wide equip qwin"><div class="winhead">任務</div>
-    <div class="btabs">${Q_CH.map((c) => `<button class="btab${c === qTab ? " on" : ""}" data-qt="${c}" ${reached(c) ? "" : "disabled"}>${reached(c) ? ZONES[c].n : "🔒"}</button>`).join("")}</div>
+    <div class="btabs">${Q_CH.map((c) => `<button class="btab${c === qTab ? " on" : ""}" data-qt="${c}" ${reached(c) ? "" : "disabled"}>${reached(c) ? ZONES[c].n : "🔒"}</button>`).join("")}<button class="btab${qTab === "boss" ? " on" : ""}" data-qt="boss">王</button></div>
     <div class="qcols"><div class="qlist">${list}</div>${right}</div>
     ${bq ? `<div class="qbounty"><b>懸賞</b>${bq.t}（${Math.min(questProg(), bq.n)} / ${bq.n}）<small>主線做完後，會一直在適合你等級的地區發懸賞</small></div>` : ""}
     <div class="btns"><button id="close" class="big">離開</button></div></div>`;

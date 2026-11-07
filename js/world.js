@@ -143,7 +143,7 @@ const WMOBS = {
   // 東邊三區：用舊怪的骨架換顏色（recolor），數值和經驗比較高
   toad: { n: "毒沼蟾", img: () => RC.toad || (RC.toad = recolor(MOB, 150, 1.1, 0.8)), hp: 46, spd: 40, dmg: 11, r: 6, exp: 30, ai: "melee", sz: "S", race: "B" },
   bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", sz: "M", race: "B" },
-  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, sz: "M", race: "P" },
+  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, lob: true, sz: "M", race: "P" },
   thawk: { n: "雷鷹", img: () => RC.thawk || (RC.thawk = recolor(CROW, 200, 1.2, 1.1)), hp: 70, spd: 84, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 130, shot: 140, sz: "S", race: "B" },
   tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", armor: 0.35, heavy: true, sz: "L", race: "R" },
   twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 140, shot: 130, sz: "S" },
@@ -204,6 +204,7 @@ function buildWorld() {
   roads.push([WAYPOINTS[5], PASS2], [PASS2, WAYPOINTS[6]], [WAYPOINTS[6], PASS3], [PASS3, WAYPOINTS[7]], [WAYPOINTS[7], PASS4], [PASS4, WAYPOINTS[8]]);
   for (const [a, b] of roads) carve(a, b, 2);
   for (const p of [...WAYPOINTS, ALTAR, ...PASSES]) clearAround(p.x, p.y, 3);
+  for (const k of RB_KEYS) if (k !== "volcano") clearAround(RBOSS[k].x, RBOSS[k].y, 7); // 區域王祭壇：清出打王空地
 }
 function setT(x, y, t) { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); if (tx >= 0 && ty >= 0 && tx < TW && ty < TH) wmap[ty * TW + tx] = t; }
 function clearAround(x, y, r) { for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const t = tileAt(x + i * TS, y + j * TS); if (t !== 5 && t !== 6) setT(x + i * TS, y + j * TS, 0); } }
@@ -303,7 +304,7 @@ function enterWorld() {
   const w = save.w;
   if (blockedCircle(w.x, w.y, 5)) { w.x = 1200; w.y = 1530; }
   if (!W0) {
-    W0 = { voids: [], orbs: [], camps: [], mobs: [], pshots: [], eshots: [], fires: [], rings: [], tornados: [], spinT: 0, spinTick: 0, drops: [], npcCool: null, zone: "", bannerT: 0, saveT: 5, combatT: 0, lastAggro: 0 };
+    W0 = { voids: [], orbs: [], camps: [], mobs: [], pshots: [], eshots: [], fires: [], rings: [], tornados: [], spinT: 0, spinTick: 0, drops: [], pools: [], rbCool: {}, npcCool: null, zone: "", bannerT: 0, saveT: 5, combatT: 0, lastAggro: 0 };
     makeCamps();
   }
   Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0, shield: 3, en: W0.en || 0,
@@ -340,7 +341,7 @@ function makeCamps() {
     let n = 0, tries = 0;
     while (n < want[z] && tries++ < 4000) {
       const x = 40 + r() * (TW * TS - 80), y = 40 + r() * (TH * TS - 80);
-      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || PASSES.some((q) => Math.hypot(x - q.x, y - q.y) < 150) || WAYPOINTS.some((wp) => Math.hypot(x - wp.x, y - wp.y) < CAMP_R + 90)) continue;
+      if (zoneAt(x, y) !== z || Math.hypot(x - TOWN.x, y - TOWN.y) < 230 || blockedCircle(x, y, 12) || PASSES.some((q) => Math.hypot(x - q.x, y - q.y) < 150) || WAYPOINTS.some((wp) => Math.hypot(x - wp.x, y - wp.y) < CAMP_R + 90) || RB_KEYS.some((k) => k !== "volcano" && Math.hypot(x - RBOSS[k].x, y - RBOSS[k].y) < 240)) continue;
       if (W0.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 120)) continue;
       const lo = ZONES[z].lv[0], hi = ZONES[z].lv[1];
       const far = clamp((Math.hypot(x - TOWN.x, y - TOWN.y) - 230) / 1300, 0, 1);
@@ -374,7 +375,7 @@ const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每
 const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus());
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
-  if (m.dead) return;
+  if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
   const crit = Math.random() < B.crit + (sz === "L" ? vs.critL || 0 : 0);
   if (crit) dmg *= B.critDmg;
@@ -383,6 +384,8 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
   if (m.mod === "鐵壁") dmg *= 0.55;
   dmg = elemHit(m, dmg); // 輔助寶石：冰凍、燃燒、融化、引爆、毒
+  if (m.inPool) dmg *= 1.25; // 王站在毒池裡
+  if (B.uq.psnHit && Math.random() < 0.2) { m.psn = Math.min(5, (m.psn || 0) + 3); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dmg * 0.12); } // 萬毒蟾衣
   const L = curLines(); // 段數：一下打好幾行，總傷害 ×(1+0.3×(段數−1))
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1) * (L > 1 ? (1 + 0.3 * (L - 1)) / L : 1)));
   m.hp -= dmg * L; m.flash = 0.08;
@@ -428,10 +431,11 @@ function killMob(m) {
   gainExp(exp);
   questEvent(m.elite ? "elite" : "kill", m.camp.z);
   save.xiuwei += Math.max(1, Math.round(exp / 6));
-  const sh = m.boss ? 20 : m.hunter ? 5 : m.elite ? 3 : Math.random() < 0.05 ? 1 : 0; // 天罰碎屑
+  const sh = m.boss ? RBOSS[m.rb || "volcano"].shards : m.hunter ? 5 : m.elite ? 3 : Math.random() < 0.05 ? 1 : 0; // 天罰碎屑
   if (sh) { save.shards = (save.shards || 0) + sh; if (sh > 1) floatText(m.x, m.y - 28, `天罰碎屑 +${sh}`, "#ffcf6b"); }
   if (heroHas("vampire")) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01);
-  if (m.boss) { if (Math.random() < 0.25) addSup(Object.keys(SUPERS)[Math.floor(Math.random() * 3)]); if (Math.random() < 0.15) wDrop({ kind: "card", c: "wboss" }, m); for (let i = 0; i < 3; i++) wDrop({ kind: "ess", k: randEss() }, m); wbKilled(m); return; }
+  if (m.boss) { wbKilled(m); return; }
+  if (m.type === "toad") addPool(m.x, m.y, 20, 4, mobDmg(m, d) * 0.3, 0.4); // 毒沼蟾：死掉炸出毒池
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   const zl = ZONE_LOOT[m.camp.z] || 1;
@@ -528,7 +532,7 @@ function updateWorld(dt) {
   const inMenu = state !== "world"; // 連線時開著選單：世界照跑，但角色不接受操作
   if (inMenu) { keys.clear(); pressed.clear(); padAct.clear(); stick.id = null; }
   updateWFx(dt); fogTick(dt);
-  updateWBZones(dt); if (W0.wbCool > 0) W0.wbCool -= dt;
+  updateWBZones(dt);
   if (typeof netTick === "function") netTick(dt);
   if (!inMenu) tutTick();
   heroTick(dt, inMenu);
@@ -565,7 +569,7 @@ function updateWorld(dt) {
     if (p.roll <= 0) p.dashHit = null;
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -798,6 +802,7 @@ function updateWorld(dt) {
         if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.3; m.atkT = 99; }
         if (m.wind > 0 && (m.wind -= dt) <= 0) {
           m.wind = 0; m.atkT = m.mod === "狂暴" ? 0.9 : 1.4;
+          if (d.lob) { wbZone({ k: "circle", x: p.x, y: p.y, r: 16, max: 0.6, dmg: mobDmg(m, d), lob: { x: m.x, y: m.y - 6 }, pool: { r: 16, dur: 5, dmg: mobDmg(m, d) * 0.3 }, c: "140,255,110" }); continue; } // 腐沼樹妖：拋毒泥打你腳下
           W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff3a3a" : d.chill ? "#d050ff" : "#ff4aa0", chill: d.chill, ele: !!d.ele }); // 怪物彈幕：亮紅／亮紫
         }
       } else if (d.ai === "bomber") {
@@ -919,7 +924,7 @@ for (const n of NPCS) NPC_IMG[n.id] = sprite([...HERO_TOP, "...kwk.kwk..", "...k
 function worldSpots() {
   return [
     ...NPCS.map((n) => ({ ...n, kind: "npc" })),
-    { id: "altar", kind: "altar", x: ALTAR.x, y: ALTAR.y, r: 20 },
+    ...RB_KEYS.map((k) => ({ id: k === "volcano" ? "altar" : "altar-" + k, kind: "altar", rb: k, x: RBOSS[k].x, y: RBOSS[k].y, r: 20, n: `${RBOSS[k].n}的祭壇` })),
   ];
 }
 function openSpot(s) {
@@ -937,8 +942,9 @@ function openSpot(s) {
     btns = WAYPOINTS.filter((wp) => w.wp.includes(wp.id) && wp.id !== s.wp.id).map((wp) => `<button class="big alt tp" data-wp="${wp.id}">${wp.n}<small>Lv.${ZONES[wp.id].lv.join("–")}</small></button>`).join("");
     if (!btns) body = "還沒有解鎖其他傳送陣。走到各地區的傳送陣就會解鎖。";
   } else if (s.kind === "altar") {
-    body = `焚天石魔的祭壇。<br>建議 Lv.18 以上（你現在 Lv.${w.lv}）。<br>石魔會在這裡現身，用你自己的招式打倒它；看到紅色範圍就閃開。<br>打贏掉 4 件好裝（直接安全）＋寶石。`;
-    btns = `<button id="fight" class="big">挑戰焚天石魔</button>`;
+    const R = RBOSS[s.rb], cd = rbCool(s.rb);
+    body = `${R.n}（Lv.${R.lv}）的祭壇。<br>建議 Lv.${R.rec} 以上（你現在 Lv.${w.lv}）。<br>${R.desc}<br>掉落（直接安全）：${R.loot}。${cd > 0 ? `<br><b>還在沉睡：${Math.ceil(cd)} 秒</b>` : ""}`;
+    btns = `<button id="fight" class="big">挑戰${R.n}</button>`;
   }
   screenEl.innerHTML = `<div class="panel"><h1 class="pick-title">${s.n || (s.kind === "wp" ? `傳送陣・${s.wp.n}` : "祭壇")}</h1>
     <div class="result">${body}</div><div class="btns">${btns}<button id="close" class="big alt">離開</button></div></div>`;
@@ -951,7 +957,7 @@ function openSpot(s) {
     worldReturn();
   }));
   const f = document.getElementById("fight");
-  if (f) f.onclick = () => { worldReturn(); startWorldBossField(); };
+  if (f) f.onclick = () => { worldReturn(); startWorldBossField(s.rb); };
 }
 function worldReturnTo() { /* renderEquip／renderMaps 的「返回」會看 inWorld 回到大世界 */ }
 function renderAP() {
@@ -1020,8 +1026,7 @@ function renderWorld() {
   }
   // 安全營地、祭壇
   drawCamps();
-  ctx.fillStyle = "#4a2a2a"; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 26, 13, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = `rgba(255,80,40,${0.5 + Math.sin(time * 4) * 0.3})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(ALTAR.x, ALTAR.y, 20, 10, 0, 0, Math.PI * 2); ctx.stroke();
+  drawAltars();
   drawFxUnder();
   drawWBZones();
   // 掉落物
@@ -1215,7 +1220,7 @@ function drawBigMap() { // 半透明大地圖蓋在畫面中間，邊打邊看
     ctx.fillStyle = on ? "#9fe8ff" : "#666"; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = 3; ctx.strokeStyle = "#0e0a16"; ctx.strokeText(wp.n, x, y - 8); ctx.fillStyle = on ? "#fff" : "#9a90a8"; ctx.fillText(wp.n, x, y - 8);
   }
-  ctx.fillStyle = "#ff4a2a"; ctx.fillRect(bx + ALTAR.x * sc - 3, by + ALTAR.y * sc - 3, 6, 6);
+  for (const k of RB_KEYS) { ctx.fillStyle = rbCool(k) > 0 ? "#888" : `rgb(${RBOSS[k].col})`; ctx.fillRect(bx + RBOSS[k].x * sc - 3, by + RBOSS[k].y * sc - 3, 6, 6); }
   const qt = questTarget(); if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 2; ctx.strokeRect(bx + qt.x * sc - 7, by + qt.y * sc - 7, 14, 14); }
   for (const m of W0.mobs) if ((m.elite || m.boss) && !m.dead) { ctx.fillStyle = m.boss ? "#ff2a2a" : "#ff6b4a"; ctx.fillRect(bx + m.x * sc - 2, by + m.y * sc - 2, 4, 4); }
   if (typeof othersList === "function") { ctx.fillStyle = "#7dff8a"; for (const o of othersList()) ctx.fillRect(bx + o.x * sc - 2, by + o.y * sc - 2, 4, 4); }
@@ -1241,7 +1246,7 @@ function drawWorldHud() {
     ctx.fillStyle = z === "snow" ? "#8a98ac" : ZONES[z].g[0]; ctx.fillRect(mx0 + i * mw / 20, my0 + j * mh / 14, mw / 20 + 0.5, mh / 14 + 0.5);
   }
   for (const wp of WAYPOINTS) { ctx.fillStyle = w.wp.includes(wp.id) ? "#9fe8ff" : "#555"; ctx.fillRect(mx0 + wp.x * sc - 1.5, my0 + wp.y * sc - 1.5, 3, 3); }
-  ctx.fillStyle = "#ff4a2a"; ctx.fillRect(mx0 + ALTAR.x * sc - 2, my0 + ALTAR.y * sc - 2, 4, 4);
+  for (const k of RB_KEYS) { ctx.fillStyle = rbCool(k) > 0 ? "#888" : `rgb(${RBOSS[k].col})`; ctx.fillRect(mx0 + RBOSS[k].x * sc - 2, my0 + RBOSS[k].y * sc - 2, 4, 4); }
   const qt = questTarget();
   if (qt) { ctx.strokeStyle = "#ffe066"; ctx.lineWidth = 1; ctx.strokeRect(mx0 + qt.x * sc - 3, my0 + qt.y * sc - 3, 6, 6); }
   const ol = typeof othersList === "function" ? othersList() : [];
