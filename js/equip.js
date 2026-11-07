@@ -63,7 +63,9 @@ const AFFIX = {
   raceP: { n: "對植物系傷害", w: 3, pct: true, t: "c" },
   raceR: { n: "對岩石系傷害", w: 3, pct: true, t: "c" },
   eleF: { n: "對火屬性傷害", w: 3, pct: true, t: "c" },
-  eleW: { n: "對水屬性傷害", w: 3, pct: true, t: "c" },
+  eleW: { n: "對冰屬性傷害", w: 3, pct: true, t: "c" },
+  eleT: { n: "對雷屬性傷害", w: 3, pct: true, t: "c" },
+  eleP: { n: "對毒屬性傷害", w: 3, pct: true, t: "c" },
   drop: { n: "掉寶率", w: 3, pct: true, t: "c" },
 };
 // 前綴／後綴數量上限（凡、靈、玄、傳說）
@@ -106,6 +108,8 @@ const UNIQUES = {
   toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit", "psnConv"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；法杖、扇和元素轉化的傷害全部變成可疊 5 層的毒；站在毒池裡不扣血，反而回真氣" },
   hourglass: { slot: "charm", n: "時之沙漏", mods: ["lbDouble"], d: "每次切換武器（1／2／3），下一招段數翻倍" },
   bloodjade: { slot: "charm", n: "血玉佩", mods: ["vamp"], d: "吸血 +3%，每斬一隻妖回 1% 生命" },
+  tstep: { slot: "boots", n: "踏雷靴", mods: ["tstep"], rb: true, d: "王專屬（九雷鵬王）：閃身結束時在落點劈下落雷（攻擊 ×3）；閃身冷卻 −20%" },
+  wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
 };
 const BAG_MAX = 40;
 // ───────── 強化（+1～+10，每級全部數值 +10%，越高越容易失敗，失敗只扣靈石）─────────
@@ -125,7 +129,9 @@ const GEMS = {
   blood: { n: "嗜血", c: "#c0304a", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%` },
   lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `飛出去的招式多 ${l >= 3 ? 4 : 2} 道（每道 70%）` },
   ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）` },
-  fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）` },
+  fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）。一把武器只能一種元素：用冰武器凍住，再按 1／2／3 切到火武器打` },
+  volt: { n: "元素轉化：雷", c: "#c8b8ff", d: (l) => `打中 ${25 + l * 7}% 雷電跳到旁邊 ${l >= 3 ? 2 : 1} 隻（50% 傷害）；打中毒的怪「毒爆」` },
+  venom: { n: "元素轉化：毒", c: "#8dff6a", d: (l) => `打中疊 1 層毒（最多 5 層，持續傷害，${l} 級）；用雷打中毒的怪會「毒爆」` },
   det: { n: "引爆", c: "#ffb347", d: (l) => `打中燃燒中的怪 ${12 + l * 5}% 機率炸開` },
 };
 const GEM_KEYS = Object.keys(GEMS);
@@ -135,6 +141,12 @@ const gemName = (g) => { const [k, l] = g.split(":"); return `${GEMS[k].n}寶石
 const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":")) n += +g.split(":")[1]; return n; };
 const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
 const randGem = (lv = 1) => `${GEM_KEYS[Math.floor(Math.random() * GEM_KEYS.length)]}:${lv}`;
+// 武器元素（企劃 06／07）：看鑲的元素轉化寶石；一把武器只能一種元素
+const ELE_GEM = { fire: "F", ice: "W", volt: "T", venom: "P" };
+const ELE_N = { F: "火", W: "冰", T: "雷", P: "毒" }, ELE_C = { F: "#ff7a3a", W: "#9fdcff", T: "#c8b8ff", P: "#8dff6a" }, ELE_PRE = { F: "炎・", W: "霜・", T: "雷・", P: "毒・" };
+function itemEle(it) { let best = null, bl = 0; for (const g of (it && it.so) || []) { if (!g) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl) { bl = +l; best = ELE_GEM[k]; } } return best; }
+const dispName = (it) => (it.slot === "sword" && ELE_PRE[itemEle(it)] || "") + it.name; // 元素字首只在畫面加，不寫進 it.name
+function eleClash(w, g) { const e = ELE_GEM[g.split(":")[0]], cur = itemEle(w); return e && cur && cur !== e ? `這把武器已經是${ELE_N[cur]}元素，一把武器只能一種元素（先拆下原本的元素寶石）` : ""; }
 function ungem(it) { if (it && it.so) { for (const g of it.so) if (g) addGem(g); it.so = []; } } // 賣掉、弄丟武器前先把寶石拆回袋子
 const fmtAff = (k, v) => `${AFFIX[k].n} +${AFFIX[k].dec ? v.toFixed(1) : v}${AFFIX[k].pct ? "%" : ""}`;
 // ───────── 魔物卡片（RO）：插在武器或道袍的符文插槽，一件一張 ─────────
@@ -162,9 +174,11 @@ const CARDS = {
   jianling: { n: "劍靈卡", slot: "sword", st: { atkP: 15 } },
   wboss: { n: "焚天石魔卡", slot: "sword", st: { critL: 10, sizeL: 15 } },
   rbswamp: { n: "腐骨蟾王卡", slot: "robe", st: { res: 20, hp: 500 } },
+  rbthunder: { n: "九雷鵬王卡", slot: "sword", st: { sizeS: 25 }, d: "爆擊時 20% 連鎖電 2 隻" },
+  rbsky: { n: "無相劍尊卡", slot: "robe", st: {}, d: "受到致命傷時不會倒下，改成無敵 3 秒（冷卻 90 秒）" },
 };
 const CARD_SLOTS = ["sword", "robe"];
-const cardDesc = (c) => Object.keys(CARDS[c].st).map((k) => fmtAff(k, CARDS[c].st[k])).join("、");
+const cardDesc = (c) => Object.keys(CARDS[c].st).map((k) => fmtAff(k, CARDS[c].st[k])).concat(CARDS[c].d ? [CARDS[c].d] : []).join("、");
 const addCard = (c, n = 1) => { if (!save.cards) save.cards = {}; save.cards[c] = (save.cards[c] || 0) + n; };
 // ───────── 精髓與通貨（PoE）：精髓＝保底詞條；天罰碎屑＝換保底裝 ─────────
 const ESS_KEYS = Object.keys(AFFIX).filter((k) => AFFIX[k].t === "p" || AFFIX[k].t === "s");
@@ -270,7 +284,7 @@ function applyBuild(b, daily) {
   b.atk *= (1 + g("atk") / 100) * (1 + g("atkP") / 100) * (sc === "fa" ? 1.35 : 1);
   b.armor = g("def"); b.dmgTaken = 1; // 護甲在 worldStats／hurtW 算（物理減傷）
   b.es = g("es"); b.res = g("res") / 100; b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
-  b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), F: g("eleF"), W: g("eleW") };
+  b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), eF: g("eleF"), eW: g("eleW"), eT: g("eleT"), eP: g("eleP") }; // 屬性卡片用 e 開頭（P 已經是植物系）
   b.drop = g("drop") / 100;
   b.spdMul = 1 + g("spd") / 100;
   b.crit = 0.15 + g("crit") / 100 + (sc === "qi" ? 0.1 : 0);
@@ -410,6 +424,7 @@ function renderEquip(msg = "") {
   screenEl.querySelectorAll(".gem").forEach((b) => b.addEventListener("click", () => { // 鑲上寶石
     const w = save.eq.sword, g = b.dataset.g;
     if (!w) { renderEquip("先裝備一把武器"); return; }
+    { const ec = eleClash(w, g); if (ec) { renderEquip(ec); return; } }
     w.so = w.so || []; const n = sockN();
     let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
     if (i < 0) { renderEquip(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }

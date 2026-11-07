@@ -141,12 +141,12 @@ const WMOBS = {
   icewisp: { n: "冰靈", img: () => ICEWISP, hp: 58, spd: 40, dmg: 10, r: 6, exp: 18, ai: "ranged", range: 125, shot: 105, chill: true, sz: "S", ele: "W" },
   yeti: { n: "雪巨猿", img: () => YETI, hp: 300, spd: 30, dmg: 26, r: 9, exp: 34, ai: "melee", armor: 0.25, heavy: true, chill: true, sz: "L", race: "B", ele: "W" },
   // 東邊三區：用舊怪的骨架換顏色（recolor），數值和經驗比較高
-  toad: { n: "毒沼蟾", img: () => RC.toad || (RC.toad = recolor(MOB, 150, 1.1, 0.8)), hp: 46, spd: 40, dmg: 11, r: 6, exp: 30, ai: "melee", sz: "S", race: "B" },
-  bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", sz: "M", race: "B" },
-  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, lob: true, sz: "M", race: "P" },
-  thawk: { n: "雷鷹", img: () => RC.thawk || (RC.thawk = recolor(CROW, 200, 1.2, 1.1)), hp: 70, spd: 84, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 130, shot: 140, sz: "S", race: "B" },
-  tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", armor: 0.35, heavy: true, sz: "L", race: "R" },
-  twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 140, shot: 130, sz: "S" },
+  toad: { n: "毒沼蟾", img: () => RC.toad || (RC.toad = recolor(MOB, 150, 1.1, 0.8)), hp: 46, spd: 40, dmg: 11, r: 6, exp: 30, ai: "melee", sz: "S", race: "B", ele: "P" },
+  bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", sz: "M", race: "B", ele: "P" },
+  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, lob: true, sz: "M", race: "P", ele: "P" },
+  thawk: { n: "雷鷹", img: () => RC.thawk || (RC.thawk = recolor(CROW, 200, 1.2, 1.1)), hp: 70, spd: 84, dmg: 12, r: 6, exp: 36, ai: "dive", range: 130, sz: "S", race: "B", ele: "T" },
+  tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", armor: 0.35, heavy: true, sz: "L", race: "R", ele: "T" },
+  twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 140, shot: 130, sz: "S", ele: "T" },
   crane: { n: "仙鶴妖", img: () => RC.crane || (RC.crane = recolor(CROW, 0, 0.1, 1.9)), hp: 80, spd: 90, dmg: 13, r: 6, exp: 44, ai: "ranged", range: 135, shot: 140, sz: "S", race: "B" },
   skyfox: { n: "天狐", img: () => RC.skyfox || (RC.skyfox = recolor(WOLF, 30, 1.3, 1.6)), hp: 84, spd: 90, dmg: 14, r: 6, exp: 44, ai: "melee", sz: "M", race: "B" },
   guardian: { n: "天兵石像", img: () => RC.guardian || (RC.guardian = recolor(GOLEM, 40, 1.4, 1.5)), hp: 380, spd: 28, dmg: 32, r: 9, exp: 80, ai: "melee", armor: 0.4, heavy: true, sz: "L", race: "R" },
@@ -204,7 +204,7 @@ function buildWorld() {
   roads.push([WAYPOINTS[5], PASS2], [PASS2, WAYPOINTS[6]], [WAYPOINTS[6], PASS3], [PASS3, WAYPOINTS[7]], [WAYPOINTS[7], PASS4], [PASS4, WAYPOINTS[8]]);
   for (const [a, b] of roads) carve(a, b, 2);
   for (const p of [...WAYPOINTS, ALTAR, ...PASSES]) clearAround(p.x, p.y, 3);
-  for (const k of RB_KEYS) if (k !== "volcano") clearAround(RBOSS[k].x, RBOSS[k].y, 7); // 區域王祭壇：清出打王空地
+  for (const k of RB_KEYS) if (k !== "volcano") clearAround(RBOSS[k].x, RBOSS[k].y, RBOSS[k].clr || 7); // 區域王祭壇：清出打王空地
 }
 function setT(x, y, t) { const tx = Math.floor(x / TS), ty = Math.floor(y / TS); if (tx >= 0 && ty >= 0 && tx < TW && ty < TH) wmap[ty * TW + tx] = t; }
 function clearAround(x, y, r) { for (let i = -r; i <= r; i++) for (let j = -r; j <= r; j++) { const t = tileAt(x + i * TS, y + j * TS); if (t !== 5 && t !== 6) setT(x + i * TS, y + j * TS, 0); } }
@@ -387,19 +387,22 @@ function packAggro(m) { // 打一隻，整個營地一起衝過來
 const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
 const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
 const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus());
+const brkMul = () => 1 - 0.2 * ((W0 && W0.brk) || 0); // 破體：每層吸血、回血 −20%
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
   const crit = W0.sureCast || W0.sureNow || Math.random() < B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0);
   if (crit) dmg *= B.critDmg;
-  dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs[d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
+  dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs["e" + d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
+  if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
   if (m.mod === "鐵壁") dmg *= 0.55;
   dmg = elemHit(m, dmg); // 輔助寶石：冰凍、燃燒、融化、引爆、毒
   if (m.inPool) dmg *= 1.25; // 王站在毒池裡
   if (m.armBrk > 0) dmg *= 1.15; // 大刀破甲
+  dmg *= (m.takeMul || 1) * (m.gd ? 0.5 : 1) * (m.tired > 0 ? 1.3 : 1); // 王的破綻／劍柱護體、天兵金線、雷鷹喘氣
   if (B.uq.psnHit && Math.random() < 0.2) { m.psn = Math.min(5, (m.psn || 0) + 3); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dmg * 0.12); } // 萬毒蟾衣
   const L = curLines(); // 段數：一下打好幾行，總傷害 ×(1+0.3×(段數−1))
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1) * (L > 1 ? (1 + 0.3 * (L - 1)) / L : 1)));
@@ -408,7 +411,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.st === "idle" || m.st === "home") { m.st = "chase"; packAggro(m); }
   if (kb && from && !m.elite && !m.boss) { m.kb = kb; m.ka = angTo(from, m); }
   const lch = B.leech + 0.005 * gemLv("blood") + (W0.invT > 0 ? 0.1 : 0);
-  if (lch > 0) W0.regenAcc += dmg * L * lch;
+  if (lch > 0) W0.regenAcc += dmg * L * lch * brkMul();
   const gf = gemLv("frost"); if (gf && Math.random() < 0.15 + gf * 0.1) m.slowT = Math.max(m.slowT || 0, 1.5);
   const gc = gemLv("chain");
   if (gc && !chainLock && Math.random() < 0.08 + gc * 0.05) {
@@ -430,6 +433,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.hp <= 0) killMob(m);
 }
 function killMob(m) {
+  if (WMOBS[m.type].ai === "pillar") { m.dead = true; fxBoom(m.x, m.y, 24, "255,220,140"); burst(m.x, m.y, "#ffe08a", 20, 100, 0.5); sfx("break"); return; } // 劍柱：不給經驗、不掉寶
   m.dead = true; tutEvent("kill");
   W0.en = Math.min(EN_FULL, (W0.en || 0) + (m.boss ? 100 : m.elite || m.hunter ? 25 : 6) * (B.enMul || 1)); // 吸取魂屑
   if (W0.en >= EN_FULL && !W0.enFullFx) { W0.enFullFx = true; floatText(W0.x, W0.y - 36, "天罰能量已滿！按 E", "#ffd84a", true); sfx("arrive"); }
@@ -449,7 +453,7 @@ function killMob(m) {
   save.xiuwei += Math.max(1, Math.round(exp / 6));
   const sh = m.boss ? RBOSS[m.rb || "volcano"].shards : m.hunter ? 5 : m.elite ? 3 : Math.random() < 0.05 ? 1 : 0; // 天罰碎屑
   if (sh) { save.shards = (save.shards || 0) + sh; if (sh > 1) floatText(m.x, m.y - 28, `天罰碎屑 +${sh}`, "#ffcf6b"); }
-  if (B.uq.vamp) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01);
+  if (B.uq.vamp) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01 * brkMul());
   if (m.boss) { wbKilled(m); return; }
   if (m.type === "toad") addPool(m.x, m.y, 20, 4, mobDmg(m, d) * 0.3, 0.4); // 毒沼蟾：死掉炸出毒池
   // 掉寶
@@ -561,7 +565,7 @@ function updateWorld(dt) {
   if (p.es === undefined) p.es = B.maxEs;
   if (p.esT > 0) p.esT -= dt; else p.es = Math.min(B.maxEs, p.es + B.maxEs * 0.33 * dt); // 脫戰 3 秒回充
   p.es = Math.min(p.es, B.maxEs);
-  p.regenAcc += B.regen * dt;
+  p.regenAcc += B.regen * dt * brkMul();
   if (p.regenAcc >= 1) { const h = Math.min(Math.floor(p.regenAcc), p.maxHp - p.hp); p.hp += h; p.regenAcc -= Math.floor(p.regenAcc); }
 
   // 移動
@@ -592,7 +596,7 @@ function updateWorld(dt) {
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -779,7 +783,7 @@ function updateWorld(dt) {
   for (const s of W0.pshots) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
     if (s.back !== undefined && s.life < s.back && !s.turned) { s.turned = true; s.hit.clear(); }
-    if (s.turned) { const a = angTo(s, p); s.vx = Math.cos(a) * 220; s.vy = Math.sin(a) * 220; s.a += dt * 20; if (dist(s, p) < 8) { s.life = 0; if (s.heal && s.hits && !s.ghost) { const h = Math.min(Math.round(p.maxHp * Math.min(0.03, 0.005 * s.hits)), p.maxHp - p.hp); if (h > 0) { p.hp += h; floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); } } } }
+    if (s.turned) { const a = angTo(s, p); s.vx = Math.cos(a) * 220; s.vy = Math.sin(a) * 220; s.a += dt * 20; if (dist(s, p) < 8) { s.life = 0; if (s.heal && s.hits && !s.ghost) { const h = Math.min(Math.round(p.maxHp * Math.min(0.03, 0.005 * s.hits) * brkMul()), p.maxHp - p.hp); if (h > 0) { p.hp += h; floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); } } } }
     else if (s.kind === "wind") s.a += dt * 20;
     if (s.home && !s.ghost) { // 追蹤箭：每 0.1 秒找目標，轉向有上限
       if ((s.seekT = (s.seekT || 0) - dt) <= 0) { s.seekT = 0.1; let o = null, bd = 120; for (const m of W0.mobs) if (!m.dead && !s.hit.has(m)) { const d = dist(m, s); if (d < bd) { bd = d; o = m; } } s.tgt = o; }
@@ -841,7 +845,7 @@ function updateWorld(dt) {
     else moveBody(t, t.vx * dt, t.vy * dt, 3);
     if (t.orbit !== undefined && !t.ghost) for (const s of W0.eshots) if (Math.hypot(s.x - p.x, s.y - p.y) < 36) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } // 吹散敵方子彈
     if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40)) { const a = angTo(m, t), f = t.pull || 40; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg(t.dmg || 13), 0, t, true); } // 08-A：6→13
+    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg(t.dmg || 13), 0, t, true); if (t.boom && wEle() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
     if (t.t <= 0 && t.boom) { fxBoom(t.x, t.y, 34, "190,220,255"); bolts.push({ x: t.x, y: t.y, life: 0.25 }); shake = Math.max(shake, 4); sfx("crit"); if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 34 + WMOBS[m.type].r) hitMob(m, wDmg(t.boom), 80, t, true); }
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }
@@ -870,6 +874,7 @@ function updateWorld(dt) {
     if (W0.originT > 0) continue; // 起源：時停
     if (m.boss && !m.dead) { aggro = true; if (dotTick(m, dt)) continue; updateWBoss(m, dt, p); continue; }
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
+    if (WMOBS[m.type].ai === "pillar") { m.flash = Math.max(0, m.flash - dt); dotTick(m, dt); continue; } // 劍尊的劍柱：不會動
     const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
     if (dotTick(m, dt)) continue; // 燃燒、中毒；冰凍不能動
@@ -894,7 +899,21 @@ function updateWorld(dt) {
       if (m.hunter && inTown) { m.dead = true; floatText(m.x, m.y - 12, "獵寶妖跑掉了", "#cfc4dc"); continue; }
       if (!m.hunter && (homeD > 280 || inTown)) { m.st = "home"; continue; }
       const a = angTo(m, p);
-      if (d.ai === "ranged") {
+      if (d.ai === "dive") { // 雷鷹：飛到中距離 → 紅線 0.5 秒 → 衝過去 → 停下喘氣 0.8 秒（受傷 +30%）
+        const v = m.dv;
+        if (m.tired > 0) m.tired -= dt;
+        else if (v && v.ph === "aim") { v.t -= dt; if (dp < 160) seenHint("dive", "紅線＝雷鷹要俯衝的路線，往旁邊閃；牠衝完會停下喘氣，那時打牠更痛"); if (v.t <= 0) { v.ph = "go"; v.t = 0.45; v.hit = false; sfx("dash"); } }
+        else if (v && v.ph === "go") {
+          v.t -= dt; const ox = m.x, oy = m.y; moveBody(m, Math.cos(v.a) * 311 * dt, Math.sin(v.a) * 311 * dt, d.r);
+          if (Math.random() < 0.7) particles.push({ x: m.x, y: m.y, vx: 0, vy: 0, life: 0.25, max: 0.25, color: "#c8d8ff", size: 2 });
+          if (!v.hit && segDist(p.x, p.y, ox, oy, m.x, m.y) < 10) { v.hit = true; hurtW(mobDmg(m, d) * 1.3, m); }
+          if (v.t <= 0 || (Math.hypot(m.x - ox, m.y - oy) < 0.5 && v.t < 0.4)) { m.dv = null; m.tired = 0.8; m.atkT = (m.mod === "狂暴" ? 1.0 : 1.6); }
+        } else {
+          const dir = dp > 120 ? 1 : dp < 90 ? -0.7 : 0;
+          moveBody(m, Math.cos(a) * spd * dir * dt, Math.sin(a) * spd * dir * dt, d.r);
+          if (dp < 150 && m.atkT <= 0) { m.dv = { ph: "aim", t: m.elite ? 0.42 : 0.5, a }; m.atkT = 99; }
+        }
+      } else if (d.ai === "ranged") {
         const want = d.range * 0.75;
         const dir = dp > want + 10 ? 1 : dp < want - 15 ? -0.7 : 0;
         moveBody(m, Math.cos(a) * spd * dir * dt, Math.sin(a) * spd * dir * dt, d.r);
@@ -926,6 +945,7 @@ function updateWorld(dt) {
               const cx = m.x + Math.cos(m.wa) * 8, cy = m.y + Math.sin(m.wa) * 8;
               fxBoom(cx, cy, 28, "255,170,90"); shake = Math.max(shake, 4); sfx("break");
               if (Math.hypot(p.x - cx, p.y - cy) < 28) hurtW(dmg, m);
+              if (m.type === "tgolem") addZap(cx, cy, 28, 2); // 雷甲巨像：砸地留電圈
             } else { // 撲咬：往前衝一下
               moveBody(m, Math.cos(m.wa) * 12, Math.sin(m.wa) * 12, d.r); m.lunge = 0.15;
               const diff = Math.abs(((angTo(m, p) - m.wa + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -1273,6 +1293,7 @@ function renderWorld() {
 }
 function drawWMob(m) {
   if (m.boss) { drawWBoss(m); return; }
+  if (WMOBS[m.type].draw) { WMOBS[m.type].draw(m); return; }
   const d = WMOBS[m.type], img = d.img(), sc = m.hunter ? 1.7 : m.elite ? 1.4 : 1;
   if (m.wind > 0) drawTelegraph(m, d);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * sc, d.r * 0.3 * sc, 0, 0, Math.PI * 2); ctx.fill();
@@ -1300,6 +1321,7 @@ function drawWMob(m) {
   const lab = `${m.elite && !m.hunter ? (m.mod || "") + "精英 " : ""}${d.n}${d.sz ? `（${SZ_N[d.sz]}）` : ""} Lv.${m.lv}`, fc = ctx.fillStyle;
   ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
   ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
+  if (d.ele) drawEleTag(m.x + ctx.measureText(lab).width / 2 + 4, m.y - d.r * sc - 10.5, d.ele);
 }
 let miniRect = null, questRect = null;
 cvs.addEventListener("pointerdown", (e) => { // 點小地圖：開／關大地圖

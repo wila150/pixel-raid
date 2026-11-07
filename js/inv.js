@@ -199,7 +199,7 @@ function affHtml(it) {
 // 武器組、超技能插槽、傳授插槽
 function wsetHtml() {
   if (!save.w) return "";
-  return `<div class="wset"><small>武器組（按 1／2／3 切換；放武器：點背包裡的武器 →「放到武器 N」）</small><div>${[0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="wsc${i === save.w.wi ? " on" : ""}" data-wsw="${i}" style="--c:${it ? RARITY[it.q].c : "#444"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b><small>${it ? it.name : "空"}</small></button>`; }).join("")}</div></div>`;
+  return `<div class="wset"><small>武器組（按 1／2／3 切換；放武器：點背包裡的武器 →「放到武器 N」）</small><div>${[0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="wsc${i === save.w.wi ? " on" : ""}" data-wsw="${i}" style="--c:${it ? RARITY[it.q].c : "#444"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b><small>${it ? dispName(it) : "空"}</small></button>`; }).join("")}</div></div>`;
 }
 function extraSlots(it) {
   let h = "";
@@ -290,7 +290,7 @@ function renderEquip(msg = "") {
     right = `<div class="cmp-item">
       <div class="ilvl">物品等級 ${selItem.il}</div>
       <div class="big-ico" style="--c:${RARITY[selItem.q].c}">${itemIcon(selItem)}</div>
-      <h3 style="color:${RARITY[selItem.q].c}">${selItem.name}</h3>
+      <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
@@ -433,6 +433,7 @@ function bindEquip(selItem) {
   ov.querySelectorAll(".gem").forEach((b) => b.addEventListener("click", () => {
     const w = save.eq.sword, g = b.dataset.g;
     if (!w) { again("先裝備一把武器"); return; }
+    { const ec = eleClash(w, g); if (ec) { again(ec); return; } }
     w.so = w.so || []; const n = sockN();
     let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
     if (i < 0) { again(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }
@@ -494,7 +495,7 @@ function buildTerrain() { // 地形縮圖（一格一點），只做一次
   }
   g.putImageData(img, 0, 0); return c;
 }
-const ZONE_BOSS = { town: "無（安全區）", grass: "精英小妖、狼妖首領", forest: "精英樹妖", waste: "精英石甲妖、獵寶妖", volcano: "焚天石魔 Lv.22（祭壇）", snow: "精英雪巨猿", swamp: "精英屍骨狼、腐沼樹妖", thunder: "精英雷甲巨像", sky: "精英天兵石像、劍靈" };
+const ZONE_BOSS = { town: "無（安全區）", grass: "精英小妖、狼妖首領", forest: "精英樹妖", waste: "精英石甲妖、獵寶妖", volcano: "焚天石魔 Lv.22（祭壇）", snow: "精英雪巨猿", swamp: "腐骨蟾王 Lv.50（祭壇）", thunder: "九雷鵬王 Lv.75（祭壇）", sky: "無相劍尊 Lv.110（祭壇）" };
 function openTeleport() { openStarMap(); }
 function openStarMap() {
   if (ovKind !== "map" && !ovOpen("map")) return;
