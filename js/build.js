@@ -1,47 +1,76 @@
-// 萬劍仙途 — 構築：武器組 1/2/3、輔助寶石（元素轉化／多重投射／引爆）、超技能寶石、轉職、英雄核心＋保命技、傳授寶石、起源大招、多角色
+// 萬劍仙途 — 構築：武器組 1/2/3、輔助寶石（元素轉化／多重投射／引爆）、超技能寶石、轉職、護身法術（保命技）、起源大招、多角色
 "use strict";
 
-// ───────── 英雄核心（角色綁定、拆不掉）─────────
-const HEROES = {
-  ronin: { n: "時空浪人", save: "時間回溯", cd: 30, sd: "回到 3 秒前的位置和生命", pd: "每次切換武器，下一招段數翻倍" },
-  witch: { n: "劇毒魔女", save: "化身霧氣", cd: 40, sd: "4 秒免疫物理傷害、移動加快", pd: "法術武器和元素轉化的傷害，全部變成可疊 5 層的毒素持續傷害（毒傷 +50%）" },
-  vampire: { n: "吸血鬼", save: "血霧無敵", cd: 60, sd: "5 秒無敵，期間吸血 +10%", pd: "吸血 +3%，每斬一隻妖回 1% 生命" },
+// ───────── 護身法術（保命技，V／手機下方按鈕；隨轉職解鎖，安全營地可換）─────────
+// v4.7 拿掉「選英雄」：保命技改成可以換的護身法術；舊英雄的被動改成傳說裝備（時之沙漏、萬毒蟾衣、血玉佩）
+const SAVES = {
+  rewind: { n: "時間回溯", cd: 30, job: 0, d: "回到 3 秒前的位置和生命" },
+  mist: { n: "化身霧氣", cd: 40, job: 1, d: "4 秒免疫物理傷害、移動加快" },
+  blood: { n: "血霧無敵", cd: 60, job: 2, d: "5 秒無敵，期間吸血 +10%" },
 };
-const HERO_KEYS = Object.keys(HEROES);
-const heroKey = () => (save.w && HEROES[save.w.hero] ? save.w.hero : "ronin");
-// 自己的英雄，或佩上插了那個英雄的傳授寶石
-const heroHas = (k) => heroKey() === k || !!(save.eq.charm && save.eq.charm.link === k);
+const SAVE_KEYS = Object.keys(SAVES);
+const HERO_SAVE = { ronin: "rewind", witch: "mist", vampire: "blood" };
+const HERO_GIFT = { ronin: "hourglass", witch: "toadrobe", vampire: "bloodjade" };
+const svHas = (k, w = save.w) => !!w && (jobLvOf(w) >= SAVES[k].job || (w.svU || []).includes(k));
+const svKey = () => { const w = save.w; return w && SAVES[w.sv] && svHas(w.sv) ? w.sv : "rewind"; };
+// 舊存檔：原本的英雄 → 那個保命技直接解鎖＋送對應傳說；插著的傳授寶石拆掉換碎屑
+function migHero() {
+  let note = "";
+  const one = (w, eq) => {
+    if (!w || w.hv) return; w.hv = 1;
+    const hk = HEROES_OLD[w.hero] ? w.hero : w.created ? "ronin" : null; // 很舊的角色沒選過＝預設浪人
+    if (hk) {
+      const sk = HERO_SAVE[hk]; w.svU = [sk]; w.sv = sk;
+      const it = giftUnique(HERO_GIFT[hk], w.lv); if (it) { save.bag.push(it); note = `英雄改版：保命技「${SAVES[sk].n}」保留，另外送你一件「${it.name}」（在行囊）`; }
+    }
+    const ch = eq && eq.charm; if (ch && ch.link) { delete ch.link; save.shards = (save.shards || 0) + 40; note = (note ? note + "；" : "") + "傳授寶石拆下，補償 40 碎屑"; }
+    delete w.hero; delete w.heroSet;
+  };
+  one(save.w, save.eq);
+  for (const c of save.chars || []) if (c) one(c.w, c.eq);
+  delete save.links;
+  return note;
+}
+const HEROES_OLD = { ronin: 1, witch: 1, vampire: 1 };
+function giftUnique(u, lv) {
+  if (!UNIQUES[u]) return null;
+  const il = Math.floor((lv || 1) / 3) + 1, sl = UNIQUES[u].slot, bv = BASE_VAL[SLOTS[sl].base];
+  const it = rollItem(0, il); it.slot = sl; it.u = u; it.q = 3; delete it.wt; delete it.so;
+  it.base = Math.round((bv[0] + bv[1] * il) * 2); rollAffixes(it, 2); nameItem(it); return it;
+}
 
 // ───────── 轉職（不換職業，是擴充插槽與被動）─────────
 const JOBS = [
-  { lv: 10, n: "一轉・築基", d: "武器輔助插槽 3→4、移動 +5%" },
-  { lv: 30, n: "二轉・金丹", d: "輔助插槽 5、攻速 +8%、解鎖武器的「超技能插槽」；英雄核心變成傳授寶石，可以插給其他角色" },
+  { lv: 10, n: "一轉・築基", d: "武器輔助插槽 3→4、移動 +5%、解鎖護身法術「化身霧氣」" },
+  { lv: 30, n: "二轉・金丹", d: "輔助插槽 5、攻速 +8%、解鎖武器的「超技能插槽」、解鎖護身法術「血霧無敵」" },
   { lv: 70, n: "三轉・元嬰", d: "輔助插槽 6、所有招式段數 +1" },
   { lv: 120, n: "四轉・化神", d: "段數再 +1、傷害 +15%、起源覺醒：天罰能量集滿按 E，放出全螢幕時停的起源大招" },
 ];
 // 舊存檔是 6 轉制，換成 4 轉制（一次性）
 const migJob = (w) => { if (w && w.job && !w.jv) { w.job = [0, 1, 2, 2, 3, 4, 4][w.job] || 4; } if (w) w.jv = 2; return w; };
-const jobLv = () => (save.w && migJob(save.w).job) || 0;
+const jobLvOf = (w) => (w && migJob(w).job) || 0;
+const jobLv = () => jobLvOf(save.w);
 const sockN = () => { const j = jobLv(); return j >= 3 ? 6 : j >= 2 ? 5 : j >= 1 ? 4 : 3; };
 function jobStats(b) {
   const j = jobLv();
   if (j >= 1) b.spdMul *= 1.05;
   if (j >= 2) b.aspd *= 1.08;
   if (j >= 4) b.atk *= 1.15;
-  if (heroHas("vampire")) b.leech += 0.03;
+  if (b.uq && b.uq.vamp) b.leech += 0.03; // 血玉佩
   return b;
 }
 function doJob() {
   const w = save.w, j = jobLv(), J = JOBS[j];
   if (!J || w.lv < J.lv) return false;
   w.job = j + 1;
-  if (w.job >= 2) { save.links = save.links || {}; save.links[heroKey()] = 1; }
+  const ns = SAVE_KEYS.find((k) => SAVES[k].job === w.job);
   writeSave();
   if (W0) {
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; applyWeapon(); setPadLabels(true);
     flashT = 0.35; flashColor = "255,235,170"; shake = 10; sfx("win");
     burst(W0.x, W0.y, "#ffe066", 60, 160, 1); W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.8, r: 140, c: "255,230,150" });
     floatText(W0.x, W0.y - 40, `${J.n}！`, "#ffe066", true);
+    if (ns) floatText(W0.x, W0.y - 56, `解鎖護身法術「${SAVES[ns].n}」（角色→修行）`, "#9fe8ff", true);
   }
   if (w.job >= 2 && typeof netAnnounce === "function") netAnnounce(`完成${J.n}！`);
   return true;
@@ -60,7 +89,7 @@ function curLines() {
 // ───────── 輔助寶石：元素轉化、引爆、多重投射（GEMS 在 equip.js）─────────
 function elemHit(m, dmg) {
   const gi = gemLv("ice"), gf = gemLv("fire"), gd = gemLv("det");
-  if (heroHas("witch") && (gi || gf || SPELL_WT[curWeapon()])) { // 魔女：屬性傷害全部變毒
+  if (B.uq.psnConv && (gi || gf || SPELL_WT[curWeapon()])) { // 萬毒蟾衣：屬性傷害全部變毒
     m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dmg * 0.12 * (1 + (gi + gf) * 0.15));
     return dmg;
   }
@@ -125,7 +154,7 @@ function switchW(i) {
   if ((W0.swT || 0) > 0) return;
   ws[w.wi] = save.eq.sword || null; save.eq.sword = ws[i]; ws[i] = null; w.wi = i; W0.swT = 0.25;
   B = worldStats(); W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp); setPadLabels(true);
-  if (heroHas("ronin")) { W0.lbReady = true; floatText(W0.x, W0.y - 34, "段數翻倍待發", "#9fe8ff"); }
+  if (B.uq.lbDouble) { W0.lbReady = true; floatText(W0.x, W0.y - 34, "段數翻倍待發", "#9fe8ff"); }
   floatText(W0.x, W0.y - 24, `${i + 1}・${save.eq.sword.name}`, RARITY[save.eq.sword.q].c, true); sfx("dash");
   burst(W0.x, W0.y, "#ffcf6b", 10, 50); fxCast(WPN_FX[curWeapon()]);
   writeSave(); wbarDraw(true);
@@ -140,16 +169,16 @@ function setWSlot(i, it) { // 從背包放到第 i 把
 
 // ───────── 保命技（V／手機下方按鈕）─────────
 function heroSave() {
-  const p = W0, h = HEROES[heroKey()];
-  if (!p || (p.saveCd || 0) > 0) { if (p) floatText(p.x, p.y - 24, `${h.save}冷卻中 ${Math.ceil(p.saveCd)} 秒`, "#cfc4dc"); return; }
+  const p = W0, k = svKey(), h = SAVES[k];
+  if (!p || (p.saveCd || 0) > 0) { if (p) floatText(p.x, p.y - 24, `${h.n}冷卻中 ${Math.ceil(p.saveCd)} 秒`, "#cfc4dc"); return; }
   p.saveCd = h.cd;
-  if (heroKey() === "ronin") {
+  if (k === "rewind") {
     const o = (p.hist && p.hist[0]) || { x: p.x, y: p.y, hp: p.hp };
     burst(p.x, p.y, "#9fe8ff", 20, 90); p.x = o.x; p.y = o.y; p.hp = Math.max(p.hp, o.hp); p.iframe = 0.6; cam.x = p.x; cam.y = p.y;
     W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.5, r: 50, c: "150,220,255" }); flashT = 0.15; flashColor = "150,220,255";
-  } else if (heroKey() === "witch") { p.mistT = 4; burst(p.x, p.y, "#a0ff9a", 30, 80, 0.6); }
+  } else if (k === "mist") { p.mistT = 4; burst(p.x, p.y, "#a0ff9a", 30, 80, 0.6); }
   else { p.invT = 5; burst(p.x, p.y, "#ff3a4a", 30, 90, 0.6); flashT = 0.12; flashColor = "200,20,40"; }
-  floatText(p.x, p.y - 30, h.save + "！", "#ffe066", true); sfx("arrive");
+  floatText(p.x, p.y - 30, h.n + "！", "#ffe066", true); sfx("arrive");
 }
 
 // ───────── 起源覺醒（四轉）：全螢幕時停＋段數炸裂 ─────────
@@ -221,11 +250,11 @@ let wbarKey = "";
 function wbarDraw(force) {
   const on = typeof inWorld !== "undefined" && inWorld && state === "world" && save.w;
   wbar.classList.toggle("hidden", !on); if (!on) return;
-  const h = HEROES[heroKey()], cd = Math.ceil((W0 && W0.saveCd) || 0);
-  const key = [0, 1, 2].map((i) => { const it = wsGet(i); return it ? it.id + it.q : "-"; }).join() + save.w.wi + cd + heroKey();
+  const h = SAVES[svKey()], cd = Math.ceil((W0 && W0.saveCd) || 0);
+  const key = [0, 1, 2].map((i) => { const it = wsGet(i); return it ? it.id + it.q : "-"; }).join() + save.w.wi + cd + svKey();
   if (!force && key === wbarKey) return; wbarKey = key;
   wbar.innerHTML = [0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="ws${i === save.w.wi ? " on" : ""}${it ? "" : " empty"}" data-ws="${i}" style="--c:${it ? RARITY[it.q].c : "#555"}">${it ? itemIcon(it) : ""}<small>${i + 1}</small></button>`; }).join("")
-    + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.save}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`;
+    + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.n}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`;
 }
 wbar.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || state !== "world") return; if (b.dataset.save) heroSave(); else switchW(+b.dataset.ws); wbarDraw(true); });
 setInterval(() => wbarDraw(), 250);
@@ -247,27 +276,3 @@ function newChar() {
   cs[save.ci] = { w: save.w, eq: save.eq }; cs.push(null); save.ci = cs.length - 1;
   save.w = null; save.eq = {}; writeSave(); ovClose(); renderCreate(); return "";
 }
-// 角色畫面加上：英雄核心、轉職、角色列表
-const _renderAP = renderAP;
-renderAP = function (msg) {
-  _renderAP();
-  const w = save.w, h = HEROES[heroKey()], j = jobLv(), J = JOBS[j], panel = screenEl.querySelector(".panel"), btns = panel && panel.querySelector(".btns");
-  if (!btns) return;
-  const cs = charList();
-  const box = document.createElement("div"); box.className = "herobox";
-  box.innerHTML = `${msg ? `<div class="emsg">${msg}</div>` : ""}
-    <div class="baghead">英雄核心：<b>${h.n}</b>（綁定角色，拆不掉）</div>
-    <div class="hcore"><div><b>保命技・${h.save}</b>（V，冷卻 ${h.cd} 秒）<small>${h.sd}</small></div><div><b>核心被動</b><small>${h.pd}</small></div></div>
-    ${!w.heroSet ? `<div class="baghead">還沒選過英雄：可以免費選一次</div><div class="hpick">${HERO_KEYS.map((k) => `<button class="tab${k === heroKey() ? " on" : ""}" data-hero="${k}">${HEROES[k].n}</button>`).join("")}</div>` : ""}
-    <div class="baghead">轉職 <small>目前 ${j ? JOBS[j - 1].n : "未轉職"}</small></div>
-    <div class="jobs">${JOBS.map((x, i) => `<span class="job${i < j ? " done" : i === j ? " next" : ""}"><b>${x.n}</b><small>Lv.${x.lv}・${x.d}</small></span>`).join("")}</div>
-    ${J ? `<button id="doJob" class="big${w.lv >= J.lv ? "" : " alt"}" ${w.lv >= J.lv ? "" : "disabled"}>${w.lv >= J.lv ? `進行 ${J.n}` : `Lv.${J.lv} 可以 ${J.n}`}</button>` : `<p class="sub">已經完成四轉</p>`}
-    <div class="baghead">角色（行囊共用；練到二轉，英雄核心會變成傳授寶石）</div>
-    <div class="chars">${cs.map((c, i) => { const cw = i === save.ci ? w : c && c.w; if (!cw) return ""; return `<button class="cchar${i === save.ci ? " on" : ""}" data-char="${i}"><b>${cw.nick || "修士"}</b><small>${HEROES[cw.hero] ? HEROES[cw.hero].n : "時空浪人"}・Lv.${cw.lv}${migJob(cw).job ? "・" + JOBS[cw.job - 1].n.split("・")[0] : ""}</small></button>`; }).join("")}
-      ${cs.length < 3 ? `<button class="cchar new" id="newChar"><b>＋ 新角色</b><small>從 Lv.1 開始</small></button>` : ""}</div>`;
-  panel.insertBefore(box, btns);
-  box.querySelectorAll("[data-hero]").forEach((b) => b.addEventListener("click", () => { w.hero = b.dataset.hero; w.heroSet = 1; writeSave(); B = worldStats(); sfx("arrive"); renderAP(`英雄核心：${HEROES[w.hero].n}`); }));
-  const dj = document.getElementById("doJob"); if (dj) dj.onclick = () => { if (doJob()) renderAP(`完成${JOBS[jobLv() - 1].n}！`); };
-  box.querySelectorAll("[data-char]").forEach((b) => b.addEventListener("click", () => { const m = switchChar(+b.dataset.char); if (m) renderAP(m); }));
-  const nc = document.getElementById("newChar"); if (nc) nc.onclick = () => { const m = newChar(); if (m) renderAP(m); };
-};

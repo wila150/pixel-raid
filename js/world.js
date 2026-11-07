@@ -303,6 +303,8 @@ function enterWorld() {
   if (!save.w || !save.w.created) { renderCreate(); return; }
   if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; nameItem(it); save.eq.sword = it; writeSave(); }
   if (!save.gems) { save.gems = {}; addGem("multi:1"); addGem("power:1"); writeSave(); W0gift = true; }
+  const heroNote = typeof migHero === "function" ? migHero() : "";
+  if (heroNote) writeSave();
   mode = "normal";
   inWorld = true;
   B = worldStats();
@@ -323,6 +325,7 @@ function enterWorld() {
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
   setPadLabels(true);
+  if (heroNote) { floatText(W0.x, W0.y - 70, "英雄系統改版（選英雄拿掉了）", "#9fe8ff", true); heroNote.split("；").forEach((t, i) => floatText(W0.x, W0.y - 54 + i * 12, t.replace("英雄改版：", ""), "#cfe8ff")); }
   if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 56, "得到 2 顆技能寶石！", "#ffb347", true); floatText(W0.x, W0.y - 40, "打開背包鑲到武器上", "#ffb347"); }
   last = performance.now();
 }
@@ -439,7 +442,7 @@ function killMob(m) {
   save.xiuwei += Math.max(1, Math.round(exp / 6));
   const sh = m.boss ? RBOSS[m.rb || "volcano"].shards : m.hunter ? 5 : m.elite ? 3 : Math.random() < 0.05 ? 1 : 0; // 天罰碎屑
   if (sh) { save.shards = (save.shards || 0) + sh; if (sh > 1) floatText(m.x, m.y - 28, `天罰碎屑 +${sh}`, "#ffcf6b"); }
-  if (heroHas("vampire")) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01);
+  if (B.uq.vamp) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01);
   if (m.boss) { wbKilled(m); return; }
   if (m.type === "toad") addPool(m.x, m.y, 20, 4, mobDmg(m, d) * 0.3, 0.4); // 毒沼蟾：死掉炸出毒池
   // 掉寶

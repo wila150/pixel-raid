@@ -161,7 +161,7 @@ function ovClose() {
 }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"] };
@@ -207,10 +207,6 @@ function extraSlots(it) {
     const ss = Object.keys(save.sups || {}).filter((k) => save.sups[k] > 0);
     h += `<div class="supslot${it.sup ? " on" : ""}"><b>✦ 超技能插槽</b>${jobLv() < 2 ? `<small>二轉（Lv.30）解鎖</small>` : it.sup ? `<small style="color:${SUPERS[it.sup].c}">${SUPERS[it.sup].n}：${SUPERS[it.sup].d}</small><button data-supoff="1">拆下</button>` : `<small>空：${ss.length ? "點下面的超技能寶石插上" : "沒有超技能寶石（工藝台用碎屑換、世界王會掉）"}</small>`}
       ${jobLv() >= 2 && !it.sup ? ss.map((k) => `<button data-sup="${k}" style="color:${SUPERS[k].c}">${SUPERS[k].n} ×${save.sups[k]}<small>${SUPERS[k].d}</small></button>`).join("") : ""}</div>`;
-  }
-  if (it === save.eq.charm) {
-    const ls = Object.keys(save.links || {}).filter((k) => k !== heroKey());
-    h += `<div class="supslot${it.link ? " on" : ""}"><b>◎ 傳授插槽</b>${it.link ? `<small>${HEROES[it.link].n}：${HEROES[it.link].pd}</small><button data-linkoff="1">拔下</button>` : `<small>${ls.length ? "插上別的英雄的核心被動" : "把別的英雄角色練到二轉，就會得到他的傳授寶石"}</small>${ls.map((k) => `<button data-link="${k}">${HEROES[k].n}<small>${HEROES[k].pd}</small></button>`).join("")}`}</div>`;
   }
   if (it.slot === "sword" && save.bag.includes(it)) h += `<div class="acts row">${[0, 1, 2].map((i) => `<button data-wsset="${i}">放到武器 ${i + 1}</button>`).join("")}</div>`;
   return h;
@@ -358,8 +354,6 @@ function bindEquip(selItem) {
   ov.querySelectorAll("[data-wsset]").forEach((b) => b.addEventListener("click", () => { sfx("good"); setWSlot(+b.dataset.wsset, selItem); eqSel = null; if (W0) { B = worldStats(); setPadLabels(true); } again(`放到武器 ${+b.dataset.wsset + 1}`); }));
   ov.querySelectorAll("[data-sup]").forEach((b) => b.addEventListener("click", () => { const k = b.dataset.sup; selItem.sup = k; save.sups[k]--; if (!save.sups[k]) delete save.sups[k]; writeSave(); sfx("arrive"); again(`插上超技能：${SUPERS[k].n}`); }));
   ov.querySelectorAll("[data-supoff]").forEach((b) => b.addEventListener("click", () => { addSup(selItem.sup); delete selItem.sup; writeSave(); again("拆下超技能寶石"); }));
-  ov.querySelectorAll("[data-link]").forEach((b) => b.addEventListener("click", () => { selItem.link = b.dataset.link; writeSave(); sfx("arrive"); if (W0) B = worldStats(); again(`傳授：${HEROES[selItem.link].n}`); }));
-  ov.querySelectorAll("[data-linkoff]").forEach((b) => b.addEventListener("click", () => { delete selItem.link; writeSave(); if (W0) B = worldStats(); again("拔下傳授寶石"); }));
   ov.querySelectorAll("[data-buysup]").forEach((b) => b.addEventListener("click", () => {
     if (!atCamp() || (save.shards || 0) < SUPER_COST) return;
     save.shards -= SUPER_COST; const k = Object.keys(SUPERS)[Math.floor(Math.random() * 3)]; addSup(k); writeSave(); sfx("win"); again(`換到超技能寶石：${SUPERS[k].n}`);

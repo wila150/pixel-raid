@@ -455,7 +455,7 @@ function bindFashion() {
     if (v.length < 2) { floatText(W0.x, W0.y - 30, "暱稱至少 2 個字", "#ff8a7a"); return; }
     w.nick = v; writeSave(); sfx("good"); renderAP();
   };
-  screenEl.querySelectorAll(".skin").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".fashion .skin").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.k, s = SKINS[k]; w.skins = w.skins || ["none", "snow"];
     if (!w.skins.includes(k) && s.price) {
       if (save.stone < s.price) { sfx("bad"); b.querySelector("small").textContent = "靈石不夠"; return; }
@@ -481,21 +481,18 @@ function renderCreate(msg = "") {
     <input id="cname" class="cname" maxlength="10" placeholder="例如：青雲劍仙" value="${nameVal.replace(/"/g, "")}">
     <div class="baghead">初始武器（決定一開始的招式；之後撿到別的武器隨時能換）</div>
     <div class="cards cwrap">${WT_KEYS.map(wpn).join("")}</div>
-    <div class="baghead">英雄核心（綁定角色：保命技＋核心被動）</div>
-    <div class="cards cwrap">${HERO_KEYS.map((k) => `<button class="card ch${(createSel.hero || "ronin") === k ? " picked" : ""}" data-h="${k}"><b>${HEROES[k].n}</b><span class="tag">${HEROES[k].save}</span><span class="desc">${HEROES[k].sd}；${HEROES[k].pd}</span></button>`).join("")}</div>
     <div class="baghead">外觀</div>
     <div class="skins">${looks.map((k) => `<button class="skin${createSel.skin === k ? " sel" : ""}" data-k="${k}"><img src="${skinIcon(k)}" alt=""><b>${k === "none" ? "素衣" : SKINS[k].n}</b></button>`).join("")}</div>
     <div class="btns"><button id="cgo" class="big">踏上仙途</button></div>
   </div>`;
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".cw").forEach((b) => b.addEventListener("click", () => { createSel.wt = b.dataset.k; sfx("click"); renderCreate(); }));
-  screenEl.querySelectorAll(".ch").forEach((b) => b.addEventListener("click", () => { createSel.hero = b.dataset.h; sfx("click"); renderCreate(); }));
   screenEl.querySelectorAll(".skin").forEach((b) => b.addEventListener("click", () => { createSel.skin = b.dataset.k; sfx("click"); renderCreate(); }));
   document.getElementById("cgo").onclick = () => {
     const n = document.getElementById("cname").value.trim().replace(/[<>&"]/g, "");
     if (n.length < 2) { renderCreate("名字至少 2 個字"); return; }
     save.w = blankW();
-    Object.assign(save.w, { created: 1, hero: createSel.hero || "ronin", heroSet: 1, tut: save.chars && save.chars.length > 1 ? undefined : 0, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
+    Object.assign(save.w, { created: 1, hv: 1, sv: "rewind", tut: save.chars && save.chars.length > 1 ? undefined : 0, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
     const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; nameItem(it);
     if (save.eq.sword) save.bag.push(save.eq.sword);
     save.eq.sword = it;
