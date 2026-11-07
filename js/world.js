@@ -379,7 +379,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
   const crit = Math.random() < B.crit + (sz === "L" ? vs.critL || 0 : 0);
   if (crit) dmg *= B.critDmg;
-  dmg *= (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz] * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs[d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
+  dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs[d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
   if (m.mod === "鐵壁") dmg *= 0.55;
@@ -569,7 +569,7 @@ function updateWorld(dt) {
     if (p.roll <= 0) p.dashHit = null;
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (W0.spinT > 0 ? 0.6 : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -738,7 +738,7 @@ function updateWorld(dt) {
   W0.rings = W0.rings.filter((r) => r.t < r.max);
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
-    if (W0.spinTick <= 0) { W0.spinTick = 0.2; for (const m of W0.mobs) if (!m.dead && dist(m, p) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(12), 60, p, true); sfx("dash"); }
+    if (W0.spinTick <= 0) { W0.spinTick = 0.2; for (const m of W0.mobs) if (!m.dead && dist(m, p) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(12) * (m.boss ? 0.6 : 1), 60, p, true); sfx("dash"); }
   }
   for (const t of W0.tornados) {
     t.t -= dt; t.tick -= dt;

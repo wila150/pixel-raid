@@ -11,7 +11,7 @@ const RBOSS = {
     where: "焚天火山北邊祭壇", loot: "4 件好裝、2 寶石、精髓 3、25% 超技能寶石、15% 王卡",
     wake: "焚天石魔甦醒了！", sleep: "焚天石魔沉回熔岩⋯⋯", p2: "石魔暴走！", p3: "元神燃燒！", addMsg: "召喚熔岩妖群！", addN: 3,
     desc: "石魔會在這裡現身，用你自己的招式打倒它；看到紅色範圍就閃開。" },
-  swamp: { type: "rbswamp", n: "腐骨蟾王", lv: 50, x: 3800, y: 1650, hp: 300000, dmgMul: 1.6, cool: 120, rec: 45, col: "120,230,110", bar: ["#8ad86a", "#6ac04a", "#4aa83a"], shards: 15, addType: "toad", addN: 2,
+  swamp: { type: "rbswamp", n: "腐骨蟾王", lv: 50, x: 3800, y: 1650, hp: 450000, dmgMul: 1.4, cool: 120, rec: 45, col: "120,230,110", bar: ["#8ad86a", "#6ac04a", "#4aa83a"], shards: 15, addType: "toad", addN: 2,
     where: "幽冥沼澤東南深處祭壇", loot: "3 件裝備（至少 1 件玄品）、12% 傳說「萬毒蟾衣」、10% 王卡、精髓 2",
     wake: "腐骨蟾王從泥沼爬出來了！", sleep: "腐骨蟾王沉回泥沼⋯⋯", p2: "蟾王發狂！會跳了！", p3: null, addMsg: "叫來毒沼蟾！",
     desc: "紅線＝舌頭，往旁邊閃；紅圈落地會留下毒池，別站在池子裡。<br>蟾王站進毒池時受到的傷害 +25%，可以引牠進去。" },
@@ -147,7 +147,7 @@ function tkPick(m, p, dp) {
     m.actT = 0.35;
     floatText(m.x, m.y - 34, "毒涎！", "#9aff7a", true);
     const dur = m.phase >= 2 ? 12 : 8, pts = [{ x: p.x, y: p.y }, { x: p.x + rand(-55, 55), y: p.y + rand(-40, 40) }, { x: p.x + rand(-55, 55), y: p.y + rand(-40, 40) }];
-    for (const q of pts) wbZone({ k: "circle", x: q.x, y: q.y, r: 22, max: 1.0, dmg: wbDmg(m, 0.45), lob: { x: m.x, y: m.y - 14 }, pool: { r: 24, dur, dmg: wbDmg(m, 0.12) }, c: "140,255,110" });
+    for (const q of pts) wbZone({ k: "circle", x: q.x, y: q.y, r: 22, max: 1.0, dmg: wbDmg(m, 0.45), lob: { x: m.x, y: m.y - 14 }, pool: { r: 24, dur, dmg: wbDmg(m, 0.25) }, c: "140,255,110" });
   } else if (k === "leap") {
     m.actT = 0.3;
     floatText(m.x, m.y - 34, "蟾躍！", "#ffb07a", true);
