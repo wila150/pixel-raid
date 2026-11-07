@@ -128,6 +128,12 @@ function ghostCast(o, wt, c) {
     else if (c.o === "boom") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.2, 230), { life: 0.5, kind: "sword" }));
     else if (c.o === "rain") for (let i = 0; i < 8; i++) W0.fires.push({ x: c.x + rand(-26, 26), y: c.y + rand(-18, 18), t: 0.3 + i * 0.05, r: 16, dmg: 0, ghost: true });
     else if (c.o === "refr") for (let i = -2; i <= 2; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.18, 280), { life: 0.55, kind: "arrow" }));
+    else if (c.o === "shower") for (let i = 0; i < 6; i++) W0.fires.push({ x: c.x + rand(-28, 28), y: c.y + rand(-20, 20), t: 0.3 + i * 0.07, r: 16, dmg: 0, ghost: true });
+    else if (c.o === "doom") W0.fires.push({ x: c.x, y: c.y, t: 0.7, r: 26, dmg: 0, ghost: true });
+    else if (c.o === "wall") { const cx = sx + Math.cos(c.a) * 34, cy = sy + Math.sin(c.a) * 34; for (let i = -2; i <= 2; i++) W0.walls && W0.walls.push({ x: cx - Math.sin(c.a) * i * 16, y: cy + Math.cos(c.a) * i * 16, t: 2, tick: 0, ghost: true }); }
+    else if (c.o === "suck" || c.o === "storm") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
+    else if (c.o === "ward") W0.tornados.push({ x: sx, y: sy, vx: 0, vy: 0, t: 3, tick: 0, orbit: 0, own: o, ghost: true });
+    else if (c.o === "whirl") W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 55, c: "255,220,170" });
     else if (c.o === "swal") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.15, 300), { life: 0.6, kind: "arrow" }));
     else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 30, c: "190,225,255" });
   } else if (c.k === "q") {
