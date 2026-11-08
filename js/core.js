@@ -101,16 +101,18 @@ cvs.addEventListener("pointercancel", endStick);
 // 技能按鈕
 const pad = document.getElementById("pad");
 const padAct = new Set();
+const padHeld = new Set(); // 按住中的鈕（手機攻擊鍵按住連打，跟電腦按住滑鼠一樣）
 pad.querySelectorAll(".btn").forEach((b) => {
   b.addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    padAct.add(b.dataset.act);
+    padAct.add(b.dataset.act); padHeld.add(b.dataset.act);
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
     b.classList.add("down");
   });
-  const up = () => b.classList.remove("down");
-  b.addEventListener("pointerup", up);
-  b.addEventListener("pointerleave", up);
+  const up = () => { b.classList.remove("down"); padHeld.delete(b.dataset.act); };
+  for (const ev of ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"]) b.addEventListener(ev, up);
 });
+window.addEventListener("blur", () => padHeld.clear());
 const act = (name, ...ks) => padAct.has(name) || ks.some((k) => pressed.has(k));
 
 // ───────── 遊戲狀態 ─────────

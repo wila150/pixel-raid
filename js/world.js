@@ -615,7 +615,7 @@ function updateWorld(dt) {
   const gp = gemLv("pierce");
   const shoot = (a, o) => { if (gp) { o.pierce = true; o.dmg *= 1 + gp * 0.05; } o.bn = (B.uq.bounce ? 2 : 0) + (o.bnAdd || 0); if (W0.sureCast) o.sure = true; W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o)); multiShots(a, o, shoot); };
   const autoAtk = w.autoAtk && !inMenu && p.cds.attack <= 0 && W0.mobs.some((m) => !m.dead && !m.noTarget && dist(m, p) < 70); // 設定：半自動割草
-  if ((act("attack", "j", "z") || autoAtk || ((keys.has("j") || mouse.down) && p.cds.attack <= 0)) && useSkill("attack")) {
+  if ((act("attack", "j", "z") || autoAtk || ((keys.has("j") || mouse.down || (padHeld.has("attack") && !inMenu)) && p.cds.attack <= 0)) && useSkill("attack")) {
     if (B.uq.orbit && (W0.orbAtk = (W0.orbAtk || 0) + 1) % 3 === 0) { if (W0.orbs.length >= 6) W0.orbs.shift(); W0.orbs.push({ t: 8, hit: new Map() }); }
     if (wt === "sword") { // 劍擊：前方扇形（改招：劍舞／劍芒／破軍）
       const ta = triOf("sword", "a"), t = near(ta === "ray" ? 90 : 50); if (t) p.face = angTo(p, t);
@@ -773,10 +773,15 @@ function updateWorld(dt) {
   W0.sureCast = false; if (W0.sureT > 0) W0.sureT -= dt;
   if (W0.kcT > 0) { W0.kcT -= dt; if (W0.kcT <= 0) W0.kc = 0; }
   if (W0.kcPop > 0) W0.kcPop -= dt;
+  if (W0.potHintT > 0) W0.potHintT -= dt;
   const autoPot = w.autoPot !== false && p.hp < p.maxHp * 0.3 && !inMenu; // 設定：低血量自動喝藥（預設開）
-  if ((act("potion", "h", "4") || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
-    w.potions--; const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
+  const potKey = act("potion", "h", "4");
+  if (potKey && p.cds.potion > 0 && W0.potCd && !(W0.potHintT > 0)) { floatText(p.x, p.y - 16, `丹藥冷卻 ${Math.ceil(p.cds.potion)} 秒`, "#ff9a7a"); W0.potHintT = 1; }
+  if ((potKey || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
+    w.potions--; W0.potCd = bossHitNow() ? 6 : 0; if (W0.potCd) p.cds.potion = W0.potCd; // 打區域王：丹藥冷卻 6 秒（企劃 13：不能站著吃招靠丹藥硬撐）
+    const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
     floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); sfx("heal"); writeSave();
+    if (W0.potCd) seenHint("potCd", "打區域王時丹藥要冷卻 6 秒，靠躲招撐住！");
   }
 
   // 劍氣飛行
@@ -1287,7 +1292,7 @@ function renderWorld() {
   }
   drawShield();
   drawFxOver();
-  drawFx();
+  wbBarFloatClamp(k, oy); drawFx(); fltMinY = null;
   drawWorldHud();
   drawWBossBar();
 }
@@ -1475,7 +1480,7 @@ function drawWorldHud() {
   // 按鈕冷卻
   for (const k of ["spin", "ult", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
-    if (el) el.style.transform = `scaleY(${p.cds[k] / (WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1))})`;
+    if (el) el.style.transform = `scaleY(${p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1))})`;
     const btn = pad.querySelector(`[data-act="${k}"]`);
     if (btn) btn.style.opacity = p.mp < WSKILL[k].mp ? 0.45 : 1;
   }

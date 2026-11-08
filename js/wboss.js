@@ -337,15 +337,24 @@ function drawWBoss(m) {
   ctx.restore();
   if (m.act && m.act !== "rain") glow(m.x, m.y - 10, 26, "255,80,40", 0.35 + 0.2 * Math.sin(time * 20));
 }
+var fltMinY = null; // 有王血條時，飄字最高只畫到這個世界座標 y（不要疊在血條上，企劃 13）
+const wbBarY = () => (W <= 600 ? 168 : 60);
+function wbBarFloatClamp(k, oy) { // renderWorld 畫飄字前呼叫：k、oy 是當下的 world→裝置像素轉換
+  fltMinY = W0.mobs.some((o) => o.boss) ? ((wbBarY() + 40) * DPR - oy) / k : null;
+}
 function drawWBossBar() { // 畫面上方的王血條
   const m = W0.mobs.find((o) => o.boss); if (!m) return;
   const R = rbOf(m);
-  const bw = Math.min(260, W * 0.62), x = (W - bw) / 2, y = W <= 600 ? 168 : 60;
+  const bw = Math.min(260, W * 0.62), x = (W - bw) / 2, y = wbBarY();
+  const kk = SCALE * 1.35, bsx = W / 2 + (m.x - cam.x) * kk, bsy = H / 2 + (m.y - cam.y) * kk; // 王在畫面上的位置
+  const under = bsy - 70 * kk < y + 30 && bsy + 10 * kk > y - 6 && Math.abs(bsx - W / 2) < bw / 2 + 40 * kk;
+  ctx.save(); if (under) ctx.globalAlpha = 0.4; // 王跑到血條底下：血條變半透明
   ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(x - 3, y - 3, bw + 6, 14);
   ctx.fillStyle = "#2a1a1a"; ctx.fillRect(x, y, bw, 8);
   ctx.fillStyle = R.bar[Math.min(2, m.phase - 1)]; ctx.fillRect(x, y, bw * Math.max(0, m.hp / m.max), 8);
   ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffe0c0";
   ctx.fillText(`${R.n} Lv.${m.lv}　${Math.max(0, Math.ceil(m.hp))} / ${m.max}`, W / 2, y + 22);
+  ctx.restore();
 }
 // 王專屬傳說（不會在一般掉落、碎屑兌換出現）
 function rbUnique(u, il) {

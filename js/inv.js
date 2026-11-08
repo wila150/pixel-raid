@@ -145,6 +145,7 @@ ov.id = "ov"; ov.className = "ov hidden";
 document.body.appendChild(ov);
 let ovKind = null, ovJust = false, ovMsg = "";
 function ovOpen(kind) {
+  padHeld.clear();
   if (!(state === "world" || (state === "pick" && pausedFrom === "world"))) return false;
   pausedFrom = "world"; state = "pick";
   keys.clear(); stick.id = null; mouse.down = false; pad.classList.add("hidden"); screenEl.classList.add("hidden");
