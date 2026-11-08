@@ -168,4 +168,5 @@
   - Android 返回（inv.js）：最上面永遠留一筆陷阱紀錄（`histArm`，在 pointerdown/keydown 時塞，Chrome 才不會跳過）；`popstate` → 補回去 → `ovSub()` 先關子視窗（選中的物品／道具、星盤選點、角色數值說明、離開確認）→ 關介面 → 關舊 `.screen` 畫面 → 都沒有就跳 `#exitAsk`「要離開遊戲嗎？」（離開＝存檔＋`cloudFlush`＋`history.go(-2)`，走不了就提示可以直接關分頁）。✕ 關閉不用退紀錄（陷阱一直在）。Esc 也會關離開確認。
   - 連段發光 `comboGlow()`：劍舞第 3 下（`danceN`=2）、寸勁第 5 拳（`inchN`=4）、三連珠第 3 箭（`triN`=2）、乘勢 `sureT`、時之沙漏 `lbReady`、連環衝 `dash2T`；手機 `#pad .btn.combo` 金框閃，電腦在球旁招式框畫金框。
   - 戰力數字：點背包裡的物品，說明最上面「穿上後戰力 A → B（±N）」`.cpafter`；穿上時（`equipItem` 包一層記 `cpRoll`）左欄「戰力」數字 0.7 秒滾動＋綠字（變低是紅字）。
+  - v5.5.1：標題列底色改不透明（企劃驗收：左上 HUD 透出來疊在標題上）。
   - 測試：Playwright（scratchpad 裝 playwright-core＋借用的 chromium 系統函式庫，`LD_LIBRARY_PATH`），`isMobile/hasTouch` 844×390、390×844：7 個介面 ✕ 都在右上 48px、ov 從 56px 開始、沒有左右捲動；切頁、✕、返回（子視窗→介面→離開確認）、Esc、快捷鍵都測過、沒有 JS 錯誤。真機（Android Chrome、加入主畫面、LINE）還沒測。

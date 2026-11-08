@@ -563,7 +563,7 @@ body.inworld #quick { display: flex; }
 
 /* v5.5 企劃 15 手機介面：標題列＋大 ✕＋分頁、技能／任務／排行覆蓋層、返回確認、連段發光、戰力數字 */
 #ovTitle, #ovX { display: none; }
-body.ovopen #topbar { left: 0; right: 0; top: 0; height: calc(56px + env(safe-area-inset-top)); box-sizing: border-box; padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left)); align-items: center; background: rgba(10, 11, 11, 0.92); border-bottom: 1px solid var(--line); }
+body.ovopen #topbar { left: 0; right: 0; top: 0; height: calc(56px + env(safe-area-inset-top)); box-sizing: border-box; padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left)); align-items: center; background: #0b0c0c; border-bottom: 1px solid var(--line); }
 body.ovopen #ovTitle { display: block; margin-right: auto; font-size: 16px; font-weight: 700; letter-spacing: 0.25em; color: #e8d4a8; white-space: nowrap; }
 body.ovopen #quick { display: flex; }
 body.ovopen #ovX { display: grid; place-items: center; width: 48px; height: 48px; margin-left: 6px; border-radius: 10px; border: 1px solid rgba(230, 210, 170, 0.6); background: rgba(40, 30, 24, 0.8); color: #f0e2c4; font-size: 24px; line-height: 1; padding: 0; }
