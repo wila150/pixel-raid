@@ -1682,9 +1682,9 @@ function openHud(h) {
   if (h === "bag") { eqSel = null; renderEquip(); }
   else if (h === "ap") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderAP(); }
   else if (h === "swap") quickSwap();
-  else if (h === "quest") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderQuests(); }
-  else if (h === "skill") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderSkills(); }
-  else if (h === "rank") { pausedFrom = "world"; state = "pick"; pad.classList.add("hidden"); renderRank(); }
+  else if (h === "quest") renderQuests();
+  else if (h === "skill") renderSkills();
+  else if (h === "rank") renderRank();
   else if (h === "menu") openMenu();
   else openStarMap();
 }

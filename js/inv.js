@@ -78,6 +78,19 @@ function drawOrb(cx, cy, R, f, c1, c2, rim) {
   ctx.strokeStyle = rim; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
 }
 let atkRect = null, atkRectT = 0;
+// 企劃 15 第 9 節：連段發光（下一下會變強的招式，按鈕外框亮）
+function comboGlow() {
+  const p = W0, g = { attack: false, spin: false };
+  if (!p || typeof triOf !== "function") return g;
+  const wt = curWeapon(), ta = triOf(wt, "a");
+  if (ta === "dance" && p.danceWt === wt && (p.danceN || 0) === 2) g.attack = true; // 劍舞第 3 下
+  if (ta === "inch" && p.inchWt === wt && (p.inchN || 0) === 4) g.attack = true; // 寸勁第 5 拳
+  if (ta === "tri3" && (p.triN || 0) === 2) g.attack = true; // 三連珠第 3 箭
+  if (p.sureT > 0 || p.lbReady) { g.attack = true; g.spin = true; } // 乘勢必爆、時之沙漏切武器加倍
+  if (p.dash2T > 0 && wt === "fist") g.spin = true; // 連環衝可以再衝
+  return g;
+}
+let comboLast = "";
 function drawOrbs() {
   const p = W0, padOn = !pad.classList.contains("hidden") && getComputedStyle(pad).display !== "none";
   let R = clamp(Math.min(W, H) * 0.11, 34, 56);
@@ -125,7 +138,9 @@ function drawOrbs() {
     ctx.fillText(full ? "E 天罰" : `${Math.floor(ef * 100)}%`, ex, ey + 4);
     const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"], ["H", `丹藥×${save.w.potions}`, "potion"]];
     let x = ex - R - 16 - sk.length * 50;
+    const cg = comboGlow();
     for (const [k, n, id] of sk) {
+      if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
       const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = p.mp < (WSKILL[id].mp || 0);
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
@@ -135,6 +150,7 @@ function drawOrbs() {
       x += 50;
     }
   }
+  if (padOn) { const cg = comboGlow(), key = (cg.attack ? "a" : "") + (cg.spin ? "s" : ""); if (key !== comboLast) { comboLast = key; pad.querySelector('[data-act="attack"]').classList.toggle("combo", cg.attack); pad.querySelector('[data-act="spin"]').classList.toggle("combo", cg.spin); } }
   const ub = pad.querySelector('[data-act="ult"]');
   if (ub) { ub.style.setProperty("--ult", ef); ub.classList.toggle("ready", full); ub.style.opacity = 1; }
 }
@@ -143,37 +159,93 @@ function drawOrbs() {
 const ov = document.createElement("div");
 ov.id = "ov"; ov.className = "ov hidden";
 document.body.appendChild(ov);
-let ovKind = null, ovJust = false, ovMsg = "";
+let ovKind = null, ovJust = false, ovMsg = "", ovSw = false;
+// 企劃 15：介面種類 → 右上快捷分頁、標題
+const OV_TAB = { bag: "bag", char: "ap", skill: "skill", quest: "quest", map: "map", social: "social", rank: "rank" };
+const OV_NAME = { bag: "行囊", char: "角色", skill: "技能", quest: "任務", map: "星盤", social: "聊天", rank: "排行", menu: "設定" };
 function ovOpen(kind) {
   padHeld.clear();
   if (!(state === "world" || (state === "pick" && pausedFrom === "world"))) return false;
   pausedFrom = "world"; state = "pick";
   keys.clear(); stick.id = null; mouse.down = false; pad.classList.add("hidden"); screenEl.classList.add("hidden");
   ovKind = kind; ovJust = true; setTimeout(() => { ovJust = false; }, 0);
-  ov.className = `ov k-${kind}`; requestAnimationFrame(() => ov.classList.add("show"));
+  ov.className = `ov k-${kind}${ovSw ? " show" : ""}`; if (!ovSw) requestAnimationFrame(() => ov.classList.add("show"));
+  ovBar();
   return true;
 }
 function ovClose() {
   if (!ovKind) return;
   ovKind = null; eqSel = null; mapSel = null;
+  if (typeof qTab !== "undefined" && !ovSw) qTab = null;
   ov.classList.remove("show");
   setTimeout(() => { if (!ovKind) { ov.className = "ov hidden"; ov.innerHTML = ""; } }, 220);
   if (state === "pick" && pausedFrom === "world") worldReturn();
+  ovBar();
 }
+// 直接換頁（不用先關）：快捷分頁、快捷鍵都走這裡
+function ovGo(q) {
+  if (ovKind) { if (OV_TAB[ovKind] === q) return; ovSw = true; ovClose(); }
+  if (state === "world") { if (q === "map") { sfx("click"); openStarMap(); } else if (q === "social") { sfx("click"); openSocial(); } else openHud(q); }
+  ovSw = false;
+}
+// 標題列：開介面時 #topbar 變成整條（標題＋分頁＋大 ✕），內容從標題列下面開始
+const ovTitle = document.createElement("span"); ovTitle.id = "ovTitle";
+const ovX = document.createElement("button"); ovX.id = "ovX"; ovX.className = "tbtn"; ovX.setAttribute("aria-label", "關閉"); ovX.innerHTML = "✕";
+document.getElementById("topbar").prepend(ovTitle); document.getElementById("topbar").appendChild(ovX);
+ovX.addEventListener("click", (e) => { e.stopPropagation(); sfx("click"); ovClose(); });
+function ovBar() {
+  document.body.classList.toggle("ovopen", !!ovKind);
+  ovTitle.textContent = ovKind ? OV_NAME[ovKind] || "" : "";
+  document.querySelectorAll("#quick .qbtn").forEach((b) => b.classList.toggle("on", !!ovKind && OV_TAB[ovKind] === b.dataset.q));
+}
+// 子視窗（選中的物品、星盤選的點、數值說明、離開確認）：返回鍵先關這些
+function ovSub() {
+  if (exitAsk) { exitAskClose(); return true; }
+  if (ovKind === "bag" && (eqSel || propSel)) { eqSel = null; propSel = null; renderEquip(); return true; }
+  if (ovKind === "map" && mapSel) { mapSel = null; openStarMap(); return true; }
+  if (ovKind === "char" && typeof chHelp !== "undefined" && chHelp) { chHelp = null; renderChar(); return true; }
+  return false;
+}
+// Android 返回鍵：最上面永遠留一筆「陷阱」紀錄，按返回 → 補回去，再關子視窗／介面／舊畫面；都沒有就問要不要離開
+let histArmed = false, exitAsk = null, leaving = false;
+function histArm() { if (histArmed || leaving || !inWorld) return; histArmed = true; history.pushState({ pr: 1 }, ""); }
+["pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, histArm, true)); // 要在使用者操作時塞，Chrome 才不會跳過
+window.addEventListener("popstate", () => {
+  if (leaving || !histArmed) return;
+  histArmed = false; histArm();
+  if (ovSub()) return;
+  if (ovKind) { sfx("click"); ovClose(); return; }
+  if (state === "pick" && pausedFrom === "world") { worldReturn(); return; }
+  if (state === "world" || state === "paused") exitAskOpen();
+});
+function exitAskOpen() {
+  if (exitAsk) return;
+  exitAsk = document.createElement("div"); exitAsk.id = "exitAsk";
+  exitAsk.innerHTML = `<div class="exbox"><h3>要離開遊戲嗎？</h3><p>進度會自動存檔。</p><div class="acts row"><button id="exStay" class="gold">繼續玩</button><button id="exGo" class="red">離開</button></div></div>`;
+  document.body.appendChild(exitAsk);
+  exitAsk.querySelector("#exStay").onclick = () => { sfx("click"); exitAskClose(); };
+  exitAsk.querySelector("#exGo").onclick = () => {
+    writeSave(); if (typeof cloudFlush === "function") cloudFlush();
+    leaving = true; exitAskClose();
+    setTimeout(() => { history.go(histArmed ? -2 : -1); setTimeout(() => { if (document.visibilityState === "visible") { window.close(); leaving = false; histArmed = false; floatText(W0.x, W0.y - 30, "已存檔，可以直接關掉分頁", "#ffe9a0", true); } }, 600); }, 150);
+  };
+}
+window.addEventListener("keydown", (e) => { if (exitAsk && e.key === "Escape") { e.stopImmediatePropagation(); exitAskClose(); } }, true);
+function exitAskClose() { if (exitAsk) { exitAsk.remove(); exitAsk = null; } }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
-const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"] };
+const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
   const k = e.key.toLowerCase();
   if (!ovKind || ovJust || e.repeat) return;
   if (k === "tab") e.preventDefault();
   if ((OV_KEYS[ovKind] || []).includes(k)) { ovClose(); return; }
-  const sw = { i: "bag", b: "bag", m: "map", tab: "map" }[k];
-  if (sw && sw !== ovKind) { ovKind = null; state = "world"; sw === "bag" ? renderEquip() : openStarMap(); }
+  const sw = { i: "bag", b: "bag", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
+  if (sw && sw !== OV_TAB[ovKind]) ovGo(sw);
 });
 
 // ───────── 背包：左 星芒裝備位／中 瀑布流／右 詞條對比 ─────────
@@ -294,6 +366,7 @@ function renderEquip(msg = "") {
       <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
+      ${!worn ? (() => { const now = totalCP(), d = itemCP(selItem) - itemCP(cur); return `<div class="cpafter">穿上後戰力 ${now} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${now + d}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${Math.abs(d)}</b>）</div>`; })() : ""}
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
       ${affHtml(selItem)}${extraSlots(selItem)}
       <div class="stats">${cmpRows(selItem, cur)}</div>
@@ -318,6 +391,20 @@ function renderEquip(msg = "") {
     ${ovMsg ? `<div class="toast">${ovMsg}</div>` : ""}`;
   ovMsg = "";
   bindEquip(selItem);
+  cpRollRun();
+}
+// 穿上裝備：戰力數字滾動＋綠字（黑色沙漠式回饋）
+let cpRoll = null;
+const _equipItemCp = equipItem;
+equipItem = function (it) { const a = totalCP(); _equipItemCp(it); const b = totalCP(); if (a !== b) cpRoll = { a, b }; };
+function cpRollRun() {
+  if (!cpRoll) return;
+  const { a, b } = cpRoll; cpRoll = null;
+  const el = ov.querySelector(".info b"); if (!el) return;
+  el.classList.add("cproll"); if (b < a) el.classList.add("down");
+  const t0 = performance.now(), D = 700;
+  const step = (t) => { if (!el.isConnected) return; const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = `戰力 ${Math.round(a + (b - a) * e)}${k >= 1 ? `（${b > a ? "+" : "−"}${Math.abs(b - a)}）` : ""}`; if (k < 1) requestAnimationFrame(step); else setTimeout(() => { if (el.isConnected) { el.classList.remove("cproll", "down"); el.textContent = `戰力 ${b}`; } }, 1600); };
+  requestAnimationFrame(step);
 }
 function bindEquip(selItem) {
   const again = (m) => renderEquip(m);
@@ -596,8 +683,8 @@ const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;
-  const go = () => { if (state !== "world") return; if (m === "map") { sfx("click"); openStarMap(); } else if (m === "social") { sfx("click"); openSocial(); } else openHud(m); };
-  if (state !== "world" && ovKind) { ovClose(); setTimeout(go, 0); } else go();
+  if (state !== "world" && !ovKind) return;
+  ovGo(m);
 }));
 function openMenu() {
   if (ovKind !== "menu" && !ovOpen("menu")) return;

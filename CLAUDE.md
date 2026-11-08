@@ -161,3 +161,11 @@
   - 測試：scratchpad test.js `boss.py` 加 `_k`（swamp／thunder／sky，自動配等級／轉職／配點）、`gem`；bot 會躲甜甜圈、先打劍柱；`#smoke` 跑三區小怪＋畫面；`#bshot=王,秒,血量比例` 截圖。實測數字寫在企劃 07 第 4 節。
 - **v5.4 企劃 13 小修（11/09）**：①打區域王（`bossHitNow()`，不含石魔）喝丹藥後冷卻 6 秒（`W0.potCd`，手機鈕冷卻條用它當分母；冷卻中按會飄「丹藥冷卻 N 秒」，`seenHint("potCd")`）。②王血條 `drawWBossBar`：王在血條底下時 40% 透明；飄字在有王血條時最高只畫到血條下方（`fltMinY`，wboss.js 設、render.js `drawFx` 用）。③手機攻擊鍵按住連打：core.js `padHeld`（pointerdown 加、up/cancel/leave/lostpointercapture 刪、blur 和 `ovOpen` 清空），world.js 攻擊判斷加 `padHeld.has("attack") && !inMenu`；Q 不做按住。
   - 為什麼是冷卻、不是「破體砍丹藥」：bot 比較（每種武器 2–4 個 seed）——破體每層丹藥 −15%／−20%／門檻制（3 層減半、5 層無效）都會讓**會躲的 bot** 死 4–8/24（對照組 0/24），因為較弱的裝備打得久，偶爾被打中也會疊到 3–5 層。冷卻 6 秒：會躲的雷鵬死 2/24、劍尊 5/24（對照組 3/24）；站著不躲雷鵬死 11/12、劍尊 9/12。拳站樁偶爾還能贏（最低 5–19% 血）。
+- **v5.5 企劃 15 手機介面第一版（11/09）**：
+  - 標題列：開任何覆蓋層 `body.ovopen`，`#topbar` 變整條（高 56px＋瀏海），左邊 `#ovTitle`、中間快捷分頁（目前頁 `.qbtn.on`）、右上大 ✕ `#ovX`（48×48）；`.ov` 的 top 讓到標題列下面，快捷列不再蓋內容。`OV_TAB`／`OV_NAME` 是介面種類 ↔ 分頁／標題。
+  - 換頁：`ovGo(q)`（快捷分頁、I/B/C/O/N/Y/M/Tab/G/R 都走這裡），`ovSw` 時直接換、不播收起動畫。「點空白處關閉」保留（`.panel` 加進例外）。
+  - 技能（skills.js）、任務（quests.js）、排行（net.js `renderRank`）改用 `#ov`：開頭 `ovOpen("skill"|"quest"|"rank")`，內容包在 `.col.cw`（橫跨三欄、最寬 860），拿掉底部「離開」鈕；`bindTri` 改綁 `ov`。`openHud` 直接呼叫這三個 render。
+  - Android 返回（inv.js）：最上面永遠留一筆陷阱紀錄（`histArm`，在 pointerdown/keydown 時塞，Chrome 才不會跳過）；`popstate` → 補回去 → `ovSub()` 先關子視窗（選中的物品／道具、星盤選點、角色數值說明、離開確認）→ 關介面 → 關舊 `.screen` 畫面 → 都沒有就跳 `#exitAsk`「要離開遊戲嗎？」（離開＝存檔＋`cloudFlush`＋`history.go(-2)`，走不了就提示可以直接關分頁）。✕ 關閉不用退紀錄（陷阱一直在）。Esc 也會關離開確認。
+  - 連段發光 `comboGlow()`：劍舞第 3 下（`danceN`=2）、寸勁第 5 拳（`inchN`=4）、三連珠第 3 箭（`triN`=2）、乘勢 `sureT`、時之沙漏 `lbReady`、連環衝 `dash2T`；手機 `#pad .btn.combo` 金框閃，電腦在球旁招式框畫金框。
+  - 戰力數字：點背包裡的物品，說明最上面「穿上後戰力 A → B（±N）」`.cpafter`；穿上時（`equipItem` 包一層記 `cpRoll`）左欄「戰力」數字 0.7 秒滾動＋綠字（變低是紅字）。
+  - 測試：Playwright（scratchpad 裝 playwright-core＋借用的 chromium 系統函式庫，`LD_LIBRARY_PATH`），`isMobile/hasTouch` 844×390、390×844：7 個介面 ✕ 都在右上 48px、ov 從 56px 開始、沒有左右捲動；切頁、✕、返回（子視窗→介面→離開確認）、Esc、快捷鍵都測過、沒有 JS 錯誤。真機（Android Chrome、加入主畫面、LINE）還沒測。

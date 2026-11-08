@@ -11,6 +11,7 @@ const qReward = (q) => {
 const qWhere = (q, ch) => { const z = ZONES[ch]; return q.k === "boss" ? "焚天火山北邊祭壇" : `${z.n}（妖獸 Lv.${z.lv[0]}–${z.lv[1]}）`; };
 const qHow = (q) => ({ kill: "在該地區斬殺妖獸，精英也算", wp: "走到傳送陣附近就會點亮", lv: "斬妖、做任務升級；升級拿能力點和技能點", elite: "精英怪名字是藍色、比較大隻", boss: "火山祭壇召喚世界王打倒它" }[q.k] || "");
 function renderQuests() {
+  if (ovKind !== "quest" && !ovOpen("quest")) return; // 企劃 15：改用覆蓋層
   const w = save.w, cur = w.q || 0, done = cur >= QUESTS.length;
   const curCh = done ? "sky" : questCh[cur];
   if (!qTab) qTab = curCh;
@@ -42,14 +43,12 @@ function renderQuests() {
     right = `<div class="qdet"><h3>區域王</h3><p class="sub">每區最深處有一座祭壇，走過去按「挑戰」。王的等級、掉落固定，不看你的等級。<br>打倒後要等王重新醒來（冷卻）才能再打。<br>星盤上的祭壇圖示：亮的＝可以打、灰的＝沉睡中。</p></div>`;
   }
   const bq = done || (typeof curQuest === "function" && curQuest() && !curQuest().main) ? curQuest() : null;
-  screenEl.innerHTML = `<div class="panel wide equip qwin"><div class="winhead">任務</div>
+  ov.innerHTML = `<div class="col cw"><div class="panel wide equip qwin">
     <div class="btabs">${Q_CH.map((c) => `<button class="btab${c === qTab ? " on" : ""}" data-qt="${c}" ${reached(c) ? "" : "disabled"}>${reached(c) ? ZONES[c].n : "🔒"}</button>`).join("")}<button class="btab${qTab === "boss" ? " on" : ""}" data-qt="boss">王</button></div>
     <div class="qcols"><div class="qlist">${list}</div>${right}</div>
     ${bq ? `<div class="qbounty"><b>懸賞</b>${bq.t}（${Math.min(questProg(), bq.n)} / ${bq.n}）<small>主線做完後，會一直在適合你等級的地區發懸賞</small></div>` : ""}
-    <div class="btns"><button id="close" class="big">離開</button></div></div>`;
-  screenEl.classList.remove("hidden");
-  screenEl.querySelectorAll("[data-qt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qTab = b.dataset.qt; qSel = null; renderQuests(); }));
-  screenEl.querySelectorAll("[data-qi]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qSel = +b.dataset.qi; renderQuests(); }));
-  const qm = document.getElementById("qMap"); if (qm) qm.onclick = () => { worldReturn(); setTimeout(() => openStarMap(), 0); };
-  document.getElementById("close").onclick = () => { qTab = null; worldReturn(); };
+    </div></div>`;
+  ov.querySelectorAll("[data-qt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qTab = b.dataset.qt; qSel = null; renderQuests(); }));
+  ov.querySelectorAll("[data-qi]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qSel = +b.dataset.qi; renderQuests(); }));
+  const qm = document.getElementById("qMap"); if (qm) qm.onclick = () => ovGo("map");
 }

@@ -188,21 +188,20 @@ function lbPush(force) {
 }
 function lbTick(dt) { lbT -= dt; if (lbT <= 0) { lbT = 30; lbPush(); } }
 function renderRank() {
-  const back = () => { worldReturn(); };
+  if (ovKind !== "rank" && !ovOpen("rank")) return; // 企劃 15：改用覆蓋層
   const shell = (inner) => {
-    screenEl.innerHTML = `<div class="panel wide equip rank"><h1 class="pick-title">排行榜</h1>
+    if (ovKind !== "rank") return;
+    ov.innerHTML = `<div class="col cw"><div class="panel wide equip rank">
       <div class="tabs"><button class="tab${rankTab === "lv" ? " on" : ""}" data-t="lv">等級榜</button><button class="tab${rankTab === "cp" ? " on" : ""}" data-t="cp">戰力榜</button></div>
-      ${inner}<div class="btns"><button id="close" class="big">回到仙界</button></div></div>`;
-    screenEl.classList.remove("hidden");
-    document.getElementById("close").onclick = back;
-    screenEl.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => { rankTab = b.dataset.t; sfx("click"); renderRank(); }));
+      ${inner}</div></div>`;
+    ov.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => { rankTab = b.dataset.t; sfx("click"); renderRank(); }));
   };
   if (!NET_ON || !fbUser) { shell(`<p class="sub">登入帳號後才有排行榜</p>`); return; }
   shell(`<p class="sub">讀取中…</p>`);
   lbPush(true);
   const key = rankTab;
   firebase.database().ref("lb").orderByChild(key).limitToLast(50).once("value").then((snap) => {
-    if (rankTab !== key || state !== "pick") return;
+    if (rankTab !== key || ovKind !== "rank") return;
     const rows = [];
     snap.forEach((c) => { rows.push(Object.assign({ uid: c.key }, c.val())); });
     rows.sort((a, b) => (b[key] || 0) - (a[key] || 0) || (b.lv || 0) - (a.lv || 0));

@@ -116,7 +116,7 @@ function renderTri(msg = "") {
     <p class="sub">轉職會解鎖新的一層。第一次選在哪裡都可以；之後要換，回到安全營地免費換${camp ? "" : "（你現在不在營地）"}。</p>`;
 }
 function bindTri() {
-  screenEl.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
+  ov.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, o = triList(wt, l).find((x) => x.k === k);
     triSet(wt, l, k); sfx("good"); renderSkills(`${TRI_LAYER_N[l]}換成「${o.n}」`);
   }));
