@@ -575,6 +575,7 @@ function updateWorld(dt) {
   if (keys.has("w") || keys.has("arrowup")) my -= 1;
   if (keys.has("s") || keys.has("arrowdown")) my += 1;
   if (stick.id !== null) { const dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy); if (d > 8) { mx = dx / Math.max(d, 50); my = dy / Math.max(d, 50); } }
+  if (typeof AUTO !== "undefined" && AUTO && !inMenu) { if (mx || my) autoStop("你自己動了，自動尋路停止"); else { const v = autoStep(p, dt); if (v) { mx = v[0]; my = v[1]; } } } // 企劃 15：任務「前往」
   const ml = Math.hypot(mx, my);
   if (ml > 1) { mx /= ml; my /= ml; }
   if (p.shield > 0) { // 太極護罩：3 秒，或一移動／出招就解除
@@ -1480,7 +1481,7 @@ function drawWorldHud() {
   // 按鈕冷卻
   for (const k of ["spin", "ult", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
-    if (el) el.style.transform = `scaleY(${p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1))})`;
+    if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
     if (btn) btn.style.opacity = p.mp < WSKILL[k].mp ? 0.45 : 1;
   }

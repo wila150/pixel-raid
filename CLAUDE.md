@@ -175,3 +175,11 @@
   - **流程**：右上快捷列新分頁「秘境」（`renderRift`，覆蓋層 k-rift；城裡秘境使者也開這個；Lv.30 或到過沼澤才開 `riftUnlocked`）→ 在安全營地按「開啟秘境」原地 3 秒（`RIFT_PEND`）→ 進門（鑰匙用掉）→ 殺怪漲秘境之力（精英 3、一般 1，滿 70% 的總量＝100%）→ 王門（紫）→ 秘境之主 `riftSpawnBoss`（隨機一隻 `RBOSS`，`m.R` 是縮小版資料，`rbOf` 先看 `m.R`；血量 `50萬×(Lv/50)^2.6×0.4`）→ `wbKilled` 看到 `m.R` 轉給 `riftBossKilled`：保底 1 紫＋2 件＋數量加成、必掉同層鑰匙、30%（鑰匙前綴 +30%）高一層、寶石、精髓、靈石，`save.w.riftMax` → 王門變出口。3 條命：`showWorldDead` 被包住 → `riftDead`（照仙界規則掉一半未帶回裝備，扣命，從入口重來；用完秘境崩塌）。入口的門隨時撤離（`riftAsk` 確認框；要先離開門 60 才會再問）。出來回到原本的營地自動 `bankLoot`。
   - **鑰匙**（maps.js 改寫）：`MAP_MODS` 前綴 `t:"p"`（物品數量、品質、精英成群、怪物數量、鑰匙掉率，金字）／後綴 `t:"s"`（怪血、移速、傷害、回血吸血 −60% `W0.healMul`→`brkMul`、真氣回復、抗性、物理護體、法術護體、反震、王血，紅字）。`rollKeyMods` 一半前綴一半後綴；`keyQuant`／`keyRar`／`keyStars`／`keyWarn`（`bad(wt)`：護體對你現在的武器不利 → ⚠ 不適合你的流派）。層數 1–10 `riftLv`＝Lv.30→75；`keyTierFor(lv)` 給野外精英掉鑰匙（Lv.28 以上才掉，秘境裡 3%、外面 15%）。舊鑰匙 `migKeys`（`k.v=2`）：層數壓到 1–10、詞綴照品質重骰。world.js 加了 `m.dmgMul`（mobDmg）、`m.spdMul`（怪移速）。舊的斬妖試煉秘境（hunt.js、renderMaps）沒有入口了，程式還在。
   - 測試（Playwright 844×390）：進門、BFS 確認入口到王走得通、清怪 100%、王門生王、殺王掉落、死亡扣命復活、撤離確認、回到營地世界怪物還原，沒有 JS 錯誤。還沒用 bot 實際打一張量時間、也還沒跑 20 張看鑰匙夠不夠。
+- **v5.7 企劃 15 第二版＋秘境小修（11/09）**：新檔 `js/hud2.js`（rift.js 後、main.js 前），包住 `hitMob`（打王 DPS）、`drawWorldHud`。
+  - 狀態圖示欄 `STATUS`／`drawStatus`（頭像右邊 y0+27）、精英目標框 `drawTarget`（`W0.focusM`，有王時不畫）、打王 DPS `DPS`／`drawDps`（`fmtN` 萬／億）。
+  - 自動尋路 `AUTO`：任務視窗「前往」→ `autoGo()`（離目標最近的已解鎖傳送陣比較近就 `flyTo`）→ world.js 移動那段：沒有玩家輸入時 `autoStep` 給方向（BFS `autoPathFind`，先不走熔岩、找不到再允許）；動搖桿／被打（hurt>0.15）／卡住 3 次／進秘境就 `autoStop`。
+  - 快捷道具欄（build.js `wbarDraw`）：`data-it="pot"` 點＝`padAct.add("potion")`、長按 500ms 切 `save.w.autoPot`（角上「自」）；`"rc"` 回城符（`quickItem`）。
+  - 手機技能冷卻：world.js 改設 `--cdf`，CSS `body.inworld #pad .btn .cd` 用 conic-gradient 轉圈。
+  - 直向行囊（inv.js）：`PORTRAIT()` 時 `.ptabs` 裝備｜背包｜工藝（`bagPt`，預設背包），選了物品 `.pt-sheet` → 右欄變成固定在下面的說明面板（`.sheetbar` 收起）。插卡：選了卡片能插的格子 `.cardok` 發光。
+  - 秘境（企劃 16 第 10 節）：地圖 76×64、營地 17、殺 80%、王血 `50萬×(Lv/50)^3.54×0.5`、flood fill `R.reach`。
+  - 測試（Playwright）：狀態圖示／目標框截圖、自動尋路從城裡 → 御劍到靈草原 → 6 秒往森林走了 27 格路徑的一半、回城符、秘境可達 91/91、王血、DPS 面板、直向背包分頁＋說明面板、沒有左右捲動、沒有 JS 錯誤。

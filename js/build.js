@@ -251,12 +251,28 @@ function wbarDraw(force) {
   const on = typeof inWorld !== "undefined" && inWorld && state === "world" && save.w;
   wbar.classList.toggle("hidden", !on); if (!on) return;
   const h = SAVES[svKey()], cd = Math.ceil((W0 && W0.saveCd) || 0);
-  const key = [0, 1, 2].map((i) => { const it = wsGet(i); return it ? it.id + it.q : "-"; }).join() + save.w.wi + cd + svKey();
+  const pot = save.w.potions, ap = save.w.autoPot !== false, rc = W0 && W0.recall > 0;
+  const key = [0, 1, 2].map((i) => { const it = wsGet(i); return it ? it.id + it.q : "-"; }).join() + save.w.wi + cd + svKey() + pot + ap + rc;
   if (!force && key === wbarKey) return; wbarKey = key;
   wbar.innerHTML = [0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="ws${i === save.w.wi ? " on" : ""}${it ? "" : " empty"}" data-ws="${i}" style="--c:${it ? RARITY[it.q].c : "#555"}">${it ? itemIcon(it) : ""}<small>${i + 1}</small></button>`; }).join("")
-    + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.n}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`;
+    + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.n}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`
+    + `<button class="qit pot${ap ? " auto" : ""}" data-it="pot" title="丹藥（長按切換自動）"><b>丹</b><small>×${pot}</small>${ap ? "<i>自</i>" : ""}</button>`
+    + `<button class="qit rc${rc ? " on" : ""}" data-it="rc" title="回城符：原地不動 3 秒回青雲城"><b>回</b><small>${rc ? "…" : "城"}</small></button>`;
 }
-wbar.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || state !== "world") return; if (b.dataset.save) heroSave(); else switchW(+b.dataset.ws); wbarDraw(true); });
+wbar.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || state !== "world") return; if (b.dataset.it) { if (wbarLong) { wbarLong = false; return; } quickItem(b.dataset.it); } else if (b.dataset.save) heroSave(); else switchW(+b.dataset.ws); wbarDraw(true); });
+// 企劃 15 第 9 節：快捷道具欄（丹藥：點＝喝、長按＝切換自動；回城符）
+let wbarLong = false, wbarLT = null;
+wbar.addEventListener("pointerdown", (e) => { const b = e.target.closest('[data-it="pot"]'); if (!b) return; wbarLong = false; clearTimeout(wbarLT); wbarLT = setTimeout(() => { wbarLong = true; save.w.autoPot = save.w.autoPot === false; writeSave(); sfx("click"); if (W0) floatText(W0.x, W0.y - 30, save.w.autoPot ? "自動丹藥：開（血量低於 30%）" : "自動丹藥：關", "#ffcf9a", true); wbarDraw(true); }, 500); });
+["pointerup", "pointercancel", "pointerleave"].forEach((ev) => wbar.addEventListener(ev, () => clearTimeout(wbarLT)));
+function quickItem(k) {
+  if (!W0) return;
+  if (k === "pot") { padAct.add("potion"); return; }
+  if (k === "rc") {
+    if (safeAt(W0.x, W0.y)) { floatText(W0.x, W0.y - 26, "已經在安全區了", "#cfc4dc", true); return; }
+    if (W0.recall > 0) return;
+    W0.recall = 3; W0.recallTo = null; floatText(W0.x, W0.y - 26, "回城符：原地不動 3 秒", "#9fe8ff", true);
+  }
+}
 setInterval(() => wbarDraw(), 250);
 
 // ───────── 多角色（帳號共用行囊；每個角色自己的等級、配點、裝備、轉職）─────────

@@ -31,7 +31,7 @@ function renderQuests() {
       <div class="sr"><span>進度</span><b>${prog} / ${sel.n}</b></div>
       <div class="sr"><span>獎勵</span><b>${qReward(sel)}、經驗</b></div>
       <p class="sub">${qHow(sel)}</p>
-      ${qSel === cur ? `<button id="qMap" class="sbtn">在星盤上看地點</button>` : ""}</div>`;
+      ${qSel === cur ? `<div class="qacts">${questTarget() ? `<button id="qGo" class="sbtn gold">前往（自動尋路）</button>` : ""}<button id="qMap" class="sbtn">在星盤上看地點</button></div>` : ""}</div>`;
   }
   if (qTab === "boss") { // 區域王分頁：冷卻、首殺
     list = RB_KEYS.map((k) => { const R = RBOSS[k], cd = rbCool(k), kd = rbKilled(k);
@@ -50,5 +50,6 @@ function renderQuests() {
     </div></div>`;
   ov.querySelectorAll("[data-qt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qTab = b.dataset.qt; qSel = null; renderQuests(); }));
   ov.querySelectorAll("[data-qi]").forEach((b) => b.addEventListener("click", () => { sfx("click"); qSel = +b.dataset.qi; renderQuests(); }));
+  const qg = document.getElementById("qGo"); if (qg) qg.onclick = () => { sfx("click"); autoGo(); };
   const qm = document.getElementById("qMap"); if (qm) qm.onclick = () => ovGo("map");
 }

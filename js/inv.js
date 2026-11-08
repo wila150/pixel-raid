@@ -321,7 +321,8 @@ function apHtml() {
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
 // 背包分頁＋格子（每格一件；道具分頁是丹藥、碎屑、精髓、寶石、超技能）
 const BAG_TABS = [["all", "全部"], ["wpn", "武器"], ["arm", "防具"], ["acc", "飾品"], ["use", "道具"]];
-let bagTab = "all", propSel = null;
+let bagTab = "all", propSel = null, bagPt = "bag";
+const PORTRAIT = () => window.matchMedia("(orientation: portrait) and (max-width: 700px)").matches;
 const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" ? "acc" : "arm");
 function propList() {
   const L = [], w = save.w;
@@ -353,7 +354,7 @@ function renderEquip(msg = "") {
   // 裝備視窗：人物在中間，格子圍一圈，空格寫部位名稱
   const eqCells = SLOT_KEYS.map((k) => {
     const it = save.eq[k], [cx, cy] = EQ_CELL[k], c = it ? RARITY[it.q].c : "#6a6078";
-    return `<button class="eqc${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="grid-column:${cx};grid-row:${cy};--c:${c}">${it ? itemIcon(it) + (it.en ? `<span class="en">+${it.en}</span>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
+    return `<button class="eqc${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}${cardSel && CARDS[cardSel] && CARDS[cardSel].slot === k ? " cardok" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="grid-column:${cx};grid-row:${cy};--c:${c}">${it ? itemIcon(it) + (it.en ? `<span class="en">+${it.en}</span>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
   }).join("") + EQ_LOCK.map(([n, cx, cy]) => `<span class="eqc lock" style="grid-column:${cx};grid-row:${cy}" title="${n}（尚未開放）"><small>${n}</small></span>`).join("");
   let right = craftHtml();
   if (propSel && !selItem) right = propInfo(propSel) || right;
@@ -379,7 +380,12 @@ function renderEquip(msg = "") {
       ${!selItem.u ? `<div class="essbar"><small>${camp ? "精髓注入（保底詞條，直接變紫裝）" : "回營地才能注入精髓"}</small>${essK.map((k) => `<button data-ess="${k}" ${camp ? "" : "disabled"}>${essName(k)}<small>${AFFIX[k].n}・剩 ${save.ess[k]}</small></button>`).join("") || `<span class="dim">沒有精髓</span>`}</div>` : ""}
       ${camp ? "" : `<p class="warn">精煉、洗練、點金、精髓要在安全營地</p>`}</div>`;
   }
-  ov.innerHTML = `<div class="col l"><div class="eqwin"><div class="winhead">裝備</div><div class="eqgrid"><img class="eqhero" src="${heroURL()}" alt="">${eqCells}</div></div>
+  // 企劃 15 第 3-4 節：直向分頁「裝備｜背包｜工藝」，點物品＝從下面滑出的說明面板
+  const pt = PORTRAIT(), hasSel = !!(selItem || (propSel && propInfo(propSel)));
+  ov.classList.toggle("pt", pt); ov.classList.toggle("pt-sheet", pt && hasSel);
+  ["eq", "bag", "craft"].forEach((k) => ov.classList.toggle("pt-" + k, bagPt === k));
+  const ptabs = pt ? `<div class="ptabs">${[["eq", "裝備"], ["bag", "背包"], ["craft", "工藝"]].map(([k, n]) => `<button class="ptab${bagPt === k ? " on" : ""}" data-pt="${k}">${n}</button>`).join("")}</div>` : "";
+  ov.innerHTML = `${ptabs}<div class="col l"><div class="eqwin"><div class="winhead">裝備</div><div class="eqgrid"><img class="eqhero" src="${heroURL()}" alt="">${eqCells}</div></div>
       <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
       ${wsetHtml()}${cardChips()}${apHtml()}${gemHtml()}</div>
     <div class="col c"><div class="bagwin"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
@@ -387,7 +393,7 @@ function renderEquip(msg = "") {
       <div class="bgrid">${bagCells(bag)}</div>
       <div class="bmoney"><span class="coin"></span><b>${save.stone}</b><small>靈石</small></div></div>
       <div class="acts row"><button id="autoEq" class="gold">一鍵換最強</button><button id="sellJunk">賣掉凡品、靈品</button></div></div>
-    <div class="col r">${right}</div>
+    <div class="col r">${pt && hasSel ? `<button class="sheetbar" aria-label="收起說明"><i></i>收起</button>` : ""}${right}</div>
     ${ovMsg ? `<div class="toast">${ovMsg}</div>` : ""}`;
   ovMsg = "";
   bindEquip(selItem);
@@ -408,6 +414,8 @@ function cpRollRun() {
 }
 function bindEquip(selItem) {
   const again = (m) => renderEquip(m);
+  ov.querySelectorAll("[data-pt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagPt = b.dataset.pt; eqSel = null; propSel = null; again(); }));
+  const sb = ov.querySelector(".sheetbar"); if (sb) sb.onclick = () => { sfx("click"); eqSel = null; propSel = null; again(); };
   ov.querySelectorAll("[data-bt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagTab = b.dataset.bt; propSel = null; again(); }));
   ov.querySelectorAll("[data-prop]").forEach((b) => b.addEventListener("click", () => { sfx("click"); eqSel = null; propSel = propSel === b.dataset.prop ? null : b.dataset.prop; again(); }));
   ov.querySelectorAll(".loot").forEach((c) => {

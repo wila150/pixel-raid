@@ -4,7 +4,7 @@
 // 所以碰撞、畫地形、子彈都不用改；zoneAt 在秘境裡固定回傳主題地區（畫面、怪物種類跟著換）。
 "use strict";
 
-const RIFT_IX0 = 152, RIFT_IY0 = 66, RIFT_IW = 64, RIFT_IH = 42;
+const RIFT_IX0 = 140, RIFT_IY0 = 46, RIFT_IW = 76, RIFT_IH = 64; // x 2240–3456、y 736–1760（v5.7 加大，企劃 16 第 10 節）
 const RIFT_LIVES = 3;
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
 const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier % 2 ? "volcano" : "snow");
@@ -32,10 +32,10 @@ function riftBuild(R) {
   R.ent = riftT2W(4, Math.floor(RIFT_IH / 2));
   R.boss = riftT2W(RIFT_IW - 14, Math.floor(RIFT_IH / 2));
   const pts = [];
-  for (let i = 0; i < 400 && pts.length < 11; i++) {
+  for (let i = 0; i < 900 && pts.length < 17; i++) {
     const p = riftT2W(8 + Math.floor(r() * (RIFT_IW - 26)), 4 + Math.floor(r() * (RIFT_IH - 8)));
     if (Math.hypot(p.x - R.ent.x, p.y - R.ent.y) < 150 || Math.hypot(p.x - R.boss.x, p.y - R.boss.y) < 210) continue;
-    if (pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 120)) continue;
+    if (pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 110)) continue;
     pts.push(p);
   }
   // 路：從入口一路接最近的營地，最後接到王；再多接幾條讓地圖有環路
@@ -50,7 +50,11 @@ function riftBuild(R) {
   // 外框補回石頭
   for (let tx = 0; tx < RIFT_IW; tx++) { wmap[RIFT_IY0 * TW + RIFT_IX0 + tx] = 2; wmap[(RIFT_IY0 + RIFT_IH - 1) * TW + RIFT_IX0 + tx] = 2; }
   for (let ty = 0; ty < RIFT_IH; ty++) { wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0] = 2; wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0 + RIFT_IW - 1] = 2; }
-  R.pts = pts;
+  // 從入口 flood fill：走不到的營地不放怪（企劃 16 第 10 節 ③）
+  const reach = new Uint8Array(TW * TH), q = [Math.floor(R.ent.y / TS) * TW + Math.floor(R.ent.x / TS)]; reach[q[0]] = 1;
+  while (q.length) { const i = q.pop(); for (const n of [i - 1, i + 1, i - TW, i + TW]) if (!reach[n] && (wmap[n] === 0 || wmap[n] === 3)) { reach[n] = 1; q.push(n); } }
+  R.reach = reach;
+  R.pts = pts.filter((p) => reach[Math.floor(p.y / TS) * TW + Math.floor(p.x / TS)]);
   // 小地圖快取
   const mc = document.createElement("canvas"); mc.width = RIFT_IW; mc.height = RIFT_IH;
   const g = mc.getContext("2d"), ground = ZONES[z].g[0];
@@ -71,6 +75,7 @@ function riftSpawn(R) {
       spawnWMob(camp);
       const m = W0.mobs[W0.mobs.length - 1];
       m.noRespawn = true; m.rift = true;
+      if (!R.reach[Math.floor(m.y / TS) * TW + Math.floor(m.x / TS)]) { m.x = camp.x; m.y = camp.y; m.wx = m.x; m.wy = m.y; } // 生在走不到的角落就拉回營地中心
       if (!m.elite && mods.includes("elites") && Math.random() < 0.16) { m.elite = true; m.hp *= 4; m.max *= 4; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; }
       if (mods.includes("hp")) { m.hp *= 1.4; m.max *= 1.4; }
       if (mods.includes("fast")) m.spdMul = 1.25;
@@ -121,7 +126,7 @@ function riftLeave(ok) {
 // 秘境之主：從區域王裡抽一隻，血量縮小、等級＝鑰匙等級
 function riftSpawnBoss() {
   const R = RIFT, k = RB_KEYS[Math.floor(Math.random() * RB_KEYS.length)], base = RBOSS[k], lv = R.lv, mods = R.key.mods;
-  const hp = Math.round(500000 * Math.pow(lv / 50, 2.6) * 0.4 * (mods.includes("lordhp") ? 1.6 : 1));
+  const hp = Math.round(500000 * Math.pow(lv / 50, 3.54) * 0.5 * (mods.includes("lordhp") ? 1.6 : 1)); // 照區域王實測血量內插（50 萬@Lv.50、210 萬@Lv.75）×0.5
   const BR = Object.assign({}, base, { x: R.boss.x, y: R.boss.y, lv, hp, cool: 0, n: `秘境之主・${base.n}`, dmgMul: (base.dmgMul || 1) * (mods.includes("dmg") ? 1.3 : 1),
     wake: `${base.n}從裂隙中現身！`, sleep: `${base.n}退回裂隙深處（走進王門可以再挑戰）` });
   W0.mobs.push({ type: base.type, rb: k, R: BR, rift: true, boss: true, lv, elite: false, camp: { x: BR.x, y: BR.y, z: R.theme, lv, respawn: [] }, x: BR.x, y: BR.y - 6, hp, max: hp,
@@ -224,7 +229,7 @@ killMob = function (m) {
   _killMobR.apply(this, arguments);
   if (!RIFT || was || !m.dead || m.boss || WMOBS[m.type].ai === "pillar") return;
   const R = RIFT, before = R.pow;
-  R.pow = Math.min(100, R.pow + (m.elite ? 3 : 1) / Math.max(1, R.total * 0.7) * 100);
+  R.pow = Math.min(100, R.pow + (m.elite ? 3 : 1) / Math.max(1, R.total * 0.8) * 100);
   if (before < 100 && R.pow >= 100) { floatText(W0.x, W0.y - 40, "秘境之力 100%：王門打開了！", "#e0a0ff", true); sfx("arrive"); }
   const Q = keyQuant(R.key), zl = ZONE_LOOT[R.theme] || 1, il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
   if (Math.random() < (m.elite ? 0.4 : 0.028) * zl * Q / 100) wDropItem(rollItem(m.elite ? 1 : 0, il), m);
@@ -354,7 +359,7 @@ function renderRift(msg = "") {
     <p>・<b>3 條命</b>：死掉從入口重來，未帶回的裝備掉一半在屍體旁（跑回去撿得回來）。</p>
     <p>・3 條命用完：秘境崩塌，鑰匙和留在裡面的東西都沒了。</p>
     <p>・隨時可以走回<b>入口的門</b>撤離：撿到的全部帶回，鑰匙算用掉。</p>
-    <p>・不用全殺：<b>秘境之力 100%</b> 王門就開。秘境之主必掉同層鑰匙，30% 掉高一層。</p>
+    <p>・不用全殺：殺掉約八成，<b>秘境之力 100%</b> 王門就開。秘境之主必掉同層鑰匙，30% 掉高一層。</p>
     <p>・<span class="rp">金字前綴＝好處</span>、<span class="rs">紅字後綴＝危險</span>；危險越多掉越多。</p>
     <div class="rbest">最高通過：第 <b>${w.riftMax || 0}</b> 層　鑰匙 ${save.keys.length} / ${KEY_MAX}</div>
     ${open && !RIFT && !save.keys.some((k) => k.tier === 1) ? `<div class="acts"><button id="rfree">領取第 1 層秘境鑰（免費）</button></div>` : ""}`;

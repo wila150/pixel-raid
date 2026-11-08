@@ -622,3 +622,27 @@ body.ovopen .ov.k-char .col.r { padding-top: 8px; }
 .ov .col.r.rift p { font-size: 12px; line-height: 1.6; margin: 4px 0; }
 .ov .rp { color: #ffd890; } .ov .rs { color: #ff9a8a; }
 .ov .rbest { margin-top: 10px; padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); font-size: 12px; } .ov .rbest b { color: #e8d8ff; font-size: 15px; }
+/* v5.7 企劃 15 第二版 */
+.ptabs { display: none; }
+@media (orientation: portrait) and (max-width: 700px) {
+  .ov.k-bag.pt .ptabs { display: flex; gap: 6px; position: sticky; top: 0; z-index: 3; padding: 8px 10px; background: rgba(12, 12, 12, 0.95); border-bottom: 1px solid var(--line); }
+  .ov .ptab { flex: 1; min-height: 42px; border-radius: 8px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.8); font-weight: 700; font-size: 14px; }
+  .ov .ptab.on { border-color: #ffd890; color: #ffe9a0; background: rgba(110, 80, 30, 0.75); }
+  .ov.k-bag.pt .col { display: none; }
+  .ov.k-bag.pt.pt-eq .col.l, .ov.k-bag.pt.pt-bag .col.c, .ov.k-bag.pt.pt-craft .col.r { display: block; }
+  .ov.k-bag.pt.pt-sheet .col.r { display: block; position: fixed; left: 0; right: 0; bottom: 0; max-height: 64vh; overflow-y: auto; z-index: 6; border-radius: 14px 14px 0 0; border-top: 1px solid rgba(230, 210, 170, 0.5); background: rgba(14, 14, 14, 0.97); box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6); animation: sheetUp 0.18s ease-out; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+  .ov.k-bag.pt.pt-sheet.pt-craft .col.r { position: fixed; }
+  .ov .sheetbar { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 40px; border: 0; background: none; color: var(--dim); font-size: 12px; }
+  .ov .sheetbar i { display: block; width: 40px; height: 4px; border-radius: 2px; background: rgba(230, 210, 170, 0.5); }
+}
+@keyframes sheetUp { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+/* 扇形轉圈冷卻（仙界） */
+body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; background: conic-gradient(rgba(0, 0, 0, 0.62) calc(var(--cdf, 0) * 360deg), transparent 0); }
+/* 快捷道具欄 */
+#wbar .qit { width: 44px; } #wbar .qit b { display: block; font-size: 15px; color: #ffcf9a; margin-top: 4px; } #wbar .qit.rc b { color: #9fe8ff; }
+#wbar .qit small { position: absolute; right: 3px; bottom: 1px; font-size: 10px; }
+#wbar .qit i { position: absolute; left: 2px; top: 1px; font-style: normal; font-size: 9px; color: #7dff8a; }
+#wbar .qit.rc.on { box-shadow: 0 0 0 2px #9fe8ff; }
+/* 插卡：可以插的裝備格發光 */
+.ov .eqc.cardok { box-shadow: 0 0 0 2px #ffe066, 0 0 14px rgba(255, 224, 102, 0.7); animation: comboPulse 0.6s ease-in-out infinite alternate; }
+.ov .qacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; } .ov .qacts .gold { border-color: #ffd84a; color: #ffe066; }
