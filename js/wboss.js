@@ -31,7 +31,7 @@ const RBOSS = {
 };
 const RB_KEYS = Object.keys(RBOSS);
 let wbZones = []; // 預警範圍：{ k: "circle"|"line", x, y, r, a, len, w, t, max, dmg, pool, done }
-const rbOf = (m) => RBOSS[m.rb || "volcano"];
+const rbOf = (m) => m.R || RBOSS[m.rb || "volcano"]; // m.R：秘境之主（縮小版，位置在秘境裡）
 const rbCool = (k) => ((W0.rbCool || {})[k] || 0);
 const rbKilled = (k) => { const w = save.w; if (w.rbK && w.rbK[k]) return true; if (k === "volcano") { const bi = QUESTS.findIndex((q) => q.k === "boss"); return bi >= 0 && (w.q || 0) > bi; } return false; };
 
@@ -364,6 +364,7 @@ function rbUnique(u, il) {
   nameItem(it); delete it.risk; return it;
 }
 function wbKilled(m) { // 打倒區域王
+  if (m.R && typeof riftBossKilled === "function") { wbZones = []; riftBossKilled(m); return; }
   const k = m.rb || "volcano", R = RBOSS[k], w = save.w;
   if (!W0.rbCool) W0.rbCool = {};
   W0.rbCool[k] = R.cool; wbZones = [];

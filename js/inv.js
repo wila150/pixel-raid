@@ -161,8 +161,8 @@ ov.id = "ov"; ov.className = "ov hidden";
 document.body.appendChild(ov);
 let ovKind = null, ovJust = false, ovMsg = "", ovSw = false;
 // 企劃 15：介面種類 → 右上快捷分頁、標題
-const OV_TAB = { bag: "bag", char: "ap", skill: "skill", quest: "quest", map: "map", social: "social", rank: "rank" };
-const OV_NAME = { bag: "行囊", char: "角色", skill: "技能", quest: "任務", map: "星盤", social: "聊天", rank: "排行", menu: "設定" };
+const OV_TAB = { bag: "bag", char: "ap", skill: "skill", quest: "quest", map: "map", social: "social", rank: "rank", rift: "rift" };
+const OV_NAME = { bag: "行囊", char: "角色", skill: "技能", quest: "任務", map: "星盤", social: "聊天", rank: "排行", rift: "秘境", menu: "設定" };
 function ovOpen(kind) {
   padHeld.clear();
   if (!(state === "world" || (state === "pick" && pausedFrom === "world"))) return false;
@@ -185,7 +185,7 @@ function ovClose() {
 // 直接換頁（不用先關）：快捷分頁、快捷鍵都走這裡
 function ovGo(q) {
   if (ovKind) { if (OV_TAB[ovKind] === q) return; ovSw = true; ovClose(); }
-  if (state === "world") { if (q === "map") { sfx("click"); openStarMap(); } else if (q === "social") { sfx("click"); openSocial(); } else openHud(q); }
+  if (state === "world") { if (q === "map") { sfx("click"); openStarMap(); } else if (q === "social") { sfx("click"); openSocial(); } else if (q === "rift") { sfx("click"); renderRift(); } else openHud(q); }
   ovSw = false;
 }
 // 標題列：開介面時 #topbar 變成整條（標題＋分頁＋大 ✕），內容從標題列下面開始
@@ -234,7 +234,7 @@ window.addEventListener("keydown", (e) => { if (exitAsk && e.key === "Escape") {
 function exitAskClose() { if (exitAsk) { exitAsk.remove(); exitAsk = null; } }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
@@ -677,9 +677,9 @@ function drawStarMap(cv) {
 }
 
 // ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
-const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"]];
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["rift", "秘境", ""]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

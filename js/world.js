@@ -379,7 +379,7 @@ function spawnWMob(camp) {
 
 // 精英詞綴：狂暴（快、出手快）、鐵壁（很硬）、召喚（半血叫小弟）
 const ELITE_MODS = ["狂暴", "鐵壁", "召喚"];
-const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1);
+const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1); // dmgMul：秘境詞綴
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
 }
@@ -387,7 +387,7 @@ function packAggro(m) { // 打一隻，整個營地一起衝過來
 const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
 const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
 const wDmg = (base) => base * B.atk * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus());
-const brkMul = () => 1 - 0.2 * ((W0 && W0.brk) || 0); // 破體：每層吸血、回血 −20%
+const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
@@ -468,7 +468,7 @@ function killMob(m) {
   else if (Math.random() < (m.elite ? 0.25 : 0.012 * zl)) wDrop({ kind: "gem", g: randGem(1) }, m);
   if (Math.random() < (m.elite ? 0.8 : 0.15)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
   if (Math.random() < 0.03) wDrop({ kind: "potion" }, m);
-  if (m.elite && Math.random() < 0.15) wDrop({ kind: "key", k: makeKey(Math.max(1, Math.ceil(m.lv / 4))) }, m);
+  if (m.elite && Math.random() < (m.rift ? 0.03 : 0.15) && typeof keyTierFor === "function" && keyTierFor(m.lv)) wDrop({ kind: "key", k: makeKey(keyTierFor(m.lv)) }, m); // 秘境鑰：Lv.28 以上的精英才掉
   if (!m.hunter && !m.noRespawn) m.camp.respawn.push(15 + Math.random() * 7);
 }
 // 掉落過濾器：低於設定品質的裝備直接變成靈石（不會占背包、也不用走過去撿）
@@ -880,7 +880,7 @@ function updateWorld(dt) {
     if (m.boss && !m.dead) { aggro = true; if (dotTick(m, dt)) continue; updateWBoss(m, dt, p); continue; }
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
     if (WMOBS[m.type].ai === "pillar") { m.flash = Math.max(0, m.flash - dt); dotTick(m, dt); continue; } // 劍尊的劍柱：不會動
-    const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1);
+    const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1) * (m.spdMul || 1);
     m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
     if (dotTick(m, dt)) continue; // 燃燒、中毒；冰凍不能動
     if (m.slowT > 0) { m.slowT -= dt; spd *= 0.45; }
@@ -1057,7 +1057,7 @@ function openSpot(s) {
   pad.classList.add("hidden");
   const w = save.w;
   let body = "", btns = "";
-  if (s.id === "rift") { worldReturnTo(); keySel = null; renderMaps(); return; }
+  if (s.id === "rift") { renderRift(); return; } // 企劃 16：秘境改成用仙界角色進
   if (s.id === "alch") {
     W0.hp = W0.maxHp; W0.mp = B.maxMp; w.potions = Math.max(w.potions, B.potMax); writeSave();
     body = `生命、真氣都回滿了，丹藥補到 ${w.potions} 顆。`;

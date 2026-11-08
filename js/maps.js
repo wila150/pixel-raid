@@ -2,39 +2,63 @@
 // 玩法：用鑰匙開秘境 → 斬妖到門檻 → 秘境之主現身 → 打倒噴寶＋掉更高層的鑰匙。詞綴越危險，掉寶越多。
 "use strict";
 
+// 企劃 16：前綴＝好處（金字）、後綴＝危險（紅字）。q＝物品數量 %、r＝物品品質 %
 const MAP_MODS = {
-  hp: { n: "妖獸血量 +40%", q: 15 },
-  fast: { n: "妖獸移動 +25%", q: 15 },
-  dmg: { n: "妖獸傷害 +30%", q: 15 },
-  elites: { n: "妖將成群（每 25 秒一隻）", q: 20 },
-  golem: { n: "石甲大軍", q: 10 },
-  wolf: { n: "狼群出沒", q: 10 },
-  noregen: { n: "回血效果 −60%", q: 12 },
-  lord: { n: "秘境之主血量 +60%", q: 18 },
-  swarm: { n: "妖獸數量 +40%", q: 18 },
+  // 前綴（好處）
+  qty: { t: "p", n: "物品數量 +30%", q: 30 },
+  rar: { t: "p", n: "物品品質 +40%", r: 40 },
+  elites: { t: "p", n: "精英成群（精英 ×3）", q: 10 },
+  swarm: { t: "p", n: "怪物數量 +40%", q: 20 },
+  keyf: { t: "p", n: "鑰匙掉率 +30%（高一層）", q: 5 },
+  // 後綴（危險）
+  hp: { t: "s", n: "怪物血量 +40%", q: 12 },
+  fast: { t: "s", n: "怪物移速 +25%", q: 10 },
+  dmg: { t: "s", n: "怪物傷害 +30%", q: 14 },
+  noregen: { t: "s", n: "回血、吸血 −60%", q: 12 },
+  nomp: { t: "s", n: "真氣回復 −40%", q: 10 },
+  lowres: { t: "s", n: "元素抗性 −20%", q: 10 },
+  physw: { t: "s", n: "物理護體（物理傷害 −40%）", q: 16, bad: (wt) => !SPELL_WT[wt] },
+  spellw: { t: "s", n: "法術護體（法術傷害 −40%）", q: 16, bad: (wt) => !!SPELL_WT[wt] },
+  reflect: { t: "s", n: "反震（你造成傷害的 5% 彈回）", q: 14 },
+  lordhp: { t: "s", n: "秘境之主血量 +60%", q: 12 },
 };
-const KEY_MAX = 20;
+const KEY_MAX = 20, RIFT_MAX = 10;
 const KEY_RARITY = [{ n: "凡", c: "#d8d2e0", mods: [0, 0] }, { n: "靈", c: "#6fb8ff", mods: [1, 2] }, { n: "玄", c: "#ffd84a", mods: [3, 4] }];
+const riftLv = (tier) => 25 + 5 * tier; // 1–10 層：Lv.30 → 75
+const keyTierFor = (lv) => (lv < 28 ? 0 : clamp(Math.round((lv - 25) / 5), 1, RIFT_MAX));
 function makeKey(tier, q = null) {
   if (q === null) { const r = Math.random(); q = r < 0.15 ? 2 : r < 0.55 ? 1 : 0; }
-  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: Math.max(1, tier), q, mods: [] };
+  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: clamp(tier, 1, RIFT_MAX), q, mods: [], v: 2 };
   const [a, b] = KEY_RARITY[q].mods;
   rollKeyMods(k, a + Math.floor(Math.random() * (b - a + 1)));
   return k;
 }
-function rollKeyMods(k, n) {
-  const pool = Object.keys(MAP_MODS);
+function rollKeyMods(k, n) { // 一半前綴一半後綴（單數時後綴多一條）
+  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p"), suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s");
+  const ns = Math.ceil(n / 2), np = n - ns, pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
   k.mods = [];
-  for (let i = 0; i < n && pool.length; i++) k.mods.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  for (let i = 0; i < ns; i++) k.mods.push(pick(suf));
+  for (let i = 0; i < np; i++) k.mods.push(pick(pre));
+  if (k.mods.includes("physw") && k.mods.includes("spellw")) k.mods = k.mods.filter((m) => m !== "spellw"); // 兩個護體不會同時出現
 }
-const keyQuant = (k) => k.mods.reduce((s, m) => s + MAP_MODS[m].q, 0) + k.q * 10; // 掉寶加成 %
+const keyQuant = (k) => k.mods.reduce((s, m) => s + (MAP_MODS[m].q || 0), 0) + k.q * 10; // 物品數量 %
+const keyRar = (k) => k.mods.reduce((s, m) => s + (MAP_MODS[m].r || 0), 0); // 物品品質 %
+const keyStars = (k) => Math.min(5, 1 + k.mods.filter((m) => MAP_MODS[m].t === "s").length + (k.tier >= 8 ? 1 : 0));
+const keyWarn = (k) => k.mods.filter((m) => MAP_MODS[m].bad && MAP_MODS[m].bad(curWeapon()));
 const keyName = (k) => `第 ${k.tier} 層秘境`;
 const keyCost = (k, up) => Math.round((up ? 20 : 8) * (1 + k.tier * 0.4));
-const hasMod = (m) => hunt && hunt.map && hunt.map.mods.includes(m);
+const hasMod = (m) => (typeof RIFT !== "undefined" && RIFT ? RIFT.key.mods.includes(m) : hunt && hunt.map && hunt.map.mods.includes(m));
 function addKey(k) {
   if (save.keys.length >= KEY_MAX) { save.keys.sort((a, b) => a.tier - b.tier); save.keys.shift(); }
   save.keys.push(k);
   writeSave();
+}
+// 舊鑰匙（斬妖試煉版）轉成新鑰匙：層數壓到 1–10、詞綴照品質重骰
+function migKeys() {
+  if (!save.keys) save.keys = [];
+  let n = 0;
+  for (const k of save.keys) if (k.v !== 2) { k.tier = clamp(k.tier || 1, 1, RIFT_MAX); const [a, b] = KEY_RARITY[k.q || 0].mods; rollKeyMods(k, Math.min(b, Math.max(a, (k.mods || []).length))); k.v = 2; n++; }
+  if (n) writeSave();
 }
 
 // ───────── 秘境畫面 ─────────
