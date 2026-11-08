@@ -194,3 +194,7 @@
 - **v5.9 企劃 16 第二版：秘境事件＋掉率下修（11/09）**：新檔 `js/riftev.js`（econ.js 後），包住 `riftEnter`（選事件 `R.ev`）、`updateWorld`（事件邏輯）、`drawCamps`、`drawWorldHud`、`renderRift`（精髓指定事件 `key.ev`）。5 種事件 `RIFT_EV`：crack 天裂之隙、altar 祭劍台（`E.alt` 三座、`EV_CURSES`）、seal 封妖石、goblin 寶藏妖（借 `hunter` 外觀，每幀自己逃跑）、tomb 劍冢（`E.hold` 累計 15 秒）。事件怪 `evSpawn`（`m.ev`，吃鑰匙詞綴），確認框 `evDialog`（共用 #riftAsk 樣式）。
   - 掉率（企劃 bot 實測後）：通貨全部約 ×0.3–0.5、精英 ×5；稀有素材精英 20%、一般 0.5%。
   - 測試：5 種事件各跑一次都能完成、掉獎勵、沒有 JS 錯誤；`key.ev` 指定 4/4 正確。
+- **v6.0 劍靈＋主線劇情＋更新公告（企劃 12 第 2-1、2-4 節，11/09）**：新檔 `js/story.js`（riftev.js 後）。
+  - **`GAME_VER`（story.js）改版時要跟 index.html 的 ?v= 一起改**，並在 `UPDATES` 最前面加 3–5 行白話的更新內容；玩家版本比 `save.lastVer` 舊就跳 `#updCard`（新玩家不跳），右上齒輪「更新內容」可以再看。
+  - 劍靈：`drawNotice` 被換掉 → 畫在角色肩膀旁（`spiritScreen` 用 `SCALE×1.35` 換成螢幕座標，`SPIRIT` 平滑跟隨），提示變成它的對話泡泡（最多 3 行、2.6–6 秒、點一下下一句）。`say(t)` = `notice`。舊存檔第一次看到 `save.w.spirit`。
+  - 劇情：`QUEST_STORY[任務位置]`（包住 `checkQuest`，任務推進時說）、`BOSS_STORY`（包住 `wbKilled`，首殺才說；秘境之主不算）、`CH_STORY` 顯示在任務視窗分頁下面（包住 `renderQuests`）。事件任務還沒做。
