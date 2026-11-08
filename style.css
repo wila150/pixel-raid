@@ -664,3 +664,10 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 .ov .rcp .trk { min-width: 40px; opacity: 0.45; } .ov .rcp .trk.on { opacity: 1; border-color: #ffd84a; }
 .ov .fsel { display: flex; gap: 6px; margin: 6px 0; } .ov .fsel select { flex: 1; min-height: 38px; border-radius: 6px; background: #1a1612; color: var(--txt); border: 1px solid var(--line); font: inherit; font-size: 12px; }
 .bcell.mat b { font-size: 13px; }
+/* v5.9 企劃 16 第二版：秘境事件 */
+.ov .evpick { margin-top: 14px; }
+.ov .evlist { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ov .evlist button { text-align: left; padding: 6px 8px; min-height: 44px; border-radius: 8px; border: 1px solid rgba(255, 216, 120, 0.3); background: rgba(255, 255, 255, 0.03); }
+.ov .evlist button b { color: #ffe9a0; font-size: 13px; } .ov .evlist button small { display: block; font-size: 10px; color: var(--dim); line-height: 1.35; }
+.ov .evlist button.on { border-color: #ffd84a; background: rgba(80, 60, 10, 0.4); opacity: 1; }
+#riftAsk .evbtns { flex-wrap: wrap; } #riftAsk .evbtns button { min-width: 90px; flex: 1 1 30%; }

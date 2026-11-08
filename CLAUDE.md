@@ -191,3 +191,6 @@
   - 企劃 15 驗收小修：`notice(t, c)` 提示條排隊（hud2.js，3.2 秒、點一下下一則），`seenHint`、選新招式、素材禮包都走它；電腦版球旁拿掉舊的「丹藥×N H」框（改用下方快捷道具欄）。
   - **注意包裝函式的名字不能重複**：econ.js 原本的 `_hurtWE` 跟 elem.js 撞名，整個檔案載入失敗（`const` 重複宣告）。新包裝請用檔案專屬的字尾。
   - 測試（Playwright）：300 隻沼澤怪掉落統計、點金→點金→混元→淬靈→造化→太虛鏡、軟限制數值、部位鍛造（il13 保底詞綴）、王裝鍛造、煉丹 buff、兌換、追蹤顯示、素材分頁，沒有 JS 錯誤。採集點、bot 1 小時統計還沒做。
+- **v5.9 企劃 16 第二版：秘境事件＋掉率下修（11/09）**：新檔 `js/riftev.js`（econ.js 後），包住 `riftEnter`（選事件 `R.ev`）、`updateWorld`（事件邏輯）、`drawCamps`、`drawWorldHud`、`renderRift`（精髓指定事件 `key.ev`）。5 種事件 `RIFT_EV`：crack 天裂之隙、altar 祭劍台（`E.alt` 三座、`EV_CURSES`）、seal 封妖石、goblin 寶藏妖（借 `hunter` 外觀，每幀自己逃跑）、tomb 劍冢（`E.hold` 累計 15 秒）。事件怪 `evSpawn`（`m.ev`，吃鑰匙詞綴），確認框 `evDialog`（共用 #riftAsk 樣式）。
+  - 掉率（企劃 bot 實測後）：通貨全部約 ×0.3–0.5、精英 ×5；稀有素材精英 20%、一般 0.5%。
+  - 測試：5 種事件各跑一次都能完成、掉獎勵、沒有 JS 錯誤；`key.ev` 指定 4/4 正確。

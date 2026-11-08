@@ -3,12 +3,12 @@
 
 // ───────── 通貨 ─────────
 const CUR = {
-  gold: { n: "點金符", g: "金", c: "#ffd84a", r: 0.01, d: "白→藍、藍→紫（升一級品質，多一條詞綴）" },
-  chaos: { n: "混元石", g: "混", c: "#c88aff", r: 0.003, d: "重骰一件藍／紫裝的全部詞綴（數量也會重骰）" },
-  regret: { n: "洗心丹", g: "洗", c: "#9aff9a", r: 0.002, d: "重置能力點或技能點時用它代替靈石" },
-  exalt: { n: "淬靈石", g: "淬", c: "#7ab8ff", r: 0.0005, d: "在紫裝上加一條隨機詞綴（有空位才能用）" },
-  vaal: { n: "天劫雷印", g: "劫", c: "#ff5a5a", r: 0.0003, d: "渡劫：25% 沒事、25% 多一條劫紋（超強詞綴）、25% 詞綴全部重洗、25% 裝備碎掉。渡劫過的不能再改" },
-  divine: { n: "造化玉", g: "造", c: "#ffe9a0", r: 0.0001, d: "詞綴種類不變，只重骰數值高低（追 T1）" },
+  gold: { n: "點金符", g: "金", c: "#ffd84a", r: 0.0045, d: "白→藍、藍→紫（升一級品質，多一條詞綴）" },
+  chaos: { n: "混元石", g: "混", c: "#c88aff", r: 0.0009, d: "重骰一件藍／紫裝的全部詞綴（數量也會重骰）" },
+  regret: { n: "洗心丹", g: "洗", c: "#9aff9a", r: 0.001, d: "重置能力點或技能點時用它代替靈石" },
+  exalt: { n: "淬靈石", g: "淬", c: "#7ab8ff", r: 0.00015, d: "在紫裝上加一條隨機詞綴（有空位才能用）" },
+  vaal: { n: "天劫雷印", g: "劫", c: "#ff5a5a", r: 0.00009, d: "渡劫：25% 沒事、25% 多一條劫紋（超強詞綴）、25% 詞綴全部重洗、25% 裝備碎掉。渡劫過的不能再改" },
+  divine: { n: "造化玉", g: "造", c: "#ffe9a0", r: 0.00003, d: "詞綴種類不變，只重骰數值高低（追 T1）" },
   mirror: { n: "太虛鏡", g: "鏡", c: "#a0ffff", r: 0.0000002, d: "複製一件非傳說、沒渡劫的裝備（複製品標「鏡影」，不能再複製）" },
 };
 const CUR_KEYS = Object.keys(CUR);
@@ -41,7 +41,7 @@ const matHas = (need) => Object.keys(need).every((k) => k === "stone" ? save.sto
 function matUse(need) { for (const k in need) { if (k === "stone") save.stone -= need[k]; else save.mat[k] -= need[k]; } }
 const matName = (k) => (k === "stone" ? "靈石" : MATS[k].n);
 const matTxt = (need) => Object.keys(need).map((k) => `${matName(k)} ${k === "stone" ? need[k] : `${matN(k)}/${need[k]}`}`).join("、");
-const matWhere = (k) => { const M = MATS[k]; return M.boss ? `${RBOSS[M.boss].n}（打倒必掉 3–6 個；秘境之主也會掉）` : `${ZONES[M.z].n}${M.rare ? "：精英必掉、一般怪 1%" : "：區內所有怪 20%"}`; };
+const matWhere = (k) => { const M = MATS[k]; return M.boss ? `${RBOSS[M.boss].n}（打倒必掉 3–6 個；秘境之主也會掉）` : `${ZONES[M.z].n}${M.rare ? "：精英 20%、一般怪 0.5%" : "：區內所有怪 20%"}`; };
 function matList() {
   return Object.keys(MATS).filter((k) => matN(k) > 0).map((k) => ({ k: "mat:" + k, g: MATS[k].n[0], c: MATS[k].c, n: matN(k), name: MATS[k].n, d: `哪裡掉：${matWhere(k)}<br>用途：${matUses(k)}` }));
 }
@@ -108,11 +108,11 @@ killMob = function (m) {
     return;
   }
   if (m.hunter) { for (let i = 0; i < 2; i++) wDrop({ kind: "cur", c: randCur() }, m); if (MAT_Z[z]) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m); return; }
-  const em = m.elite ? 10 : 1;
+  const em = m.elite ? 5 : 1; // v5.8.1 企劃 bot 實測後下修（11 第 8 節）
   for (const k of CUR_KEYS) if (Math.random() < CUR[k].r * zl * em * dm) wDrop({ kind: "cur", c: k }, m);
   if (MAT_Z[z]) {
     if (Math.random() < 0.2 * dm) wDrop({ kind: "mat", k: MAT_Z[z][0] }, m);
-    if (m.elite || Math.random() < 0.01 * dm) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m);
+    if (Math.random() < (m.elite ? 0.2 : 0.005) * dm) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m);
   }
 };
 function dropPick(o, p) {

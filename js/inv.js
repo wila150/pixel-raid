@@ -234,7 +234,7 @@ window.addEventListener("keydown", (e) => { if (exitAsk && e.key === "Escape") {
 function exitAskClose() { if (exitAsk) { exitAsk.remove(); exitAsk = null; } }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, h2, h3, p, b, small, img")) return;
+  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, .evpick, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
