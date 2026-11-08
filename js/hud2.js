@@ -112,11 +112,28 @@ function autoGo() {
   floatText(W0.x, W0.y - 40, "自動尋路：動搖桿或被打就停", "#9fe8ff", true);
   return "";
 }
+// ───────── 提示條：一次一則排隊（3 秒，點一下跳下一則；之後交給劍靈）─────────
+const noticeQ = []; let noticeCur = null, noticeRect = null;
+function notice(t, c = "#ffe9a8") { if ((noticeCur && noticeCur.t === t) || noticeQ.some((n) => n.t === t)) return; noticeQ.push({ t, c }); }
+seenHint = function (k, t) { const w = save.w; if (!w || !W0) return; if (!w.seen) w.seen = {}; if (w.seen[k]) return; w.seen[k] = 1; notice(t); };
+function drawNotice() {
+  if (!noticeCur && noticeQ.length) { noticeCur = noticeQ.shift(); noticeCur.t0 = time; sfx("click"); }
+  if (!noticeCur) { noticeRect = null; return; }
+  const n = noticeCur, age = time - n.t0; if (age > 3.2) { noticeCur = null; return; }
+  ctx.font = "bold 12px 'Noto Sans TC', sans-serif"; const tw = Math.min(W - 40, ctx.measureText(n.t).width + 28), x = W / 2 - tw / 2, y = H * 0.26;
+  const a = Math.min(1, age * 6, (3.2 - age) * 4);
+  ctx.globalAlpha = a; ctx.fillStyle = "rgba(12,10,18,0.85)"; ctx.fillRect(x, y, tw, 26); ctx.fillStyle = n.c; ctx.fillRect(x, y + 24, tw * (1 - age / 3.2), 2);
+  ctx.strokeStyle = "rgba(230,210,170,0.4)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, tw - 1, 25);
+  ctx.textAlign = "center"; ctx.fillStyle = n.c; ctx.fillText(n.t, W / 2, y + 17, tw - 16);
+  if (noticeQ.length) { ctx.font = "9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a99bb8"; ctx.fillText(`還有 ${noticeQ.length} 則・點一下下一則`, W / 2, y + 38); }
+  ctx.globalAlpha = 1; noticeRect = { x, y, w: tw, h: 26 };
+}
+cvs.addEventListener("pointerdown", (e) => { const r = noticeRect; if (r && e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h + 14) { noticeCur = null; e.stopPropagation(); } }, true);
 // HUD
 const _drawWorldHudH = drawWorldHud;
 drawWorldHud = function () {
   _drawWorldHudH.apply(this, arguments);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  drawStatus(); drawTarget(); drawDps();
+  drawStatus(); drawTarget(); drawDps(); drawNotice();
   if (AUTO) { ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = `rgba(160,230,255,${0.7 + 0.3 * Math.sin(time * 5)})`; ctx.fillText(W0.recall > 0 ? "御劍中…之後自動走過去" : "自動尋路中…（動搖桿取消）", W / 2, H - 84 - SAFE.b); }
 };

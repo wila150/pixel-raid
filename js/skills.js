@@ -57,7 +57,7 @@ function renderSkills(msg = "") {
     <div class="skjob">${need ? (typeof JOBS !== "undefined" && JOBS[need - 1] ? JOBS[need - 1].n : tn) : "基礎心法"}${locked ? `<small>完成${tn}（Lv.${JOBS[need - 1].lv}）才能學</small>` : ""}</div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="sklist${locked ? " locked" : ""}">${list}</div>
-    <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 −${30 * w.lv} 靈石</button></div>
+    <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${30 * w.lv} 靈石`}</button></div>
     <p class="sub">每升 1 級得 1 點，每次轉職再 +3。招式本身跟著武器走，這裡學的是心法（全部武器都吃）。</p></div></div>`;
   ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st === "tri" ? "tri" : +b.dataset.st; renderSkills(); }));
   ov.querySelectorAll("[data-sk]").forEach((b) => b.addEventListener("click", () => {
@@ -65,8 +65,8 @@ function renderSkills(msg = "") {
     w.sk[k] = skLv(k) + 1; writeSave(); sfx("good"); renderSkills(`${SKT[k].n} 升到 ${w.sk[k]} 級`);
   }));
   document.getElementById("skReset").onclick = () => {
-    const c = 30 * w.lv; if (save.stone < c) { sfx("bad"); renderSkills(`靈石不夠（要 ${c}）`); return; }
-    save.stone -= c; w.sk = {}; writeSave(); renderSkills("技能點數全部退回");
+    const c = 30 * w.lv;
+    if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); renderSkills(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } w.sk = {}; writeSave(); renderSkills("技能點數全部退回");
   };
 }
 // 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有技能點 → 技能

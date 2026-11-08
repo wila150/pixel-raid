@@ -136,7 +136,7 @@ function drawOrbs() {
   if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = full ? "#ffe9a0" : "#d8d0ff";
     ctx.fillText(full ? "E 天罰" : `${Math.floor(ef * 100)}%`, ex, ey + 4);
-    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"], ["H", `丹藥×${save.w.potions}`, "potion"]];
+    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
     let x = ex - R - 16 - sk.length * 50;
     const cg = comboGlow();
     for (const [k, n, id] of sk) {
@@ -289,7 +289,7 @@ const atCamp = () => W0 && safeAt(W0.x, W0.y);
 // 工藝台（右欄沒選裝備時）：碎屑換保底裝＋精髓、卡片庫存
 function craftHtml() {
   const sh = save.shards || 0, camp = atCamp(), es = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
-  return `<div class="craft"><h3>鐵匠工藝台</h3>${camp ? "" : `<p class="warn">回到安全營地（傳送點或青雲城）才能用工藝台、精煉</p>`}
+  return `<div class="craft"><h3>鐵匠工藝台</h3>${camp ? "" : `<p class="warn">回到安全營地（傳送點或青雲城）才能用工藝台、精煉</p>`}${econHtml(camp)}
     <div class="shards">天罰碎屑 <b>${sh}</b><small>斬妖會掉，精英、獵寶妖、世界王掉更多</small></div>
     <div class="exch">${SLOT_KEYS.map((k) => `<div class="exrow"><span>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</span>
       <button data-ex="${k}:2" ${camp && sh >= SHARD_RARE ? "" : "disabled"} style="color:${RARITY[2].c}">保底紫裝<small>${SHARD_RARE}</small></button>
@@ -320,12 +320,12 @@ function apHtml() {
 }
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
 // 背包分頁＋格子（每格一件；道具分頁是丹藥、碎屑、精髓、寶石、超技能）
-const BAG_TABS = [["all", "全部"], ["wpn", "武器"], ["arm", "防具"], ["acc", "飾品"], ["use", "道具"]];
+const BAG_TABS = [["all", "全部"], ["wpn", "武器"], ["arm", "防具"], ["acc", "飾品"], ["use", "道具"], ["mat", "素材"]];
 let bagTab = "all", propSel = null, bagPt = "bag";
 const PORTRAIT = () => window.matchMedia("(orientation: portrait) and (max-width: 700px)").matches;
 const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" ? "acc" : "arm");
 function propList() {
-  const L = [], w = save.w;
+  const L = curList(), w = save.w;
   if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
   if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；工藝台用來換超技能寶石" });
   for (const k in save.ess || {}) if (save.ess[k] > 0) L.push({ k: "ess:" + k, g: "精", c: "#7fd890", n: save.ess[k], name: essName(k), d: `點選裝備後注入：保底「${AFFIX[k].n}」詞條，直接變紫裝（要在營地）` });
@@ -333,13 +333,14 @@ function propList() {
   for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
   return L;
 }
-function propInfo(k) { const p = propList().find((x) => x.k === k); return p && `<div class="cmp-item"><div class="big-ico prop" style="--c:${p.c}"><b>${p.g}</b></div><h3 style="color:${p.c}">${p.name}</h3><small>持有 ${p.n}</small><p class="sub">${p.d}</p></div>`; }
+function propInfo(k) { const p = propList().concat(matList()).find((x) => x.k === k); return p && `<div class="cmp-item"><div class="big-ico prop" style="--c:${p.c}"><b>${p.g}</b></div><h3 style="color:${p.c}">${p.name}</h3><small>持有 ${p.n}</small><p class="sub">${p.d}</p></div>`; }
 function bagCells(bag) {
   let cells;
-  if (bagTab === "use") cells = propList().map((p) => `<button class="bcell prop${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
+  if (bagTab === "mat") cells = matList().map((p) => `<button class="bcell prop mat${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
+  else if (bagTab === "use") cells = propList().map((p) => `<button class="bcell prop${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
   else cells = bag.filter((it) => bagTab === "all" || tabOf(it) === bagTab).map((it) => {
     const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]);
-    return `<div class="loot bcell q${it.q}${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" title="${it.name}・戰 ${itemCP(it)}" style="--c:${RARITY[it.q].c}">${itemIcon(it)}${it.en ? `<span class="en">+${it.en}</span>` : ""}${better ? '<em class="up">↑</em>' : ""}${it.risk ? '<em class="risk">!</em>' : ""}</div>`;
+    return `<div class="loot bcell q${it.q}${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" title="${it.name}・戰 ${itemCP(it)}" style="--c:${RARITY[it.q].c}">${itemIcon(it)}${it.en ? `<span class="en">+${it.en}</span>` : ""}${reqTag(it)}${better ? '<em class="up">↑</em>' : ""}${it.risk ? '<em class="risk">!</em>' : ""}</div>`;
   });
   const n = Math.max(24, Math.ceil(cells.length / 6) * 6);
   while (cells.length < n) cells.push('<span class="bcell empty"></span>');
@@ -366,6 +367,7 @@ function renderEquip(msg = "") {
       <div class="big-ico" style="--c:${RARITY[selItem.q].c}">${itemIcon(selItem)}</div>
       <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
+      ${reqLine(selItem)}${selItem.cor ? `<div class="corline">已渡劫${selItem.jie ? `・劫紋：${AFFIX[selItem.jie].n}` : ""}（不能再用通貨改）</div>` : ""}
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn ? (() => { const now = totalCP(), d = itemCP(selItem) - itemCP(cur); return `<div class="cpafter">穿上後戰力 ${now} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${now + d}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${Math.abs(d)}</b>）</div>`; })() : ""}
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
@@ -373,9 +375,8 @@ function renderEquip(msg = "") {
       <div class="stats">${cmpRows(selItem, cur)}</div>
       <div class="acts">
         ${worn ? `<button id="unequip">卸下</button>` : `<button id="equip" class="gold">穿上</button><button id="sell" class="red">出售 +${sellPrice(selItem)}</button>`}
-        ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="gold" ${camp ? "" : "disabled"}>精煉 +${(selItem.en || 0) + 1}<small>${Math.round(EN_RATE[selItem.en || 0] * 100)}%・${enCost(selItem)} 靈石</small></button>` : ""}
-        ${!selItem.u && selItem.q > 0 ? `<button id="reroll" ${camp ? "" : "disabled"}>洗練<small>${rerollCost(selItem)} 靈石</small></button>` : ""}
-        ${selItem.q < 2 ? `<button id="upq" ${camp ? "" : "disabled"}>點金<small>${upCost(selItem)} 靈石</small></button>` : ""}
+        ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="gold" ${camp ? "" : "disabled"}>精煉 +${(selItem.en || 0) + 1}<small>${Math.round(EN_RATE[selItem.en || 0] * 100)}%・${enCost(selItem)} 靈石${enhNeedTxt(selItem)}</small></button>` : ""}
+        ${curBtns(selItem, camp)}
       </div>
       ${!selItem.u ? `<div class="essbar"><small>${camp ? "精髓注入（保底詞條，直接變紫裝）" : "回營地才能注入精髓"}</small>${essK.map((k) => `<button data-ess="${k}" ${camp ? "" : "disabled"}>${essName(k)}<small>${AFFIX[k].n}・剩 ${save.ess[k]}</small></button>`).join("") || `<span class="dim">沒有精髓</span>`}</div>` : ""}
       ${camp ? "" : `<p class="warn">精煉、洗練、點金、精髓要在安全營地</p>`}</div>`;
@@ -414,6 +415,7 @@ function cpRollRun() {
 }
 function bindEquip(selItem) {
   const again = (m) => renderEquip(m);
+  bindEcon(again);
   ov.querySelectorAll("[data-pt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagPt = b.dataset.pt; eqSel = null; propSel = null; again(); }));
   const sb = ov.querySelector(".sheetbar"); if (sb) sb.onclick = () => { sfx("click"); eqSel = null; propSel = null; again(); };
   ov.querySelectorAll("[data-bt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagTab = b.dataset.bt; propSel = null; again(); }));
@@ -479,8 +481,10 @@ function bindEquip(selItem) {
   });
   on("sell", () => { ungem(selItem); save.stone += sellPrice(selItem); save.bag = save.bag.filter((b) => b !== selItem); eqSel = null; writeSave(); again(`賣掉 ${selItem.name}，靈石 +${sellPrice(selItem)}`); });
   on("enh", () => {
-    const c = enCost(selItem);
+    const c = enCost(selItem), nd = enhNeed(selItem);
     if (save.stone < c) { again("靈石不夠"); return; }
+    if (nd && !matHas(nd)) { again(`精煉 +${(selItem.en || 0) + 1} 需要 ${matTxt(nd)}`); return; }
+    if (nd && atCamp()) matUse(nd);
     save.stone -= c;
     if (!atCamp()) { save.stone += c; again("回營地才能精煉"); return; }
     if (Math.random() < EN_RATE[selItem.en || 0]) {
@@ -490,24 +494,7 @@ function bindEquip(selItem) {
     }
     else { writeSave(); sfx("hurt"); again(`精煉失敗⋯⋯靈石 −${c}（裝備沒事）`); }
   });
-  on("reroll", () => {
-    const c = rerollCost(selItem);
-    if (!atCamp()) { again("回營地才能用工藝台"); return; }
-    if (save.stone < c) { again("靈石不夠"); return; }
-    save.stone -= c;
-    const [a0, a1] = RARITY[selItem.q].aff;
-    rollAffixes(selItem, Math.max(Object.keys(selItem.aff).length, a0 + Math.floor(Math.random() * (a1 - a0 + 1))));
-    nameItem(selItem); writeSave(); sfx("good"); again(`洗練完成：${selItem.name}`);
-  });
-  on("upq", () => {
-    const c = upCost(selItem);
-    if (!atCamp()) { again("回營地才能用工藝台"); return; }
-    if (save.stone < c) { again("靈石不夠"); return; }
-    save.stone -= c; selItem.q++;
-    selItem.base = SLOTS[selItem.slot].base === "crit" ? Math.round(selItem.base * 1.12 * 10) / 10 : Math.round(selItem.base * 1.12);
-    rollAffixes(selItem, Math.max(RARITY[selItem.q].aff[0], Object.keys(selItem.aff).length + 1));
-    nameItem(selItem); writeSave(); sfx("arrive"); again(`點金成功：${selItem.name}`);
-  });
+  bindCur(selItem, again);
   on("autoEq", () => {
     let n = 0;
     for (const k of SLOT_KEYS) {

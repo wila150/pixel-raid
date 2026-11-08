@@ -466,7 +466,7 @@ function killMob(m) {
   else if (Math.random() < (m.elite ? 0.4 : 0.028) * zl * dm) wDropItem(rollItem(m.elite ? 1 : 0, il), m); // 越深掉越多件，但只有精英掉好東西
   if (m.hunter) { wDrop({ kind: "gem", g: randGem(1) }, m); wDrop({ kind: "gem", g: randGem(1) }, m); }
   else if (Math.random() < (m.elite ? 0.25 : 0.012 * zl)) wDrop({ kind: "gem", g: randGem(1) }, m);
-  if (Math.random() < (m.elite ? 0.8 : 0.15)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
+  if (Math.random() < (m.elite ? 0.8 : 0.08)) wDrop({ kind: "stone", v: Math.round((1 + Math.floor(m.lv / 3) + (m.elite ? 4 : 0)) * zl) }, m);
   if (Math.random() < 0.03) wDrop({ kind: "potion" }, m);
   if (m.elite && Math.random() < (m.rift ? 0.03 : 0.15) && typeof keyTierFor === "function" && keyTierFor(m.lv)) wDrop({ kind: "key", k: makeKey(keyTierFor(m.lv)) }, m); // 秘境鑰：Lv.28 以上的精英才掉
   if (!m.hunter && !m.noRespawn) m.camp.respawn.push(15 + Math.random() * 7);
@@ -1003,6 +1003,7 @@ function updateWorld(dt) {
       else if (o.kind === "card") { addCard(o.c); floatText(p.x, p.y - 16, `🂠 ${CARDS[o.c].n}！`, "#ff9ad8", true); sfx("win"); }
       else if (o.kind === "ess") { addEss(o.k); floatText(p.x, p.y - 16, essName(o.k), "#7dffd8", true); sfx("arrive"); }
       else if (o.kind === "key") { addKey(o.k); floatText(p.x, p.y - 16, `秘境鑰 第 ${o.k.tier} 層`, "#9fe8ff", true); sfx("arrive"); }
+      else if (typeof dropPick === "function") dropPick(o, p); // 通貨、素材（econ.js）
       writeSave();
     }
   }
@@ -1182,6 +1183,7 @@ function renderWorld() {
       ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = c; ctx.fillText(o.kind === "card" ? CARDS[o.c].n : essName(o.k), o.x, by - 7);
     }
     else if (o.kind === "key") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 3, o.y - 1, 6, 2); ctx.fillRect(o.x + 2, o.y - 3, 2, 6); }
+    else if ((o.kind === "cur" || o.kind === "mat") && typeof dropDraw === "function") dropDraw(o);
     else if (o.kind === "gem") { // 寶石：菱形＋光柱
       const c = GEMS[o.g.split(":")[0]].c, by = o.y - 2 + Math.sin(time * 4 + o.x) * 1.5;
       ctx.globalAlpha = 0.3; ctx.fillStyle = c; ctx.fillRect(o.x - 1, o.y - 18, 2, 18); ctx.globalAlpha = 1;

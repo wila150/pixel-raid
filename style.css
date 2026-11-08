@@ -646,3 +646,21 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 /* 插卡：可以插的裝備格發光 */
 .ov .eqc.cardok { box-shadow: 0 0 0 2px #ffe066, 0 0 14px rgba(255, 224, 102, 0.7); animation: comboPulse 0.6s ease-in-out infinite alternate; }
 .ov .qacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; } .ov .qacts .gold { border-color: #ffd84a; color: #ffe066; }
+/* v5.8 企劃 11＋17：通貨、素材、鍛造、煉丹、軟限制 */
+.bcell .rq { position: absolute; left: 1px; bottom: 1px; font-size: 8px; font-weight: 700; color: #ff6a5a; background: rgba(0, 0, 0, 0.7); padding: 0 2px; border-radius: 2px; }
+.ov .reqline { font-size: 12px; color: #ff8a7a; margin: 2px 0; } .ov .reqline.ok { color: var(--dim); }
+.ov .corline { font-size: 12px; color: #ff6a6a; margin: 2px 0; }
+.ov .curb { border-color: var(--cc) !important; } .ov .curb small { color: var(--cc) !important; }
+.ov .econ { margin-bottom: 12px; }
+.ov .curs { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 8px; }
+.ov .curc { display: inline-flex; align-items: center; gap: 3px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--cc); color: var(--cc); font-size: 12px; font-weight: 700; background: rgba(0, 0, 0, 0.3); }
+.ov .curc b { color: #f0e2c4; font-size: 12px; }
+.ov .rcp { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; padding: 6px 8px; margin: 4px 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(255, 255, 255, 0.03); }
+.ov .rcp.ok { border-color: rgba(255, 216, 90, 0.5); background: rgba(80, 60, 10, 0.25); }
+.ov .rcp b { font-size: 13px; color: #f0e2c4; } .ov .rcp small { display: block; font-size: 11px; color: var(--dim); }
+.ov .rcp > div:only-child { grid-column: 1 / 3; }
+.ov .rcp button { min-height: 40px; min-width: 64px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.8); font-weight: 700; }
+.ov .rcp button small { font-size: 10px; font-weight: 400; }
+.ov .rcp .trk { min-width: 40px; opacity: 0.45; } .ov .rcp .trk.on { opacity: 1; border-color: #ffd84a; }
+.ov .fsel { display: flex; gap: 6px; margin: 6px 0; } .ov .fsel select { flex: 1; min-height: 38px; border-radius: 6px; background: #1a1612; color: var(--txt); border: 1px solid var(--line); font: inherit; font-size: 12px; }
+.bcell.mat b { font-size: 13px; }

@@ -183,3 +183,11 @@
   - 直向行囊（inv.js）：`PORTRAIT()` 時 `.ptabs` 裝備｜背包｜工藝（`bagPt`，預設背包），選了物品 `.pt-sheet` → 右欄變成固定在下面的說明面板（`.sheetbar` 收起）。插卡：選了卡片能插的格子 `.cardok` 發光。
   - 秘境（企劃 16 第 10 節）：地圖 76×64、營地 17、殺 80%、王血 `50萬×(Lv/50)^3.54×0.5`、flood fill `R.reach`。
   - 測試（Playwright）：狀態圖示／目標框截圖、自動尋路從城裡 → 御劍到靈草原 → 6 秒往森林走了 27 格路徑的一半、回城符、秘境可達 91/91、王血、DPS 面板、直向背包分頁＋說明面板、沒有左右捲動、沒有 JS 錯誤。
+- **v5.8 企劃 11 通貨＋17 素材＋裝備軟限制（11/09）**：新檔 `js/econ.js`（hud2.js 後、main.js 前），包住 `killMob`（掉通貨／素材）、`worldStats`（破軍、尋寶丹）、`gainExp`（悟道丹）、`hurtW`（避元素丹：看 `from` 的元素，沒有就看場上的王）、`drawWorldHud`（追蹤配方）。
+  - 通貨 `CUR`（`save.cur`，`addCur/useCur/curN`），掉落 kind `"cur"`、素材 kind `"mat"`：world.js 撿東西和畫掉落改呼叫 `dropPick`／`dropDraw`。行囊右欄選裝備 → `curBtns`／`bindCur`（取代舊的靈石洗練、點金）；`it.cor` 渡劫過、`it.jie` 劫紋、`it.mir` 鏡影。
+  - 素材 `MATS`／`MAT_Z[地區]=[一般, 稀有]`（`save.mat`），配方 `RECIPES`（kind forge 王裝／slot 部位鍛造／pill 煉丹／key 鑰匙），工藝分頁 `econHtml`／`bindEcon`（`econTab`、`forgeSlot`、`forgeAff`），追蹤 `save.w.track`（最多 2）。精煉高段 `enhNeed`（+7 起稀有素材、+10 起王素材，inv.js `on("enh")` 檢查）。舊存檔 `save.matGift` 送各區一般素材 ×10＋點金 3＋混元 1。
+  - 軟限制：`reqLv(it)`＝il×3−8、`reqMul(it)`（差一級 −4%，最低 0.6），equip.js `applyBuild` 和 `totalCP` 乘上去；格子 `reqTag`、右欄 `reqLine`。
+  - 洗心丹：char.js 重新配點、skills.js 重置技能有就先用。一般怪靈石 15%→8%。
+  - 企劃 15 驗收小修：`notice(t, c)` 提示條排隊（hud2.js，3.2 秒、點一下下一則），`seenHint`、選新招式、素材禮包都走它；電腦版球旁拿掉舊的「丹藥×N H」框（改用下方快捷道具欄）。
+  - **注意包裝函式的名字不能重複**：econ.js 原本的 `_hurtWE` 跟 elem.js 撞名，整個檔案載入失敗（`const` 重複宣告）。新包裝請用檔案專屬的字尾。
+  - 測試（Playwright）：300 隻沼澤怪掉落統計、點金→點金→混元→淬靈→造化→太虛鏡、軟限制數值、部位鍛造（il13 保底詞綴）、王裝鍛造、煉丹 buff、兌換、追蹤顯示、素材分頁，沒有 JS 錯誤。採集點、bot 1 小時統計還沒做。

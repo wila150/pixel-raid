@@ -265,7 +265,7 @@ function itemCP(it) {
 function totalCP() {
   const r = realmIdx();
   let cp = 600 + r * 450 + Object.keys(save.tr).reduce((s, k) => s + save.tr[k] * 90, 0) + (save.pet ? save.petLv * 70 : 0);
-  for (const k of SLOT_KEYS) cp += itemCP(save.eq[k]);
+  for (const k of SLOT_KEYS) cp += Math.round(itemCP(save.eq[k]) * (save.eq[k] && typeof reqMul === "function" ? reqMul(save.eq[k]) : 1));
   return cp;
 }
 // 把身上裝備＋流派加到這一場的數值上（save.js 的 bonus() 最後呼叫）
@@ -274,8 +274,8 @@ function applyBuild(b, daily) {
   if (!daily) for (const k of SLOT_KEYS) {
     const it = save.eq[k];
     if (!it) continue;
-    const s = itemStats(it);
-    for (const a in s) st[a] = (st[a] || 0) + s[a];
+    const s = itemStats(it), f = typeof reqMul === "function" ? reqMul(it) : 1; // 企劃 11 第 4 節：境界不足打折
+    for (const a in s) st[a] = (st[a] || 0) + s[a] * f;
     if (it.u) { uq[it.u] = true; for (const md of UNIQUES[it.u].mods || []) uq[md] = true; }
   }
   const g = (k) => st[k] || 0, sc = ""; // 不再選流派：玩法由武器決定，數值由裝備詞綴決定

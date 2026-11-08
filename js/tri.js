@@ -133,5 +133,5 @@ setInterval(() => {
   const w = save.w; if (!w || !w.created || typeof W0 === "undefined" || !W0 || !inWorld) return;
   const pend = triPending().length > 0;
   const key = curWeapon() + jobLv();
-  if (pend && state === "world" && atCamp() && W0.triHint !== key) { W0.triHint = key; floatText(W0.x, W0.y - 40, "可以選新招式了（技能 → 招式）", "#ffe066", true); }
+  if (pend && state === "world" && atCamp() && W0.triHint !== key) { W0.triHint = key; (typeof notice === "function" ? notice("可以選新招式了（技能 → 招式）", "#ffe066") : floatText(W0.x, W0.y - 40, "可以選新招式了（技能 → 招式）", "#ffe066", true)); }
 }, 1000);

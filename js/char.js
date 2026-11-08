@@ -40,7 +40,7 @@ function chAttr() {
   const w = save.w, s = chStats();
   return `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}</button><b>${w.ap[k]}</b>
       <button class="apb" data-k="${k}" data-n="1" ${w.free ? "" : "disabled"}>＋</button><button class="apb" data-k="${k}" data-n="5" ${w.free >= 5 ? "" : "disabled"}>＋5</button></div>`).join("")}
-    <div class="chapfoot"><span>能力點 <b class="${w.free ? "hot" : ""}">${w.free}</b></span><button id="apReset">重新配點 −${20 * w.lv} 靈石</button></div></div>
+    <div class="chapfoot"><span>能力點 <b class="${w.free ? "hot" : ""}">${w.free}</b></span><button id="apReset">重新配點 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${20 * w.lv} 靈石`}</button></div></div>
     <div class="chhead">主要</div><div class="chgrid">${s.main.map(chRow).join("")}</div>
     <button class="chhead fold" id="chDef">防禦 ${chDef ? "▾" : "▸"}</button>${chDef ? `<div class="chgrid">${s.def.map(chRow).join("")}</div>` : ""}`;
 }
@@ -93,7 +93,7 @@ function bindChar() {
   ov.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => { sfx("click"); chHelp = chHelp === b.dataset.help ? null : b.dataset.help; again(); }));
   ov.querySelectorAll(".apb").forEach((b) => b.addEventListener("click", () => { const n = Math.min(+b.dataset.n, w.free); if (!n) return; w.free -= n; w.ap[b.dataset.k] += n; chHelp = b.dataset.k; writeSave(); sfx("good"); again(); }));
   const ar = document.getElementById("apReset");
-  if (ar) ar.onclick = () => { const c = 20 * w.lv; if (save.stone < c) { sfx("bad"); again(`靈石不夠（要 ${c}）`); return; } save.stone -= c; for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); again("能力點全部退回了"); };
+  if (ar) ar.onclick = () => { const c = 20 * w.lv; if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); again(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); again("能力點全部退回了"); };
   const df = document.getElementById("chDef"); if (df) df.onclick = () => { sfx("click"); chDef = !chDef; again(); };
   const dj = document.getElementById("doJob"); if (dj) dj.onclick = () => { if (doJob()) again(`完成${JOBS[jobLv() - 1].n}！`); };
   ov.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
