@@ -327,3 +327,11 @@
   - 驗收小修：毒池第一次提示（wboss.js）、elem.js 的 `seenHint` 改 `notice`（劍靈說）；render.js 飄字不是數字的，超出畫面 90% 寬就縮字（除掉 access.js 字體倍率）並把位置夾在畫面內（王的招式大字）。直向手機 `hud3Tick` 把 `#wbar` 的 bottom 設到 `#pad .btn` 最高那顆上面 8px（原本疊在血球和劍氣斬上）。
   - 測試 scratchpad `#f23`（22 項：7 顆快捷、右側 6 顆開頁、收合記住、頻道過濾、系統訊息、變淡、打王自動收／恢復、傳說、開介面藏起來、全名）、`#f19` 全過；截圖橫直（野外展開／收起、打王）＋電腦。
 - **v7.9 一鍵出售＋鎖定（總表第 25 項，企劃 38，11/10）**：新檔 `js/sellall.js`（hud3.js 後），包 `renderEquip`（行囊 h2 右邊 `#sellAll`、拿掉舊 `#sellJunk`、格子 `.lockic`、說明 `#lockIt`；鎖住的單件「出售」變灰）、`ovClose`、`ovSub`（返回先關小視窗）。`save.w.sell = {q:[品質], better}`（每個角色記自己的）；`sellPick(all)`：不賣 `it.lock`、武器組 `w.ws` 裡的、`isBetterIt`（除非 better）；`sellEx` 這次手動排除（每次打開清空）。`sellDo` 先 `ungem`（卡片、寶石退回）再加靈石。野外也能賣。鎖頭用 SVG（`LOCK_SVG`，不用 emoji）。測試 `#f38` 全過。
+- **v8.0 E 招變多（總表第 22 項，企劃 35）＋抗性要有感（第 26 項，企劃 22 §9–10），11/10**：
+  - tri.js：`TRI_E` 每把前面多 3 招（Lv.20／35／55，`TRI_LV.e` = [20,35,55,70,85,100]）：劍 array 劍陣／cold 一劍光寒／domain 劍域、法杖 freeze／tstorm／hole、弓 blast／turret 弩台／pierce9、大刀 fury／blades／titan 霸體、拳 palm／thous／dragf 化龍、扇 healz 迴風陣／petal／wwall 天風壁；`SK_TAG` 加標籤（輔助型 `b`）。圖示還沒有（`skIco` 沒圖就空白）。
+  - E 格特別值 `eRaw(wt)`＝`save.w.tri[wt].e` 可以是 "base"／"origin"／"uq"（`E_SPEC`）；`slotSkill("e")`：選了新招＞選了特別值（origin 要四轉、uq 要穿傳說）＞預設（四轉 origin、傳說 uq、否則 base）。技能鏈 E 列：原本的 E 永遠一張卡，傳說專屬、起源覺醒各自另一張。world.js `applyWeapon` 選 base 時拿掉 `WSKILL.ult.uq`；`ultFx` 看 `slotSkill("e")==="origin"` 才放起源。
+  - world.js `eAltFx` 18 招：劍陣＝`W0.orbs`（`dmg`、`eArr`，重放先清掉舊的）；狀態 `W0.swDom`（劍域：怪受傷 +20%（hitMob）、站裡面 `eAspd()` 攻速 ×1.2、每 0.5 秒 4）、`W0.titanT`（wDmg ×1.2、hurtW ×0.7）、`W0.dragT`（攻速 ×1.4、手動普攻多一道龍氣）、`W0.healZ`（每秒 3%）、`W0.wwall`（擋 eshots）、`W0.turret`（每 0.3 秒射 16）；黑洞用 `W0.voids` 加 `mul: 0.8`。畫面在 totem 繪圖前面。
+  - 數值（scratchpad `#e35`，照 21 §9 量法：Lv.100 三轉、沒爆擊、能量滿按一次 E 看 5 秒，單體／10 隻每隻；**含約 35–45 的靈獸雜訊**）：劍陣 87/96、一劍光寒 109/117、劍域 81/82、冰封 105/109、雷暴 135/130、黑洞 123/123、爆裂箭 139/116、弩台 77/44、九天穿雲 155/87、怒斬 118/117、刀陣 117/117、金剛掌 108/110、千手 107/95、花舞 117/84；霸體、化龍、迴風陣、天風壁是增益（只有雜訊值）。後期招沒動（天劍 143/147 跟 21 §9 一致）。
+  - 第 26 項：`DEEP_DMG`／`deepMul(m)` 乘在 `mobDmg`（王不乘；秘境 `RIFT.tier>=11` ×2.4、其他層 ×1）：雪域 1.6、沼澤 2、雷谷 2.2、仙域 2.4。元素：仙鶴 W、天狐 F、天兵石像 T、妖巫 P、靈醫 W（劍靈、鐵盾物理）。`hurtW` 被負抗性元素打：數字紫色 `#c77dff`＋「X抗性不足」（1.2 秒一次），提示 key `resneg2`。角色頁 `.r5.neg`／行囊 `.defbox .rneg` 閃紅框（`@keyframes resNeg`）。
+  - 測試 scratchpad `#e35ui`（13 項）、`#r26`（9 項）、舊 `#f19`／`#f23`／`#f38` 全過、沒有 JS 錯誤。
+

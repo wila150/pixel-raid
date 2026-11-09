@@ -85,18 +85,18 @@ const TRI = {
     { k: "guard", n: "護體", d: "不閃身：3 秒護盾，擋下 20% 生命的傷害；冷卻 ×4.5（全部武器通用）" },
   ],
 };
-// 企劃 21 第二版：每把武器再 3 招（E 格，Lv.70／85／100）
+// 企劃 21 第二版：每把武器再 3 招（E 格，Lv.70／85／100）；企劃 35：中期再 3 招（Lv.20／35／55，排在前面）
 const TRI_E = {
-  sword: [{ k: "storm", n: "劍雨", d: "目標一帶落下 12 把飛劍（範圍清怪）" }, { k: "nova", n: "萬劍歸心", d: "16 道穿透劍氣往四面八方飛（投射）" }, { k: "judg", n: "天劍", d: "0.6 秒後一把巨劍砸在目標，傷害極高（範圍、打王）" }],
-  staff: [{ k: "blizz", n: "暴風雪", d: "目標一帶 1.5 秒內落下 10 團冰，打中變慢（範圍）" }, { k: "chainl", n: "雷鏈", d: "一顆雷球打中後連跳 6 隻（投射）" }, { k: "inferno", n: "焚天", d: "身邊一圈火牆燒 3 秒（持續）" }],
-  bow: [{ k: "barr", n: "千鈞箭陣", d: "連射 3 波，每波 7 支箭（投射）" }, { k: "seekr", n: "天狼追魂", d: "8 支追蹤箭（投射、不用瞄）" }, { k: "star", n: "墜星箭", d: "往前一排落下 5 顆星（範圍）" }],
-  blade: [{ k: "cyclone", n: "天刀旋", d: "轉 2 秒、移動不變慢，可以邊走邊割草（近戰、持續）" }, { k: "rift", n: "斷界", d: "往前一路 8 段炸開（範圍）" }, { k: "exec", n: "斬魂", d: "大範圍一刀；剩 30% 血以下的怪傷害 ×2（近戰、打王）" }],
-  fist: [{ k: "hund", n: "百裂拳", d: "1 秒內對前面打 12 拳（近戰）" }, { k: "dragon", n: "升龍", d: "衝到怪身上，落地大範圍（位移、範圍）" }, { k: "gong", n: "氣功炮", d: "一顆大氣彈穿透一整排（投射）" }],
-  fan: [{ k: "typh", n: "颱風", d: "放出 3 道旋風（持續）" }, { k: "bloom", n: "花雨", d: "回 15% 血，12 道風刃往四周飛再飛回來（投射）" }, { k: "zephyr", n: "清風結界", d: "旋風繞著自己轉 5 秒（持續）" }],
+  sword: [{ k: "array", n: "劍陣", d: "4 把飛劍繞身 5 秒，自動砍靠近的怪（持續、近戰）" }, { k: "cold", n: "一劍光寒", d: "往前瞬斬一條直線 160，路上全砍（位移、近戰）" }, { k: "domain", n: "劍域", d: "腳下 5 秒劍陣：裡面的怪受傷 +20%，你站在裡面攻速 +20%（範圍、輔助）" }, { k: "storm", n: "劍雨", d: "目標一帶落下 12 把飛劍（範圍清怪）" }, { k: "nova", n: "萬劍歸心", d: "16 道穿透劍氣往四面八方飛（投射）" }, { k: "judg", n: "天劍", d: "0.6 秒後一把巨劍砸在目標，傷害極高（範圍、打王）" }],
+  staff: [{ k: "freeze", n: "冰封", d: "前方扇形冰凍 1.5 秒（範圍、控場）" }, { k: "tstorm", n: "雷暴", d: "3 秒內身邊隨機落 12 道雷（範圍、持續）" }, { k: "hole", n: "黑洞", d: "目標點吸怪 2 秒再爆炸（範圍、聚怪）" }, { k: "blizz", n: "暴風雪", d: "目標一帶 1.5 秒內落下 10 團冰，打中變慢（範圍）" }, { k: "chainl", n: "雷鏈", d: "一顆雷球打中後連跳 6 隻（投射）" }, { k: "inferno", n: "焚天", d: "身邊一圈火牆燒 3 秒（持續）" }],
+  bow: [{ k: "blast", n: "爆裂箭", d: "一支箭打中大爆炸（投射、範圍）" }, { k: "turret", n: "弩台", d: "放一座弩台 6 秒自動射附近的怪（召喚）" }, { k: "pierce9", n: "九天穿雲", d: "0.5 秒蓄力後一道貫穿全畫面的光箭（投射、打王）" }, { k: "barr", n: "千鈞箭陣", d: "連射 3 波，每波 7 支箭（投射）" }, { k: "seekr", n: "天狼追魂", d: "8 支追蹤箭（投射、不用瞄）" }, { k: "star", n: "墜星箭", d: "往前一排落下 5 顆星（範圍）" }],
+  blade: [{ k: "fury", n: "怒斬", d: "往前一刀大扇形，打中的怪擊飛（近戰、範圍）" }, { k: "blades", n: "刀陣", d: "身邊插 6 把刀，1 秒後一起炸（範圍）" }, { k: "titan", n: "霸體", d: "5 秒不會被擊退、受傷 −30%、傷害 +20%（輔助）" }, { k: "cyclone", n: "天刀旋", d: "轉 2 秒、移動不變慢，可以邊走邊割草（近戰、持續）" }, { k: "rift", n: "斷界", d: "往前一路 8 段炸開（範圍）" }, { k: "exec", n: "斬魂", d: "大範圍一刀；剩 30% 血以下的怪傷害 ×2（近戰、打王）" }],
+  fist: [{ k: "palm", n: "金剛掌", d: "前方巨大掌印衝擊波，把怪震退（範圍）" }, { k: "thous", n: "千手", d: "前方 1.5 秒落下 15 個小掌印（範圍、持續）" }, { k: "dragf", n: "化龍", d: "5 秒攻速 +40%、每拳多一道龍氣（輔助）" }, { k: "hund", n: "百裂拳", d: "1 秒內對前面打 12 拳（近戰）" }, { k: "dragon", n: "升龍", d: "衝到怪身上，落地大範圍（位移、範圍）" }, { k: "gong", n: "氣功炮", d: "一顆大氣彈穿透一整排（投射）" }],
+  fan: [{ k: "healz", n: "迴風陣", d: "腳下 4 秒小陣，站在裡面每秒回 3% 生命（輔助）" }, { k: "petal", n: "花舞", d: "前方錐形花瓣 2 秒持續打（持續）" }, { k: "wwall", n: "天風壁", d: "面前一道風牆 4 秒，擋住所有敵方子彈（防禦）" }, { k: "typh", n: "颱風", d: "放出 3 道旋風（持續）" }, { k: "bloom", n: "花雨", d: "回 15% 血，12 道風刃往四周飛再飛回來（投射）" }, { k: "zephyr", n: "清風結界", d: "旋風繞著自己轉 5 秒（持續）" }],
 };
 for (const wt in TRI_E) TRI[wt].e = TRI_E[wt];
 // 開放等級（第 i 張卡）；E＝Lv.5
-const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], e: [70, 85, 100], r: [25, 45, 60, 15, 35, 50] };
+const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], e: [20, 35, 55, 70, 85, 100], r: [25, 45, 60, 15, 35, 50] };
 const E_LV = 5;
 const TRI_LAYER_N = { a: "普攻", q: "Q 招", e: "E 招", r: "身法" };
 const triList = (wt, l) => (l === "r" ? TRI.r : TRI[wt] && TRI[wt][l]) || null;
@@ -152,19 +152,25 @@ const TRI_BASE_D = { a: "原本的普攻", q: "原本的 Q 招", r: "原本的�
 // 標籤：p 投射、m 近戰、a 範圍、v 位移、d 持續、b 輔助
 const TAG_N = { p: "投射", m: "近戰", a: "範圍", v: "位移", d: "持續", b: "輔助" };
 const SK_TAG = {
-  sword: { a: { base: "m", dance: "m", ray: "mp", break: "m" }, q: { base: "p", wan: "p", boom: "p", rush: "vm" }, e: { base: "a", storm: "a", nova: "p", judg: "a" } },
-  staff: { a: { base: "p", split: "p", frost: "p", burst: "pa" }, q: { base: "a", shower: "a", doom: "a", wall: "da" }, e: { base: "a", blizz: "ad", chainl: "p", inferno: "da" } },
-  bow: { a: { base: "p", tri3: "p", home: "p", snipe: "p" }, q: { base: "p", rain: "a", refr: "p", swal: "vp" }, e: { base: "p", barr: "p", seekr: "p", star: "a" } },
-  blade: { a: { base: "m", sweep: "m", quake: "m", crack: "m" }, q: { base: "md", gale: "md", whirl: "ma", leap: "va" }, e: { base: "a", cyclone: "md", rift: "a", exec: "m" } },
-  fist: { a: { base: "m", lean: "ma", inch: "m", qi: "p" }, q: { base: "vm", chain: "vm", tiger: "vm", roar: "a" }, e: { base: "a", hund: "m", dragon: "va", gong: "p" } },
-  fan: { a: { base: "p", twin: "p", gust: "p", spring: "p" }, q: { base: "d", suck: "d", storm: "da", ward: "d" }, e: { base: "a", typh: "d", bloom: "p", zephyr: "d" } },
+  sword: { a: { base: "m", dance: "m", ray: "mp", break: "m" }, q: { base: "p", wan: "p", boom: "p", rush: "vm" }, e: { array: "md", cold: "vm", domain: "ab", base: "a", storm: "a", nova: "p", judg: "a" } },
+  staff: { a: { base: "p", split: "p", frost: "p", burst: "pa" }, q: { base: "a", shower: "a", doom: "a", wall: "da" }, e: { freeze: "a", tstorm: "ad", hole: "a", base: "a", blizz: "ad", chainl: "p", inferno: "da" } },
+  bow: { a: { base: "p", tri3: "p", home: "p", snipe: "p" }, q: { base: "p", rain: "a", refr: "p", swal: "vp" }, e: { blast: "pa", turret: "p", pierce9: "p", base: "p", barr: "p", seekr: "p", star: "a" } },
+  blade: { a: { base: "m", sweep: "m", quake: "m", crack: "m" }, q: { base: "md", gale: "md", whirl: "ma", leap: "va" }, e: { fury: "ma", blades: "a", titan: "b", base: "a", cyclone: "md", rift: "a", exec: "m" } },
+  fist: { a: { base: "m", lean: "ma", inch: "m", qi: "p" }, q: { base: "vm", chain: "vm", tiger: "vm", roar: "a" }, e: { palm: "a", thous: "ad", dragf: "b", base: "a", hund: "m", dragon: "va", gong: "p" } },
+  fan: { a: { base: "p", twin: "p", gust: "p", spring: "p" }, q: { base: "d", suck: "d", storm: "da", ward: "d" }, e: { healz: "b", petal: "d", wwall: "b", base: "a", typh: "d", bloom: "p", zephyr: "d" } },
 };
 const R_TAG = { base: "v", ghost: "v", surge: "v", wave: "v", blink: "v", pull: "a", guard: "b" };
 const GEM_TAGS = { haste: "*", thrift: "*", multi: "pma", chain: "pma", burst: "pma", lmp: "p", pierce: "p", split: "p", bounce: "p", boomer: "p", seek: "p", volley: "p",
   enlarge: "amd", after: "a", focus: "a", trail: "v", rshield: "v", icepath: "v", rapid: "m", bell: "m", totem: "pa" }; // 沒寫的＝全部攻擊招 pmad
+const eRaw = (wt) => { const w = save.w; return (w && w.tri && w.tri[wt] && w.tri[wt].e) || ""; };
+const E_SPEC = ["base", "origin", "uq"];
 const slotsN = () => Math.min(5, 1 + jobLv()); // 0 轉 1 格 → 四轉 5 格
 function slotSkill(sl, wt = curWeapon()) {
-  if (sl === "e") { const v = triOf(wt, "e"); return v || (jobLv() >= 4 ? "origin" : curUq() ? "uq" : "base"); }
+  if (sl === "e") { // 企劃 35 §2-2：原本的 E、起源、傳說專屬都是各自一格（eRaw＝"base"／"origin"／"uq"）
+    const v = triOf(wt, "e"); if (v) return v;
+    const r = eRaw(wt); if (r === "base") return "base"; if (r === "origin" && jobLv() >= 4) return "origin"; if (r === "uq" && curUq()) return "uq";
+    return jobLv() >= 4 ? "origin" : curUq() ? "uq" : "base";
+  }
   if (sl === "q" && ((B.uq && B.uq.voidQ) || (typeof supOn === "function" && (supOn("meteor") || supOn("swordrain"))))) return "over";
   return triOf(wt, sl) || "base";
 }
@@ -297,10 +303,16 @@ function renderTri(msg = "") {
   const row = (l) => {
     const L = triList(wt, l);
     let base = l === "a" ? ws.attack[0] : l === "q" ? ws.spin[0] : l === "e" ? ws.ult[0] : "閃身", bd = TRI_BASE_D[l] || "原本的 E 招";
-    if (l === "e") { if (jobLv() >= 4) { base = "起源覺醒"; bd = "四轉：全螢幕時停的起源大招"; } else if (curUq()) { base = WUQ[curUq()][0]; bd = "傳說武器的專屬 E 招"; } if (lv < E_LV) bd = `🔒 Lv.${E_LV} 開放`; }
     const over = l === "q" && slotSkill("q") === "over" ? `<p class="sub">目前被傳說／超技能改寫的 Q 取代，選了也不會生效</p>` : "";
     const idx = (L || []).map((o, i) => [o, TRI_LV[l][i]]).sort((a, b) => a[1] - b[1]);
-    const cards = [card(l, "", base, bd, 1)].concat(idx.map(([o, need]) => card(l, o.k, o.n, o.d, need))).join("");
+    let first = [card(l, "", base, bd, 1)];
+    if (l === "e") { // 企劃 35：原本的 E 永遠一格；起源（四轉）、傳說專屬各自另一格
+      const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small></button>`;
+      first = [ec("base", ws.ult[0], "原本的 E 招", skIco(wt, "e", "", "tico"))];
+      if (curUq()) first.push(ec("uq", WUQ[curUq()][0], "傳說武器的專屬 E 招", ""));
+      if (jobLv() >= 4) first.push(ec("origin", "起源覺醒", "四轉：全螢幕時停的起源大招（不能串輔助）", ""));
+    }
+    const cards = first.concat(idx.map(([o, need]) => card(l, o.k, o.n, o.d, need))).join("");
     const tags = [...slotTags(l)].map((t) => TAG_N[t]).join("・"), mm = chainMpMul(l);
     const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${mm !== 1 ? `・真氣 ×${mm}` : ""}`;
     return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
@@ -312,9 +324,11 @@ function bindTri() {
   ov.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
     if (why) { sfx("bad"); renderSkills(why); return; }
-    if (k && !triOpen(wt, l, k)) return;
-    const o = k ? triList(wt, l).find((x) => x.k === k) : null;
-    triSet(wt, l, k); sfx("good"); renderSkills(`${TRI_LAYER_N[l]}換成「${o ? o.n : "原本的招式"}」`);
+    const sp = l === "e" && E_SPEC.includes(k);
+    if (k && !sp && !triOpen(wt, l, k)) return;
+    const o = k && !sp ? triList(wt, l).find((x) => x.k === k) : null;
+    const spN = { base: WSKILLS[wt].ult[0], origin: "起源覺醒", uq: curUq() ? WUQ[curUq()][0] : "" }[k];
+    triSet(wt, l, k); sfx("good"); renderSkills(`${TRI_LAYER_N[l]}換成「${o ? o.n : sp ? spN : "原本的招式"}」`);
   }));
   ov.querySelectorAll("[data-cs]").forEach((b) => b.addEventListener("click", () => {
     const [l, si] = b.dataset.cs.split(":"), i = +si, row = chainRaw(l), g = row[i];

@@ -331,7 +331,7 @@ function insertCard(c, slot) {
 function apHtml() {
   const w = save.w; if (!w) return "";
   const b = worldStats();
-  return `<div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>物理減免 <b>${Math.round(physRed(b) * 100)}%</b></span>${ELES.map((e) => `<span>${RES_S[e]}抗 <b style="color:${effRes(e, b) < 0 ? "#ff6b6b" : effRes(e, b) >= RES_CAP ? "#ffd84a" : ""}">${Math.round(effRes(e, b) * 100)}%</b></span>`).join("")}<span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
+  return `<div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>物理減免 <b>${Math.round(physRed(b) * 100)}%</b></span>${ELES.map((e) => `<span${effRes(e, b) < 0 ? ' class="rneg"' : ""}>${RES_S[e]}抗 <b style="color:${effRes(e, b) < 0 ? "#ff6b6b" : effRes(e, b) >= RES_CAP ? "#ffd84a" : ""}">${Math.round(effRes(e, b) * 100)}%</b></span>`).join("")}<span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
 }
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
 // 背包分頁＋格子（每格一件；道具分頁是丹藥、碎屑、精髓、寶石、超技能）
