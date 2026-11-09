@@ -20,8 +20,8 @@ const TR_TH = {
   crit: { s: { crit: 1 }, n: "靈犀", e: { crit: 2, cdmg: 12 } },
   cdmg: { s: { cdmg: 6 }, n: "斬首", e: { cdmg: 20 } },
   aspd: { s: { aspd: 3 }, n: "疾風", e: { aspd: 8, spd: 3 } },
-  life: { s: { hp: 4 }, n: "金剛", e: { hp: 8, armor: 15 } },
-  armor: { s: { armor: 10 }, n: "鐵壁", e: { armor: 25, hp: 4 } },
+  life: { s: { hp: 3 }, n: "金剛", e: { hp: 5, armor: 15 } },
+  armor: { s: { armor: 10 }, n: "鐵壁", e: { armor: 25, hp: 2 } },
   dodge: { s: { dodge: 2 }, n: "凌波", e: { dodge: 4, spd: 5 } },
   es: { s: { es: 8 }, n: "玄光", e: { es: 20, mp: 20 } },
   mp: { s: { mpr: 10 }, n: "吐納", e: { mpr: 25, mp: 30 } },
@@ -49,7 +49,7 @@ const TREE = {};
   add("h", 0, 0, "hub", { e: { str: 5, agi: 5, wis: 5 }, n: "萬劍樞紐" });
   TR_SEC.forEach((S, i) => {
     const sid = "s" + i, se = {}; for (const a of S.at) se[a] = S.at.length > 1 ? 3 : 6;
-    attrNode("c" + i, 90, S.a, "vit", i); link("h", "c" + i);
+    attrNode("c" + i, 90, S.a, "vit", i, 5); link("h", "c" + i);
     add(sid, ...P(175, S.a), "start", { e: se, n: `${S.n}・起點`, sec: i }); link("c" + i, sid);
     let prev = sid, ai = 0; const nextAt = () => S.at[ai++ % S.at.length];
     [245, 315, 385, 455].forEach((r, j) => { const id = `${i}p${j}`; attrNode(id, r, S.a, nextAt(), i, 5); link(prev, id); prev = id; });
@@ -79,7 +79,7 @@ const TREE = {};
   // 區和區之間的走道（體魄）：i 區＋分支第二格 ↔ i+1 區−分支第二格
   TR_SEC.forEach((S, i) => {
     const j = (i + 1) % 6, id = "x" + i;
-    attrNode(id, 610, S.a + 30, "vit", -1); link(`${i}b1a1`, id); link(id, `${j}b0a1`);
+    attrNode(id, 610, S.a + 30, "vit", -1, 5); link(`${i}b1a1`, id); link(id, `${j}b0a1`);
   });
 })();
 const TR_IDS = Object.keys(TREE);
