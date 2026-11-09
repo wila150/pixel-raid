@@ -329,7 +329,7 @@ function propList() {
   if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
   if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；工藝台用來換超技能寶石" });
   for (const k in save.ess || {}) if (save.ess[k] > 0) L.push({ k: "ess:" + k, g: "精", c: "#7fd890", n: save.ess[k], name: essName(k), d: `點選裝備後注入：保底「${AFFIX[k].n}」詞條，直接變紫裝（要在營地）` });
-  for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: `${gemCol(g)[0]}色・需要 Lv.${gemReq(g)}${gemReqOk(g) ? "" : "（等級不夠）"}　${GEMS[k].d(+l)}（技能 → 技能鏈 點空格串上去）` }); }
+  for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: `${gemCol(g)[0]}色・需要 Lv.${gemReq(g)}${gemReqOk(g) ? "" : "（等級不夠）"}<br>${gemDesc(g)}<br>（技能 → 技能鏈，點那一招後面的空格串上去）` }); }
   for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
   return L;
 }

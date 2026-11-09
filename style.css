@@ -794,3 +794,8 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov.k-char .r5.sel { background: rgba(255, 216, 120, 0.12); } .ov.k-char .r5.neg b { color: #ff6b6b; } .ov.k-char .r5.cap b { color: #ffd84a; }
 .ov.k-char .r5pen { font-size: 10px; color: #ff9a7a; margin: -2px 0 6px; text-align: center; }
 .stat.resdiff b { font-size: 11px; font-weight: normal; } .stat.resdiff em { font-style: normal; }
+/* v6.9 技能鏈第二版：每招一條輔助寶石鏈 */
+.trirow .rchain { margin-top: 6px; }
+.rpick .gem small { display: block; font-size: 10.5px; line-height: 1.35; opacity: 0.9; text-align: left; }
+.gmrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.gmerge2 { font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid #8a7a50; background: rgba(60, 50, 20, 0.5); color: #ffe9a0; }

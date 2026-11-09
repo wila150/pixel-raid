@@ -121,10 +121,14 @@ function dotTick(m, dt) {
   return false;
 }
 // 多重投射：飛行招式多射 2 道（3 級以上 4 道），每道 70%
-function multiShots(a, o, push) {
-  const g = gemLv("lmp"); if (!g || o.noMulti) return;
-  const n = g >= 3 ? 2 : 1;
-  for (let i = 1; i <= n; i++) for (const s of [-1, 1]) push(a + s * i * 0.22, Object.assign({}, o, { dmg: o.dmg * 0.7, noMulti: true }));
+function multiShots(a, o, push) { // 齊射：改成並排往前（沒串多重投射時自己多 2 道）
+  if (o.noMulti) return;
+  const g = gemLv("lmp"), v = gemLv("volley"); if (!g && !v) return;
+  const n = g >= 3 ? 2 : 1, dm = g ? 0.7 : 0.55 + v * 0.03, px = -Math.sin(a), py = Math.cos(a);
+  for (let i = 1; i <= n; i++) for (const s of [-1, 1]) {
+    const c = Object.assign({}, o, { dmg: o.dmg * dm, noMulti: true, pdone: 1 });
+    if (v) { c.x = W0.x + px * s * i * 7; c.y = W0.y - 3 + py * s * i * 7; push(a, c); } else push(a + s * i * 0.22, c);
+  }
 }
 
 // ───────── 超技能寶石（二轉解鎖，一把武器一顆，改變技能機制）─────────

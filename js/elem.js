@@ -19,7 +19,7 @@ function drawEleTag(x, y, e) { // 怪名後面的元素小圖示
 
 // ───────── 武器元素：剋制環 火→冰→雷→毒→火（被剋 +30%、同屬性 −30%）─────────
 const ELE_BEATS = { F: "W", W: "T", T: "P", P: "F" };
-const wEle = () => itemEle(save.eq.sword);
+const wEle = () => (typeof slotEle === "function" ? slotEle(CUR_SL || "a") : itemEle(save.eq.sword)); // 第二版：看正在放的那一招（沒有就看普攻）
 const mobEle = (m) => m.ele || (WMOBS[m.type] && WMOBS[m.type].ele) || null; // m.ele：秘境「元素加持」
 function chainZap(m, amt, n) { // 雷：跳到旁邊 n 隻（不會再連鎖）
   if (chainLock) return;
@@ -39,7 +39,9 @@ elemHit = function (m, dmg) {
     if (!(m.keT > time)) { m.keT = time + 0.6; floatText(m.x + 8, m.y - 20, "剋", ELE_C[we]); }
     seenHint("ke", `「剋」：火→冰→雷→毒→火，帶剋制的元素傷害 +30%，同屬性 −30%`);
   } else if (we && we === me) dmg *= 0.7;
-  const gi = gemLv("ice"), gf = gemLv("fire"), gd = gemLv("det"), gv = gemLv("volt"), gp = gemLv("venom");
+  let gi = gemLv("ice"), gf = gemLv("fire"), gd = gemLv("det"), gv = gemLv("volt"), gp = gemLv("venom");
+  const ef = gemLv("efocus"); // 元素集中：有元素的招傷害提高，但不會冰凍／燃燒／中毒、不觸發反應（雷的跳電保留）
+  if (ef && (gi || gf || gv || gp)) { dmg *= 1.2 + ef * 0.05; return gv && !chainLock && Math.random() < 0.25 + gv * 0.07 ? (chainZap(m, dmg * 0.5, gv >= 3 ? 2 : 1), dmg) : dmg; }
   if (B.uq.psnConv && (gi || gf || gv || gp || SPELL_WT[curWeapon()])) { // 萬毒蟾衣：屬性傷害全部變毒
     m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dmg * 0.12 * (1 + (gi + gf + gv + gp) * 0.15));
     return dmg;
@@ -54,7 +56,8 @@ elemHit = function (m, dmg) {
     for (const o of W0.mobs) if (!o.dead && dist(o, m) < 40) o.slowT = Math.max(o.slowT || 0, 2);
   }
   if (gi) { m.slowT = Math.max(m.slowT || 0, 1.5); if (Math.random() < (m.boss ? 0.03 : 0.1) * (1 + gi * 0.6)) { if (!(m.frz > 0)) floatText(m.x, m.y - 18, "冰凍", "#bfefff"); m.frz = m.boss ? 0.5 : 1.4; } }
-  if (gf) { m.burnT = 3; m.burnD = Math.max(m.burnD || 0, dmg * 0.1 * (1 + gf * 0.2)); }
+  if (gf) { m.burnT = 3; m.burnD = Math.max(m.burnD || 0, dmg * 0.1 * (1 + gf * 0.2));
+    const gs = gemLv("spread"); if (gs) { const r = 36 + gs * 4; for (const o of W0.mobs) if (o !== m && !o.dead && !(o.burnT > 0) && dist(o, m) < r + WMOBS[o.type].r) { o.burnT = 3; o.burnD = m.burnD * 0.7; } } } // 火勢蔓延
   if (gv && !chainLock) {
     if (m.psn > 0 && m.psnT > 0 && !((W0.pbT || 0) > 0)) { // 毒爆：毒層一次引爆（0.3 秒最多一次，炸到的不再連鎖）
       W0.pbT = 0.3; const v = m.psnD * m.psn * 4; m.psn = 0; m.psnT = 0; dmg += v;

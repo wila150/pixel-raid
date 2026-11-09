@@ -130,46 +130,84 @@ const BAG_MAX = 40;
 const EN_MAX = 12;
 const EN_RATE = [1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.12];
 const enCost = (it) => Math.round(12 * ((it.en || 0) + 1) * (1 + it.il * 0.3));
-// ───────── 技能寶石（鑲在武器上，影響這把武器的全部招式；3 顆同級合成高一級，最高 5 級）─────────
+// ───────── 輔助寶石（企劃 21 第二版：串在技能鏈上，只影響那一招；3 顆同級合成高一級，最高 5 級）─────────
 const GEMS = {
-  multi: { n: "連發", c: "#ffb347", d: (l) => `K 招有 ${25 + l * 10}% 機率連放兩次` },
-  power: { n: "巨力", c: "#ff6b6b", d: (l) => `招式傷害 +${l * 10}%` },
-  haste: { n: "疾風", c: "#7dffb0", d: (l) => `招式冷卻 −${l * 7}%` },
-  thrift: { n: "省元", c: "#6fb8ff", d: (l) => `招式耗真氣 −${l * 10}%` },
+  multi: { n: "連發", c: "#ffb347", d: (l) => `這招 ${25 + l * 10}% 機率再放一次` },
+  power: { n: "巨力", c: "#ff6b6b", d: (l) => `這招傷害 +${l * 10}%` },
+  haste: { n: "疾風", c: "#7dffb0", d: (l) => `這招冷卻 −${l * 7}%` },
+  thrift: { n: "省元", c: "#6fb8ff", d: (l) => `這招真氣倍率 −${l * 15}%` },
   frost: { n: "寒霜", c: "#bfefff", d: (l) => `打中時 ${15 + l * 10}% 機率讓妖獸變慢` },
   chain: { n: "連鎖", c: "#e0d0ff", d: (l) => `打中時 ${8 + l * 5}% 機率引雷打旁邊另一隻` },
-  burst: { n: "爆裂", c: "#ff8a3d", d: (l) => `斬殺妖獸時炸開，傷害周圍（威力 ${l} 級）` },
-  pierce: { n: "穿透", c: "#d8d2e0", d: (l) => `飛出去的招式全部穿透，傷害 +${l * 5}%` },
+  burst: { n: "爆裂", c: "#ff8a3d", d: (l) => `這招斬殺的妖獸會炸開，傷害周圍（威力 ${l} 級）` },
+  pierce: { n: "穿透", c: "#d8d2e0", d: (l) => `穿過所有怪，傷害 +${l * 5}%` },
   blood: { n: "嗜血", c: "#c0304a", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%` },
-  lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `飛出去的招式多 ${l >= 3 ? 4 : 2} 道（每道 70%）` },
-  ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）` },
-  fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）。一把武器只能一種元素：用冰武器凍住，再按 1／2／3 切到火武器打` },
+  lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `多 ${l >= 3 ? 4 : 2} 道（每道 70%）` },
+  ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）。一招只能一種元素` },
+  fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）。一招只能一種元素：用冰的招凍住，再用火的招打` },
   volt: { n: "元素轉化：雷", c: "#c8b8ff", d: (l) => `打中 ${25 + l * 7}% 雷電跳到旁邊 ${l >= 3 ? 2 : 1} 隻（50% 傷害）；打中毒的怪「毒爆」` },
   venom: { n: "元素轉化：毒", c: "#8dff6a", d: (l) => `打中疊 1 層毒（最多 5 層，持續傷害，${l} 級）；用雷打中毒的怪會「毒爆」` },
   det: { n: "引爆", c: "#ffb347", d: (l) => `打中燃燒中的怪 ${12 + l * 5}% 機率炸開` },
+  // 第二版新的 15 顆
+  split: { n: "分裂", c: "#a8ffd0", d: (l) => `打中後分成 ${l >= 3 ? 3 : 2} 道小的往旁邊飛（分出來的不會再分裂）` },
+  bounce: { n: "彈射", c: "#9fe8ff", d: (l) => `打中後跳到下一隻 ${l >= 5 ? 3 : l >= 3 ? 2 : 1} 次（每跳 −20%），撞牆也會折射` },
+  boomer: { n: "迴旋", c: "#c8f0e0", d: () => `飛到底再飛回來，回程也能打` },
+  seek: { n: "追蹤", c: "#ffe0a0", d: (l) => `飛行中慢慢轉向最近的怪（${l} 級轉得更快）` },
+  enlarge: { n: "擴大", c: "#ffb070", d: (l) => `範圍 +${[0, 15, 21, 27, 34, 40][l]}%` },
+  after: { n: "餘震", c: "#e0b080", d: (l) => `0.5 秒後同一個地方再炸一次（${Math.round(40 + (l - 1) * 7.5)}%）` },
+  trail: { n: "殘影", c: "#bfe6ff", d: (l) => `位移的路上留下 ${3 + l} 道會傷害的殘影` },
+  rshield: { n: "護盾", c: "#9fdcff", d: (l) => `位移後 ${(1.5 + l * 0.25).toFixed(2).replace(/0$/, "")} 秒內擋下一次傷害` },
+  icepath: { n: "冰徑", c: "#bfefff", d: (l) => `位移的路上結冰 ${(1.5 + l * 0.5).toFixed(1)} 秒，怪踩到變慢` },
+  focus: { n: "集中", c: "#ff9a6a", d: (l) => `取捨：範圍 −30%、傷害 +${25 + l * 5}%` },
+  volley: { n: "齊射", c: "#d8ffa0", d: (l) => `多重投射改成並排往前（比較集中）；沒串多重投射時多 2 道並排（${55 + l * 3}%）` },
+  rapid: { n: "連打", c: "#ff8a8a", d: (l) => `近戰招自動再揮 2 次（每下 ${65 + l * 2}%）` },
+  trigc: { n: "觸發：暴擊", c: "#c8a0ff", d: () => `只能串 E：其他招暴擊時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
+  trigh: { n: "觸發：受傷", c: "#b090ff", d: () => `只能串 E：受傷時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
+  totem: { n: "法壇", c: "#8fb0ff", d: (l) => `這招改成放一座法壇，${6 + l} 秒內自動朝附近的怪放（自己不用打）` },
+  exec: { n: "斬殺", c: "#ff5a5a", d: (l) => `這招打到剩 ${10 + (l - 1)}% 血的怪直接死（王 ${5 + (l - 1) * 0.5}%）` },
+  bell: { n: "金鐘", c: "#ffd08a", d: (l) => `近戰打中疊 1 層，每層受傷 −1%（最多 ${10 + l} 層，5 秒）` },
+  spread: { n: "火勢蔓延", c: "#ff9a5a", d: (l) => `燃燒會傳到旁邊 ${36 + l * 4} 內的怪（這招要有火元素）` },
+  efocus: { n: "元素集中", c: "#d0a8ff", d: (l) => `有元素的這招傷害 +${20 + l * 5}%` },
 };
+// 企劃 21 §8-6：每顆都有代價；真氣倍率串幾顆就相乘（省元 −15%／級）
+const GEM_MP = { power: 1.1, pierce: 1.1, blood: 1.1, frost: 1.1, enlarge: 1.1, haste: 1.1, burst: 1.1, det: 1.1, seek: 1.1, trail: 1.1, rshield: 1.1, icepath: 1.1, exec: 1.1, ice: 1.1, fire: 1.1, volt: 1.1, venom: 1.1,
+  split: 1.3, volley: 1.3, chain: 1.3, focus: 1.3, efocus: 1.3, bell: 1.3, spread: 1.3, bounce: 1.3, multi: 1.3, after: 1.3, lmp: 1.5, rapid: 1.5, boomer: 1.5, totem: 2, trigc: 2, trigh: 2, thrift: 1 };
+const GEM_COST = { split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%", chain: "跳到的那隻只有 70% 傷害", lmp: "多出來的每道只有 70%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
+  focus: "範圍 −30%", efocus: "不會冰凍、燃燒、中毒，也不會觸發融化、蒸汽、毒爆", totem: "傷害 −50%", trigc: "自動放的傷害 −20%；冷卻 1 秒", trigh: "自動放的傷害 −20%；冷卻 1 秒", bounce: "每跳一次傷害 −20%", after: "第二下傷害較低",
+  spread: "要跟火元素串在同一招", bell: "只有近戰招打中才疊", thrift: "沒有" };
+const gemMp = (k) => GEM_MP[k] || 1.1;
+const gemCostTxt = (k) => { const m = gemMp(k), t = GEM_COST[k]; return k === "thrift" ? "沒有" : `${t ? t + "；" : ""}這招真氣 ×${m}`; };
+const gemDesc = (g) => { const [k, l] = g.split(":"); return `好處：${GEMS[k].d(+l)}<br>代價：${gemCostTxt(k)}`; };
 const GEM_KEYS = Object.keys(GEMS);
 const GEM_MAX = 5;
 const SOCKETS = [3, 3, 3, 3]; // 舊的；現在孔數看轉職 sockN()（build.js）
-const gemName = (g) => { const [k, l] = g.split(":"); return `${GEMS[k].n}寶石 ${l} 級`; };
+const gemName = (g) => { const [k, l] = g.split(":"); return `輔助寶石「${GEMS[k].n}」${l} 級`; };
 // 企劃 21 §8-3：寶石（符文）需要等級＋顏色（紅力量／綠敏捷／藍智力，只用來分類）
-const GEM_REQ0 = { power: 1, haste: 1, thrift: 1, frost: 1, blood: 1, multi: 10, pierce: 10, lmp: 20, chain: 20, burst: 20, ice: 30, fire: 30, volt: 30, venom: 30, det: 30 };
+const GEM_REQ0 = { power: 1, haste: 1, thrift: 1, frost: 1, blood: 1, multi: 10, pierce: 10, enlarge: 10, rshield: 10, lmp: 20, chain: 20, burst: 20, boomer: 20, icepath: 20, bell: 20, exec: 30, spread: 30, efocus: 30, ice: 30, fire: 30, volt: 30, venom: 30, det: 30, split: 30, bounce: 30, seek: 30, after: 30, trail: 30, focus: 30, volley: 30, rapid: 30, totem: 50, trigc: 70, trigh: 70 };
+const GEM_NEW = ["split", "bounce", "boomer", "seek", "enlarge", "after", "trail", "rshield", "icepath", "focus", "volley", "rapid", "trigc", "trigh", "totem", "exec", "bell", "spread", "efocus"]; // Lv.30 以後才會掉
 const GEM_REQ_ADD = [0, 0, 10, 20, 35, 50];
 const gemReq = (g) => { const [k, l] = g.split(":"); return (GEM_REQ0[k] || 1) + (GEM_REQ_ADD[+l] || 0); };
 const gemReqOk = (g) => !save.w || (save.w.lv || 1) >= gemReq(g);
-const GEM_COL = { power: "r", blood: "r", burst: "r", multi: "r", haste: "g", lmp: "g", pierce: "g", frost: "b", thrift: "b", chain: "b", ice: "b", fire: "b", volt: "b", venom: "b", det: "b" };
+const GEM_COL = { power: "r", blood: "r", burst: "r", multi: "r", enlarge: "r", after: "r", focus: "r", rapid: "r", exec: "r", bell: "r", spread: "b", efocus: "b", haste: "g", lmp: "g", pierce: "g", split: "g", bounce: "g", boomer: "g", seek: "g", volley: "g", trail: "g", frost: "b", thrift: "b", chain: "b", ice: "b", fire: "b", volt: "b", venom: "b", det: "b", rshield: "b", icepath: "b", trigc: "b", trigh: "b", totem: "b" };
 const GEM_COLN = { r: ["紅", "#ff5a5a"], g: ["綠", "#5adc78"], b: ["藍", "#5a9cff"] };
 const gemCol = (g) => GEM_COLN[GEM_COL[g.split(":")[0]] || "b"];
 const gemSortKey = (g) => "rgb".indexOf(GEM_COL[g.split(":")[0]] || "b") + g;
 const gemSort = (a, b) => (gemSortKey(a) < gemSortKey(b) ? -1 : 1);
-// 等級不夠的寶石鑲著也不生效
-const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":") && gemReqOk(g)) n += +g.split(":")[1]; return n; };
+// 輔助寶石只影響「正在放的那一招」：CUR_SL＝a 普攻／q／e／r 身法（world.js 出招、子彈打中時設定）
+// 等級不夠、這招標籤不能串的不生效（chainRow／gemFits 在 tri.js）
+let CUR_SL = null, CUR_DM = 1;
+const TRIG_MP = 6;
+function gemLv(k, sl) {
+  if (arguments.length < 2) sl = CUR_SL;
+  if (!sl || typeof chainRow !== "function" || !save.w) return 0;
+  let n = 0; for (const g of chainRow(sl)) if (g && g.startsWith(k + ":") && gemReqOk(g) && gemFits(g, sl)) n += +g.split(":")[1];
+  return n;
+}
 const gemCantMsg = (g) => (gemReqOk(g) ? null : `${gemName(g)}需要 Lv.${gemReq(g)}`);
 // 寶石按鈕（鏈格／背包共用）：邊框＝顏色，等級不夠紅字
 const gemTag = (g) => { const c = gemCol(g); return `<i class="gcol" style="background:${c[1]}">${c[0]}</i>`; };
 const gemReqTxt = (g) => (gemReqOk(g) ? "" : `<em class="greq">需要 Lv.${gemReq(g)}</em>`);
 const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
-const randGem = (lv = 1) => `${GEM_KEYS[Math.floor(Math.random() * GEM_KEYS.length)]}:${lv}`;
+const randGem = (lv = 1) => { const K = save.w && (save.w.lv || 1) >= 30 ? GEM_KEYS : GEM_KEYS.filter((k) => !GEM_NEW.includes(k)); return `${K[Math.floor(Math.random() * K.length)]}:${lv}`; };
 // 武器元素（企劃 06／07）：看鑲的元素轉化寶石；一把武器只能一種元素
 const ELE_GEM = { fire: "F", ice: "W", volt: "T", venom: "P" };
 const ELE_N = { F: "火", W: "冰", T: "雷", P: "毒" }, ELE_C = { F: "#ff7a3a", W: "#9fdcff", T: "#c8b8ff", P: "#8dff6a" }, ELE_PRE = { F: "炎・", W: "霜・", T: "雷・", P: "毒・" };
