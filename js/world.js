@@ -451,7 +451,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   }
   W0.mp = Math.min(B.maxMp, W0.mp + (quiet ? 0 : 1));
   for (let i = 0; i < Math.min(L, 10); i++) { // 段數：數字一行一行疊上去
-    floatText(m.x, m.y - 10 - i * 7, crit ? `${dmg}!` : `${dmg}`, crit ? (dmg * L > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : L > 1 ? "#ffe9c0" : "#ffffff", crit);
+    floatText(m.x, m.y - 10 - i * 7, crit ? `${fmtN(dmg)}!` : fmtN(dmg), crit ? (dmg * L > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : L > 1 ? "#ffe9c0" : "#ffffff", crit);
     const f = floaters[floaters.length - 1], a = (from ? angTo(from, m) : rand(-Math.PI, Math.PI)) + rand(-0.6, 0.6); f.vx = Math.cos(a) * (crit ? 55 : 30) * (L > 1 ? 0.3 : 1); f.vy = -(crit ? 75 : 55) * (L > 1 ? 0.6 : 1); f.num = true; f.age = -i * 0.03;
   }
   if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
@@ -1708,7 +1708,7 @@ function drawWorldHud() {
     ctx.fillStyle = "#fff"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillText(label, bx + 3, y + 8);
   };
   ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left"; ctx.fillStyle = "#fff";
-  ctx.fillText(`${REALMS[realmIdx()].n}期修士　戰力 ${totalCP()}`, bx, y0 + 8);
+  ctx.fillText(`${REALMS[realmIdx()].n}期修士　戰力 ${cpHud()}`, bx, y0 + 8);
   ctx.font = "9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a99bb8"; ctx.fillText(`靈石 ${save.stone}　丹藥 ${w.potions}`, bx, y0 + 22);
   // 任務欄
   const q = curQuest();

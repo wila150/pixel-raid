@@ -93,7 +93,7 @@ function renderMaps(msg = "") {
     </div></div>` : "";
   screenEl.innerHTML = `<div class="panel wide equip">
     <h1 class="pick-title">秘境</h1>
-    <div class="cpline">戰力 <b>${totalCP()}</b>　最深 <b>${save.maxTier || 0}</b> 層　靈石 <b class="stone">${save.stone}</b></div>
+    <div class="cpline">戰力 <b>${cpTxt()}</b>　最深 <b>${save.maxTier || 0}</b> 層　靈石 <b class="stone">${save.stone}</b></div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     ${detail}
     <div class="baghead">秘境鑰 ${save.keys.length} / ${KEY_MAX}</div>

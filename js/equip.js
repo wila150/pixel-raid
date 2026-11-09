@@ -467,7 +467,7 @@ function renderEquip(msg = "") {
   }
   screenEl.innerHTML = `<div class="panel wide equip">
     <h1 class="pick-title">裝備</h1>
-    <div class="cpline">戰力 <b>${totalCP()}</b>　靈石 <b class="stone">${save.stone}</b>　招式 <b>${WEAPONS[curWeapon()].job}</b><small>（換武器就換招式）</small></div>
+    <div class="cpline">戰力 <b>${cpTxt()}</b>　靈石 <b class="stone">${save.stone}</b>　招式 <b>${WEAPONS[curWeapon()].job}</b><small>（換武器就換招式）</small></div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="slots">${SLOT_KEYS.map(cell).join("")}</div>
     ${detail}

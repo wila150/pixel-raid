@@ -73,7 +73,7 @@ function chLeft() {
       ${cs.length < 3 ? `<button class="cchar new" id="newChar"><b>＋ 新角色</b><small>從 Lv.1 開始</small></button>` : ""}<p class="dim">行囊共用；每個角色有自己的等級、配點、裝備、轉職。要在安全營地換。</p></div>` : "";
   return `<div class="chme"><div class="chpic"><img src="${heroURL()}" alt=""></div>
     <div class="chid"><h3>${myName()}</h3><small>Lv.${w.lv}・${j ? JOBS[j - 1].n : "未轉職"}・${WEAPONS[curWeapon()].job}</small>
-      <div class="chcp">戰力 <b>${totalCP()}</b></div>
+      <div class="chcp">戰力 <b>${cpTxt()}</b></div>${(() => { const p = cpParts(); return p ? `<div class="chdps" title="打木樁只用普攻的預估：攻擊倍率×攻速×爆擊期望×段數×普攻的輔助寶石／技能寶石">預估每秒傷害 <b>${fmtN(p.dps)}</b><small>攻擊分 ${fmtN(p.atk)}＋防禦分 ${fmtN(p.def)}</small></div>` : ""; })()}
       <div class="chbar exp"><i style="width:${Math.floor(w.exp / en * 100)}%"></i></div><small>經驗 ${w.exp} / ${en}（${Math.floor(w.exp / en * 100)}%）</small></div></div>
     <button id="chList" class="chsmall">${chList ? "收起角色列表" : `切換角色（${cs.filter(Boolean).length + (cs[save.ci] ? 0 : 1)}）`}</button>${list}`;
 }

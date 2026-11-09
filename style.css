@@ -998,3 +998,8 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .skgown { color: #9fe8ff; font-size: 12px; white-space: nowrap; }
 .skgl .tico { width: 34px; height: 34px; border-radius: 6px; flex: none; }
 .skgr button:not(:disabled) { border-color: #ffd84a; color: #ffe9a0; background: rgba(90, 70, 20, 0.6); }
+/* v8.2 戰力（企劃 39） */
+.chdps { font-size: 12px; color: #ffe9a0; margin-top: 2px; }
+.chdps b { color: #ffd84a; }
+.chdps small { display: block; font-size: 10px; opacity: 0.75; color: inherit; }
+.cpd b.up { color: #7dff9a; } .cpd b.down { color: #ff7a7a; }

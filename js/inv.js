@@ -383,8 +383,8 @@ function renderEquip(msg = "") {
       <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       ${reqLine(selItem)}${selItem.cor ? `<div class="corline">已渡劫${selItem.jie ? `・劫紋：${AFFIX[selItem.jie].n}` : ""}（不能再用通貨改）</div>` : ""}
-      <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
-      ${!worn ? (() => { const now = totalCP(), d = itemCP(selItem) - itemCP(cur); return `<div class="cpafter">穿上後戰力 ${now} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${now + d}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${Math.abs(d)}</b>）</div>`; })() : ""}
+      <div class="cp">裝備評分 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
+      ${!worn ? (() => { const now = totalCP(), nx = typeof cpIf === "function" ? cpIf(selItem) : now + itemCP(selItem) - itemCP(cur), d = nx - now, F = typeof fmtN === "function" ? fmtN : (x) => x; return `<div class="cpafter">穿上後戰力 ${F(now)} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${F(nx)}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${F(Math.abs(d))}</b>）</div>`; })() : ""}
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
       ${affHtml(selItem)}${extraSlots(selItem)}${selItem.slot === "sword" ? wsetHtml() : ""}
       <div class="stats">${cmpRows(selItem, cur)}</div>
@@ -400,7 +400,7 @@ function renderEquip(msg = "") {
   ["eq", "bag"].forEach((k) => ov.classList.toggle("pt-" + k, bagPt === k));
   const ptabs = pt ? `<div class="ptabs">${[["eq", "裝備"], ["bag", "背包"]].map(([k, n]) => `<button class="ptab${bagPt === k ? " on" : ""}" data-pt="${k}">${n}</button>`).join("")}</div>` : "";
   ov.innerHTML = `${ptabs}<div class="col l"><div class="eqwin"><div class="winhead">裝備</div><div class="eqgrid"><img class="eqhero" src="${heroURL()}" alt="">${eqCells}</div></div>
-      <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
+      <div class="info"><b>戰力 ${cpTxt()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
       </div>
     <div class="col c"><div class="bagwin"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
       <div class="btabs">${BAG_TABS.map(([k, n]) => `<button class="btab${bagTab === k ? " on" : ""}" data-bt="${k}">${n}</button>`).join("")}</div>
@@ -423,7 +423,7 @@ function cpRollRun() {
   const el = ov.querySelector(".info b"); if (!el) return;
   el.classList.add("cproll"); if (b < a) el.classList.add("down");
   const t0 = performance.now(), D = 700;
-  const step = (t) => { if (!el.isConnected) return; const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = `戰力 ${Math.round(a + (b - a) * e)}${k >= 1 ? `（${b > a ? "+" : "−"}${Math.abs(b - a)}）` : ""}`; if (k < 1) requestAnimationFrame(step); else setTimeout(() => { if (el.isConnected) { el.classList.remove("cproll", "down"); el.textContent = `戰力 ${b}`; } }, 1600); };
+  const step = (t) => { if (!el.isConnected) return; const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); const F = typeof fmtN === "function" ? fmtN : (x) => Math.round(x); el.textContent = `戰力 ${F(a + (b - a) * e)}${k >= 1 ? `（${b > a ? "+" : "−"}${F(Math.abs(b - a))}）` : ""}`; if (k < 1) requestAnimationFrame(step); else setTimeout(() => { if (el.isConnected) { el.classList.remove("cproll", "down"); el.textContent = `戰力 ${b}`; } }, 1600); };
   requestAnimationFrame(step);
 }
 function bindEquip(selItem) {

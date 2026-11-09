@@ -183,7 +183,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && ne
 let lbLast = "", lbT = 5, rankTab = "lv";
 function lbPush(force) {
   if (!NET_ON || !fbUser || !save.w) return;
-  const d = { n: myName(), lv: save.w.lv, cp: totalCP(), g: gearKey().split(",").slice(0, 4).join(","), wt: curWeapon(), rt: save.w.riftMax || 0 };
+  const d = { n: myName(), lv: save.w.lv, cp: Math.min(1e9, totalCP()), g: gearKey().split(",").slice(0, 4).join(","), wt: curWeapon(), rt: save.w.riftMax || 0 };
   const key = JSON.stringify(d);
   if (!force && key === lbLast) return;
   lbLast = key; d.t = firebase.database.ServerValue.TIMESTAMP;
@@ -214,6 +214,6 @@ function renderRank() {
       const g = String(r.g || "-1,-1,-1,none").split(","), img = heroImgFor(+g[0], +g[1], +g[2], 0, SKINS[g[3]] ? g[3] : "none");
       return `<div class="rrow${r.uid === fbUser.uid ? " me" : ""}"><span class="rk">${medal(i)}</span><img src="${img.toDataURL()}" alt=""><b>${String(r.n || "修士").replace(/[<>&"]/g, "")}</b><span>Lv.${r.lv || 1}</span><span class="cp">${key === "rt" ? `秘境 第 ${r.rt || 0} 層` : `戰力 ${r.cp || 0}`}</span></div>`;
     }).join("");
-    shell(`<div class="cpline">你的排名：<b>${me >= 0 ? `第 ${me + 1} 名` : "50 名外"}</b>　Lv.${save.w.lv}　戰力 ${totalCP()}</div><div class="rlist">${list || '<p class="sub">還沒有人上榜</p>'}</div><small class="hint">每 30 秒更新一次自己的成績</small>`);
+    shell(`<div class="cpline">你的排名：<b>${me >= 0 ? `第 ${me + 1} 名` : "50 名外"}</b>　Lv.${save.w.lv}　戰力 ${cpTxt()}</div><div class="rlist">${list || '<p class="sub">還沒有人上榜</p>'}</div><small class="hint">每 30 秒更新一次自己的成績</small>`);
   }).catch((e) => shell(`<p class="sub">讀不到排行榜：${e.code || e.message}</p>`));
 }
