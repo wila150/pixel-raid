@@ -227,8 +227,8 @@ function moveBody(o, dx, dy, r) {
 const AP = {
   str: { n: "STR 力量", d: "物理武器（劍、重劍、拳、弓）傷害 +3%、護甲 +3" },
   agi: { n: "AGI 敏捷", d: "攻速 +1.5%（上限 200%）、閃避 +0.4%、法術壓制 +0.3%、移動 +0.5%（前 80 點）" },
-  wis: { n: "INT 智慧", d: "法術武器（法杖、扇）傷害 +3%、能量護盾 +6、真氣 +4" },
-  vit: { n: "VIT 體質", d: "生命 +12、護甲 +1" },
+  wis: { n: "INT 智力", d: "法術武器（法杖、扇）傷害 +3%、能量護盾 +6、真氣 +4" },
+  vit: { n: "VIT 體魄", d: "生命 +12、護甲 +1" },
 };
 const blankW = () => ({ lv: 1, exp: 0, x: 1200, y: 1530, wp: ["town"], ap: { str: 0, vit: 0, agi: 0, wis: 0 }, free: 0, potions: 3 });
 const expNext = (lv) => Math.round(36 * Math.pow(lv, 1.7));
@@ -236,11 +236,12 @@ let W0 = null; // 大世界執行中的資料
 let inWorld = false;
 const AGI_SPD_PTS = 80, SPD_CAP = 1.75, ASPD_CAP = 2; // 企劃 24：常駐移速最多 +75%、攻速最多 ×2
 function worldStats() {
-  const w = save.w, a = w.ap, wt = curWeapon(), spell = !!SPELL_WT[wt];
+  const w = save.w, a = typeof treeAttr === "function" ? treeAttr() : w.ap, wt = curWeapon();
+  const main = (typeof TR_WMAIN !== "undefined" && TR_WMAIN[wt]) || "str"; // 企劃 25 §13：武器看顏色吃主屬性
   const b = bonus();
   b.maxHp = Math.round(b.maxHp + (w.lv - 1) * 12 + a.vit * 12);
-  b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a.str * (spell ? 0.01 : 0.03)) * (1 + a.wis * (spell ? 0.03 : 0.01));
-  b.aspd = (b.aspd || 1) * (1 + a.agi * 0.015);
+  b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a[main] * (main === "agi" ? 0.014 : 0.03));
+  b.aspd = (b.aspd || 1) * (1 + (main === "agi" ? a.agi * 0.003 : 0));
   b.spdMul *= 1 + Math.min(a.agi, AGI_SPD_PTS) * 0.005; // 企劃 24：只算前 80 點；總上限在 cap.js
   b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);
   b.supp = Math.min(0.6, (b.supp || 0) + a.agi * 0.003);
@@ -1847,7 +1848,7 @@ function updateWorldButtons() {
   hudEl.classList.add("hidden"); // 功能都收進右上角「☰」和快捷鍵
   if (!on || !save.w) return;
   hudEl.querySelector('[data-h="bag"]').classList.toggle("dot", save.bag.some((b) => sameWt(b) && itemCP(b) > itemCP(save.eq[b.slot])));
-  hudEl.querySelector('[data-h="ap"]').classList.toggle("dot", save.w.free > 0);
+  hudEl.querySelector('[data-h="ap"]').classList.toggle("dot", false);
 }
 const riskyItems = () => save.bag.filter((b) => b.risk).concat(SLOT_KEYS.map((k) => save.eq[k]).filter((b) => b && b.risk), ((save.w && save.w.ws) || []).filter((b) => b && b.risk));
 function bankLoot(why) { // 撤離成功：未帶回的裝備變成永久的
@@ -1896,6 +1897,7 @@ function openHud(h) {
   else if (h === "swap") quickSwap();
   else if (h === "quest") renderQuests();
   else if (h === "skill") renderSkills();
+  else if (h === "tree") renderTree();
   else if (h === "rank") renderRank();
   else if (h === "menu") openMenu();
   else openStarMap();

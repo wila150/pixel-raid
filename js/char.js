@@ -4,10 +4,10 @@
 let chTab = "attr", chHelp = null, chList = false, chDef = false;
 // 數值說明：這是什麼、怎麼提高
 const STAT_HELP = {
-  str: ["STR 力量", "物理武器（劍、大刀、拳、弓）的傷害每點 +3%，護甲 +3。", "拿劍、大刀、拳、弓的人主要點這個。"],
-  agi: ["AGI 敏捷", "每點攻速 +1.5%（上限 200%，超過的每 1% 換 0.5% 傷害）、閃避 +0.4%、法術壓制 +0.3%、移動 +0.5%（只算前 80 點）。", "想打得快、比較不容易被打中就點。"],
-  wis: ["INT 智慧", "法術武器（法杖、扇）的傷害每點 +3%，能量護盾 +6、真氣 +4。", "拿法杖、扇的人主要點這個。"],
-  vit: ["VIT 體質", "每點生命 +12、護甲 +1。", "常常被打死就多點一些。"],
+  str: ["STR 力量", "大刀、拳的主屬性：每點傷害 +3%。所有武器：每點護甲 +3。", "天賦樹紅色區（左下）最多。★＝你現在武器的主屬性。"],
+  agi: ["AGI 敏捷", "劍、弓的主屬性：每點傷害 +1.4%、攻速 +0.3%（攻速上限 200%）。所有武器：閃避 +0.4%、法術壓制 +0.3%、移動 +0.5%（只算前 80 點）。", "天賦樹綠色區（右下）最多。"],
+  wis: ["INT 智力", "法杖、扇的主屬性：每點傷害 +3%。所有武器：能量護盾 +6、真氣 +4。", "天賦樹藍色區（上方）最多。"],
+  vit: ["VIT 體魄", "每點生命 +12、護甲 +1。", "天賦樹各區之間的走道上。"],
   atk: ["攻擊", "所有招式的傷害倍率。", "靠等級、力量／智慧、武器、攻擊詞綴、技能「劍心」提高。"],
   crit: ["爆擊率", "每一下打出爆擊的機率。", "靠飾品、爆擊詞綴、技能「會心」提高。"],
   critDmg: ["爆擊傷害", "爆擊時傷害是平常的幾倍（200% ＝ 2 倍）。", "靠爆傷詞綴、技能「破甲」、天狐卡提高。"],
@@ -28,7 +28,7 @@ const STAT_HELP = {
   mpRegen: ["真氣回復", "每秒回多少真氣。", "靠等級、智慧、技能「吐納」提高。"],
 };
 const TAB_HELP = {
-  attr: ["屬性", "每升 1 級有 4 點能力點，點在 STR／AGI／INT／VIT。點任何一行，這裡會說明那個數值。", "點錯了可以花靈石重新配點。"],
+  attr: ["屬性", "屬性從天賦樹來：每升 1 級 1 點天賦點、每次轉職 +2。點任何一行，這裡會說明那個數值。", "武器看顏色吃主屬性：大刀拳＝力量、劍弓＝敏捷、法杖扇＝智力。"],
   cult: ["修行", "轉職不換職業，是讓角色變強：多輔助插槽、加段數、解鎖護身法術。", "護身法術就是 V（手機下方最右邊那顆）的保命技，在安全營地可以換。"],
   look: ["外觀", "暱稱是別的玩家看到的名字；時裝只改外觀，不影響數值。", ""],
 };
@@ -44,9 +44,9 @@ const chRow = ([k, n, v, c]) => `<button class="chrow${chHelp === k ? " sel" : "
 function chAttr() {
   const w = save.w, s = chStats();
   const res5 = `<div class="res5">${s.res.map(([k, n, v, c]) => `<button class="r5${chHelp === k ? " sel" : ""}${c ? " " + c : ""}" data-help="${k}"><span>${k === "phys" ? "物理" : n}</span><b>${v}</b></button>`).join("")}</div>${resPen() > 0 ? `<div class="r5pen">此地元素抗性 −${Math.round(resPen() * 100)}%（上面已經算進去）</div>` : ""}`;
-  return res5 + `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}</button><b>${w.ap[k]}</b>
-      <button class="apb" data-k="${k}" data-n="1" ${w.free ? "" : "disabled"}>＋</button><button class="apb" data-k="${k}" data-n="5" ${w.free >= 5 ? "" : "disabled"}>＋5</button></div>`).join("")}
-    <div class="chapfoot"><span>能力點 <b class="${w.free ? "hot" : ""}">${w.free}</b></span><button id="apReset">重新配點 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${20 * w.lv} 靈石`}</button></div></div>
+  const a = typeof treeAttr === "function" ? treeAttr() : w.ap, main = (typeof TR_WMAIN !== "undefined" && TR_WMAIN[curWeapon()]) || "str", fr = typeof treeFree === "function" ? treeFree() : 0;
+  return res5 + `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}${k === main ? " ★" : ""}</button><b>${a[k]}</b></div>`).join("")}
+    <div class="chapfoot"><span>天賦點 <b class="${fr > 0 ? "hot" : ""}">${fr}</b></span><button id="toTree">打開天賦樹（P）</button></div></div>
     <div class="chhead">主要</div><div class="chgrid">${s.main.map(chRow).join("")}</div>
     <button class="chhead fold" id="chDef">防禦 ${chDef ? "▾" : "▸"}</button>${chDef ? `<div class="chgrid">${s.def.map(chRow).join("")}</div>` : ""}`;
 }
@@ -84,7 +84,7 @@ function renderChar(msg = "") {
   if (ovKind !== "char" && !ovOpen("char")) return;
   if (msg) ovMsg = msg;
   B = worldStats();
-  const tabs = [["attr", "屬性", save.w.free > 0], ["cult", "修行", (() => { const J = JOBS[jobLv()]; return J && save.w.lv >= J.lv; })()], ["look", "外觀", false]];
+  const tabs = [["attr", "屬性", false], ["cult", "修行", (() => { const J = JOBS[jobLv()]; return J && save.w.lv >= J.lv; })()], ["look", "外觀", false]];
   const body = chTab === "attr" ? chAttr() : chTab === "cult" ? chCult() : fashionHtml();
   ov.innerHTML = `<div class="col l chbox">${chLeft()}</div>
     <div class="col c chbox"><div class="btabs">${tabs.map(([k, n, dot]) => `<button class="btab${chTab === k ? " on" : ""}" data-ct="${k}">${n}${dot ? " ●" : ""}</button>`).join("")}</div>${body}</div>
@@ -97,9 +97,7 @@ function bindChar() {
   const w = save.w, again = (m) => renderChar(m);
   ov.querySelectorAll("[data-ct]").forEach((b) => b.addEventListener("click", () => { sfx("click"); chTab = b.dataset.ct; chHelp = null; again(); }));
   ov.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => { sfx("click"); chHelp = chHelp === b.dataset.help ? null : b.dataset.help; again(); }));
-  ov.querySelectorAll(".apb").forEach((b) => b.addEventListener("click", () => { const n = Math.min(+b.dataset.n, w.free); if (!n) return; w.free -= n; w.ap[b.dataset.k] += n; chHelp = b.dataset.k; writeSave(); sfx("good"); again(); }));
-  const ar = document.getElementById("apReset");
-  if (ar) ar.onclick = () => { const c = 20 * w.lv; if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); again(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } for (const k in w.ap) { w.free += w.ap[k]; w.ap[k] = 0; } writeSave(); again("能力點全部退回了"); };
+  const tt = document.getElementById("toTree"); if (tt) tt.onclick = () => { sfx("click"); ovGo("tree"); };
   const df = document.getElementById("chDef"); if (df) df.onclick = () => { sfx("click"); chDef = !chDef; again(); };
   const dj = document.getElementById("doJob"); if (dj) dj.onclick = () => { if (doJob()) again(`完成${JOBS[jobLv() - 1].n}！`); };
   ov.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {

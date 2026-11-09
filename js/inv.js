@@ -161,8 +161,8 @@ ov.id = "ov"; ov.className = "ov hidden";
 document.body.appendChild(ov);
 let ovKind = null, ovJust = false, ovMsg = "", ovSw = false;
 // 企劃 15：介面種類 → 右上快捷分頁、標題
-const OV_TAB = { bag: "bag", char: "ap", skill: "skill", quest: "quest", map: "map", social: "social", rank: "rank", rift: "rift" };
-const OV_NAME = { bag: "行囊", char: "角色", skill: "技能", quest: "任務", map: "星盤", social: "聊天", rank: "排行", rift: "秘境", menu: "設定" };
+const OV_TAB = { tree: "tree", bag: "bag", char: "ap", skill: "skill", quest: "quest", map: "map", social: "social", rank: "rank", rift: "rift" };
+const OV_NAME = { tree: "天賦樹", bag: "行囊", char: "角色", skill: "技能", quest: "任務", map: "星盤", social: "聊天", rank: "排行", rift: "秘境", menu: "設定" };
 function ovOpen(kind) {
   padHeld.clear();
   if (!(state === "world" || (state === "pick" && pausedFrom === "world"))) return false;
@@ -203,6 +203,7 @@ function ovSub() {
   if (exitAsk) { exitAskClose(); return true; }
   if (ovKind === "bag" && (eqSel || propSel)) { eqSel = null; propSel = null; renderEquip(); return true; }
   if (ovKind === "map" && mapSel) { mapSel = null; openStarMap(); return true; }
+  if (ovKind === "tree" && trSel) { trSel = null; renderTree(); return true; }
   if (ovKind === "char" && typeof chHelp !== "undefined" && chHelp) { chHelp = null; renderChar(); return true; }
   return false;
 }
@@ -234,7 +235,7 @@ window.addEventListener("keydown", (e) => { if (exitAsk && e.key === "Escape") {
 function exitAskClose() { if (exitAsk) { exitAsk.remove(); exitAsk = null; } }
 // 點到沒有字、沒有按鈕的地方 → 收起來
 ov.addEventListener("click", (e) => {
-  if (e.target.closest("button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, .evpick, h2, h3, p, b, small, img")) return;
+  if (e.target.closest(".trwrap, button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, .evpick, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
 const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
@@ -244,7 +245,7 @@ window.addEventListener("keydown", (e) => {
   if (!ovKind || ovJust || e.repeat) return;
   if (k === "tab") e.preventDefault();
   if ((OV_KEYS[ovKind] || []).includes(k)) { ovClose(); return; }
-  const sw = { i: "bag", b: "bag", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
+  const sw = { p: "tree", i: "bag", b: "bag", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
   if (sw && sw !== OV_TAB[ovKind]) ovGo(sw);
 });
 
@@ -315,8 +316,7 @@ function insertCard(c, slot) {
 function apHtml() {
   const w = save.w; if (!w) return "";
   const b = worldStats();
-  return `<div class="apbox"><div class="aphead">屬性點 <b>${w.free}</b></div>${["str", "agi", "wis", "vit"].map((k) => `<div class="aprow"><span>${AP[k].n}</span><b>${w.ap[k]}</b><button data-ap="${k}" ${w.free ? "" : "disabled"}>＋</button><button data-ap5="${k}" ${w.free >= 5 ? "" : "disabled"}>＋5</button><small>${AP[k].d}</small></div>`).join("")}</div>
-    <div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>物理減免 <b>${Math.round(physRed(b) * 100)}%</b></span>${ELES.map((e) => `<span>${RES_S[e]}抗 <b style="color:${effRes(e, b) < 0 ? "#ff6b6b" : effRes(e, b) >= RES_CAP ? "#ffd84a" : ""}">${Math.round(effRes(e, b) * 100)}%</b></span>`).join("")}<span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
+  return `<div class="defbox"><span>生命 <b>${b.maxHp}</b></span><span>能量護盾 <b>${b.maxEs}</b></span><span>物理減免 <b>${Math.round(physRed(b) * 100)}%</b></span>${ELES.map((e) => `<span>${RES_S[e]}抗 <b style="color:${effRes(e, b) < 0 ? "#ff6b6b" : effRes(e, b) >= RES_CAP ? "#ffd84a" : ""}">${Math.round(effRes(e, b) * 100)}%</b></span>`).join("")}<span>閃避 <b>${Math.round(b.dodge * 100)}%</b></span><span>法術壓制 <b>${Math.round(b.supp * 100)}%</b></span><span>攻速 <b>×${b.aspd.toFixed(2)}</b></span><span>爆擊 <b>${Math.round(b.crit * 100)}%</b></span></div>`;
 }
 function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL() : ""; }
 // 背包分頁＋格子（每格一件；道具分頁是丹藥、碎屑、精髓、寶石、超技能）
@@ -674,9 +674,9 @@ function drawStarMap(cv) {
 }
 
 // ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
-const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["rift", "秘境", ""]];
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["tree", "天賦", "P"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["rift", "秘境", ""]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "tree" ? '<b class="qglyph">天</b>' : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

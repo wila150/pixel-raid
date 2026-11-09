@@ -23,12 +23,13 @@ const KEYSTONE = {
 };
 const ksOf = (t) => (save.w && save.w.ks && save.w.ks[t]) || null;
 // v6.7：技能點拿掉，只看轉職
-const ksOn = (k) => { if (!save.w || !save.w.ks) return false; const j = typeof jobLv === "function" ? jobLv() : 0; for (const t in save.w.ks) if (save.w.ks[t] === k && +t <= j && (typeof skGateOk !== "function" || skGateOk(+t))) return true; return false; };
+// v7.2：大節點搬到天賦樹最外圈（tree.js），點了就生效
+const ksOn = (k) => !!save.w && typeof treeHasKs === "function" && treeHasKs(k);
 const ksDef = (k) => { for (const t in KEYSTONE) for (const o of KEYSTONE[t]) if (o.k === k) return o; return null; };
 const _jobStatsM = jobStats;
 jobStats = function (b) {
   b = _jobStatsM(b);
-  for (const t in KEYSTONE) { const k = ksOf(t); if (k && ksOn(k)) ksDef(k).f(b); }
+  for (const t in KEYSTONE) for (const o of KEYSTONE[t]) if (ksOn(o.k)) o.f(b);
   return b;
 };
 function ksHtml(t) {

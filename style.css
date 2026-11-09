@@ -802,3 +802,24 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 /* v7.0 E 鍵上的天罰能量 % */
 #pad .btn .enp { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-style: normal; font-size: 10px; font-weight: bold; color: #c8b8ff; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; white-space: nowrap; }
 #pad .btn .enp.full { color: #ffd84a; }
+/* v7.2 天賦樹（tree.js，覆蓋層 #ov k-tree） */
+.ov.k-tree { display: block; padding: 0; }
+.ov.k-tree .trwrap { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.ov.k-tree #trc { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.ov.k-tree .trtop { position: absolute; top: 8px; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; pointer-events: none; }
+.ov.k-tree .trtop > * { pointer-events: auto; }
+.ov.k-tree .trpts { margin-right: auto; padding: 6px 12px; border-radius: 8px; background: rgba(12, 11, 9, 0.85); border: 1px solid var(--line); color: #f0e2c4; }
+.ov.k-tree .trpts b { font-size: 18px; margin: 0 2px; } .ov.k-tree .trpts b.hot { color: #ffd84a; }
+.ov.k-tree .trpts small { display: block; color: var(--dim); font-size: 10px; }
+.ov.k-tree .trb { min-height: 40px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.9); font-weight: 700; }
+.ov.k-tree .trb small { display: block; font-size: 10px; font-weight: 400; color: var(--dim); }
+.ov.k-tree .trb.gold { background: #6a4e18; border-color: #e8b84a; color: #ffe9a0; }
+.ov.k-tree .trb:disabled { opacity: 0.4; }
+.ov.k-tree .trinfo { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); width: min(560px, calc(100% - 20px)); pointer-events: none; }
+.ov.k-tree .trinfo > * { pointer-events: auto; }
+.ov.k-tree .trcard { padding: 10px 14px; border-radius: 10px; background: rgba(12, 11, 9, 0.9); border: 1px solid var(--line); }
+.ov.k-tree .trname { font-size: 15px; font-weight: 700; } .ov.k-tree .trname small { margin-left: 8px; font-size: 11px; font-weight: 400; color: var(--dim); }
+.ov.k-tree .trlines { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 4px 0; }
+.ov.k-tree .tract { margin-top: 6px; } .ov.k-tree .tract .trb { width: 100%; } .ov.k-tree .bad { color: #ff8a7a; }
+.ov.k-tree .trmsg { margin-top: 6px; text-align: center; color: #ffe9a0; font-size: 12px; }
+@media (max-height: 440px) { .ov.k-tree .trcard { padding: 6px 10px; } .ov.k-tree .trlines { margin: 2px 0; } }

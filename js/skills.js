@@ -29,10 +29,10 @@ function renderSkills(msg = "") {
   const w = save.w;
   if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
   skMig();
-  if (!["tri", "ks", "para"].includes(skTab)) skTab = "tri";
+  skTab = "tri"; // v7.2：大節點、巔峰點搬到天賦樹
   if (typeof B !== "undefined") B = worldStats();
   const nw = typeof triNew === "function" && triNew().length;
-  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">技能鏈${nw ? " ●" : ""}</button><button class="btab${skTab === "ks" ? " on" : ""}" data-st="ks">大節點${jobLv() < 1 ? " 🔒" : ""}</button>${typeof renderPara === "function" ? `<button class="btab${skTab === "para" ? " on" : ""}" data-st="para">巔峰${paraFree() > 0 ? " ●" : w.lv < PARA_LV ? " 🔒" : ""}</button>` : ""}</div>`;
+  const tabs = `<div class="btabs"><button class="btab on" data-st="tri">技能鏈${nw ? " ●" : ""}</button></div>`;
   let body = "";
   if (skTab === "tri") body = renderTri(msg);
   else if (skTab === "para") body = renderPara(msg);
@@ -46,6 +46,6 @@ setInterval(() => {
   const w = save.w; if (!w || !w.created) return;
   const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
   const a = q("ap"), s = q("skill");
-  if (a) a.classList.toggle("dot", (w.free || 0) > 0 || (!!J && w.lv >= J.lv));
-  if (s) s.classList.toggle("dot", (typeof paraFree === "function" && paraFree() > 0) || (typeof triNew === "function" && triNew().length > 0));
+  if (a) a.classList.toggle("dot", !!J && w.lv >= J.lv);
+  if (s) s.classList.toggle("dot", (typeof triNew === "function" && triNew().length > 0));
 }, 1000);

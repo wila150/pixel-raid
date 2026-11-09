@@ -134,7 +134,7 @@ riftEnter = function (id) {
   for (const k in tb) for (let i = 0; i < tb[k]; i++) extra.push("at_" + k);
   if (node && node.ev) key.ev2 = node.ev;
   const tl = talLv("loot"); if (tl) { MAP_MODS.tq.q = tl * 4; MAP_MODS.tq.n = `聚寶：物品數量 +${tl * 4}%`; extra.push("tq"); }
-  const pl = paraLv("loot"); if (pl) { MAP_MODS.pq.q = Math.round(pl * 0.5); MAP_MODS.pq.n = `巔峰：物品數量 +${(pl * 0.5).toFixed(1)}%`; extra.push("pq"); }
+  const pl = typeof treeLoot === "function" ? treeLoot() : 0; if (pl) { MAP_MODS.pq.q = Math.round(pl); MAP_MODS.pq.n = `天賦樹：物品數量 +${pl}%`; extra.push("pq"); }
   key.mods = key.mods.concat(extra);
   _riftEnterA.apply(this, arguments);
   if (!RIFT) return;
