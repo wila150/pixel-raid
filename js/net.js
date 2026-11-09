@@ -55,7 +55,7 @@ function netSend(force) {
   if (!netRef || !W0) return;
   const p = W0, d = {
     x: Math.round(p.x), y: Math.round(p.y), f: Math.round(p.face * 100) / 100, wt: curWeapon(), g: gearKey(),
-    vx: Math.round(netVx), vy: Math.round(netVy), lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "", ti: typeof myTitle === "function" ? myTitle() : "",
+    vx: Math.round(netVx), vy: Math.round(netVy), lv: save.w.lv, n: myName(), s: netSwing, r: p.roll > 0 ? 1 : 0, ch: myCh(), z: W0.zone || "", ti: typeof myTitle === "function" ? myTitle() : "", tj: (save.w && save.w.tj) || 0,
   };
   if (netCq.length) d.cq = netCq.slice(); // 複製一份：netCq 會原地變動，不複製的話跟上一包比永遠一樣、招式送不出去
   // 第一次、重連、心跳、切分流：送完整一包（set）；平常只送有變的欄位（update），走路時大約只剩 x、y、vx、vy、t
@@ -173,7 +173,7 @@ function drawOther(o) {
   if (!rd) drawSlash(fake, d.wt);
   ctx.globalAlpha = 1;
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  const label = `${d.n} Lv.${d.lv}`;
+  const label = `${d.n} Lv.${d.lv}${d.tj && typeof TJ_N !== "undefined" && TJ_N[d.tj] ? "・" + TJ_N[d.tj] : ""}`;
   ctx.fillStyle = "#1b1424"; ctx.fillText(label, o.x + 0.5, o.y - 12.5); ctx.fillStyle = "#9fffb0"; ctx.fillText(label, o.x, o.y - 13);
   if (d.ti && typeof drawTitleTag === "function") drawTitleTag(d.ti, o.x, o.y - 19);
 }

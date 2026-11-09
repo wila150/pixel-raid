@@ -405,7 +405,7 @@ const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
 const DEEP_DMG = { snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）
 const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1; return DEEP_DMG[zoneAt(m.x, m.y)] || 1; };
-const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m); // dmgMul：秘境詞綴
+const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1); // dmgMul：秘境詞綴
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
 }

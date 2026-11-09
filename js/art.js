@@ -426,7 +426,7 @@ function drawHeroAura(p) { // 穿傳說裝：腳下光環；武器強化 +7 以�
 const myName = () => ((save.w && save.w.nick) || (typeof fbUser !== "undefined" && fbUser && fbUser.displayName) || "我").slice(0, 12);
 function drawMyName(p) {
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  const t = `${myName()} Lv.${save.w.lv}`;
+  const t = `${myName()} Lv.${save.w.lv}${save.w.tj && typeof TJ_N !== "undefined" ? "・" + TJ_N[save.w.tj] : ""}`;
   ctx.fillStyle = "#1b1424"; ctx.fillText(t, p.x + 0.5, p.y - 12.5); ctx.fillStyle = "#ffe066"; ctx.fillText(t, p.x, p.y - 13);
   const ti = typeof myTitle === "function" ? myTitle() : "", ay = ti ? -6 : 0;
   if (ti) drawTitleTag(ti, p.x, p.y - 19);

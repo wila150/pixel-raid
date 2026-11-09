@@ -1003,3 +1003,9 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .chdps b { color: #ffd84a; }
 .chdps small { display: block; font-size: 10px; opacity: 0.75; color: inherit; }
 .cpd b.up { color: #7dff9a; } .cpd b.down { color: #ff7a7a; }
+/* v8.3 天劫等級（企劃 40-B） */
+.tjrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.tjb { flex: 1; min-width: 56px; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--line); background: rgba(20, 24, 22, 0.6); color: #ffe9a0; font: inherit; font-size: 13px; }
+.tjb.on { border-color: #ff8a5a; background: rgba(90, 40, 20, 0.6); color: #ffb08a; box-shadow: 0 0 0 1px #ff8a5a inset; }
+.tjb:disabled:not(.on) { opacity: 0.45; }
+.tjeff { color: #ffb08a; }
