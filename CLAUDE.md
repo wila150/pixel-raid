@@ -198,3 +198,14 @@
   - **`GAME_VER`（story.js）改版時要跟 index.html 的 ?v= 一起改**，並在 `UPDATES` 最前面加 3–5 行白話的更新內容；玩家版本比 `save.lastVer` 舊就跳 `#updCard`（新玩家不跳），右上齒輪「更新內容」可以再看。
   - 劍靈：`drawNotice` 被換掉 → 畫在角色肩膀旁（`spiritScreen` 用 `SCALE×1.35` 換成螢幕座標，`SPIRIT` 平滑跟隨），提示變成它的對話泡泡（最多 3 行、2.6–6 秒、點一下下一句）。`say(t)` = `notice`。舊存檔第一次看到 `save.w.spirit`。
   - 劇情：`QUEST_STORY[任務位置]`（包住 `checkQuest`，任務推進時說）、`BOSS_STORY`（包住 `wbKilled`，首殺才說；秘境之主不算）、`CH_STORY` 顯示在任務視窗分頁下面（包住 `renderQuests`）。事件任務還沒做。
+- **v6.1 企劃 16 秘境第三版（劍尊後終局）＋三個小調整（企劃 12 第 3 節第 7 項，11/09）**：新檔 `js/atlas.js`（story.js 後）。
+  - 解鎖 `atlasOpen()`＝`rbKilled("sky")`。`riftCap()`（maps.js）打倒劍尊前 10、之後 9999；`riftLv` 11 層以上每層 +4 級（T15＝Lv.95）；`riftTheme` 11 層以上輪 swamp/thunder/sky/volcano/snow（`riftTile` 補了三種地形）。
+  - 輿圖 `ATLAS`：六角格半徑 3 共 37 點（固定種子，9 座鎮妖塔、約 4 成非塔點有固定事件 `n.ev`→`key.ev2`）。存 `save.w.atlas = {d 點亮, tw 塔加成, sel 選的點, tal 天賦}`。點亮的點旁邊一圈才看得到（迷霧）；第 N 圈要 10+N 層以上鑰匙，鑰匙不夠就照一般秘境打。第一次通關點亮＋天賦點 +1。
+  - 鎮妖塔 `TOWER_B`（qty/pack/elite/ev/key）：打完塔給 1 條，混元石隨機加、淬靈石指定（最多 3 條），`towerBonus(id)` 加總周圍 2 格。效果做成特殊詞綴 `MAP_MODS.at_*`（`x:1`，`rollKeyMods` 不會骰到），進場時塞進 key.mods；pack／elite 在 `riftEnter` 包裝後補怪（`riftAddMob`）。
+  - 事件天賦 `TAL`（五種事件＋尋鑰＋聚寶，各 4 點）：`atlasEvW` 給 riftev 選事件加權；事件完成（`E.paid`）多掉通貨，4 點多 1 精髓。重置 1 洗心丹或 500 靈石。
+  - 天劫雷印渡劫鑰匙 `keyVaal`：`k.cor`；25% 沒事／25% 劫紋 `tj_qty`(+80%)＋`tj_dmg`（怪傷 ×1.6、血 ×1.4，`evSpawn` 也包了）／25% 重洗／25% `k.tj` 天劫秘境（王血 ×2.5、傷 ×1.4、多 3 件、35% 傳說、20% 雷印）。渡劫過的鑰匙點金／洗練／精髓按鈕拿掉。
+  - 巔峰點 `PARA`：Lv.120 以後每級 1 點（`paraFree`），攻擊／防禦（護甲）／生存／打寶（秘境數量，特殊詞綴 `pq`）各 +0.5%，技能頁「巔峰」分頁（`skTab="para"`），免費重置。
+  - 秘境畫面分頁「鑰匙｜輿圖｜天賦」（`atlasTab`，包住 `renderRift`；`riftKeyExtras` 在鑰匙頁加節點資訊、渡劫鈕、劫標記）。
+  - 小調整：①每張秘境 2 個不同事件（riftev.js `R.evs`，取代 `R.ev`；兩個事件距離 ≥360），地圖 76→95 格寬（`RIFT_IX0` 140→120，x 1920–3440，避開沼澤傳送陣 3560）、營地 17→21。②點金 `CUR.gold.r` 0.0045→0.0016；稀有素材精英 10%、一般 0.25%。③說明類大字飄字改 `notice`（劍靈說）：英雄改版、轉職提示、護身法術解鎖、配方可做、元素寶石退回、得到新武器、秘境進場／出口說明；教學橫條 `drawTut` 橫向移到 `H×0.24`（最少 84）、直向 `H×0.3`。
+  - **層數榜還沒上**：要改 `net.js lbPush` 多送 `rt`、排行加分頁、`database.rules.json` 的 lb 加 rt 驗證＋`.indexOn`，等使用者同意發佈 Firebase 規則再做。
+  - 測試（scratchpad t.js，Edge headless）：解鎖、37 點／9 塔、巔峰攻擊 ×1.025、節點秘境 2 事件、21 營地全可達、殺王點亮＋天賦點＋周圍 6 點亮、T15 塔加成數量 +15、天劫王、渡劫 400 次約各 1/4、特殊詞綴不會骰到、劍尊前上限 10；輿圖／鑰匙／天賦／巔峰截圖，沒有 JS 錯誤。

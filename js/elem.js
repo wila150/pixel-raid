@@ -85,7 +85,7 @@ enterWorld = function () {
   for (const it of save.bag || []) if (it.slot === "sword") n += fixEleGems(it);
   for (const it of (save.w && save.w.ws) || []) n += fixEleGems(it);
   const r = _enterWorldE.apply(this, arguments);
-  if (n && W0) floatText(W0.x, W0.y - 50, `一把武器只能一種元素：${n} 顆元素寶石退回袋子`, "#ffe9a8", true);
+  if (n && W0) notice(`一把武器只能一種元素：${n} 顆元素寶石退回袋子`, "#ffe9a8");
   return r;
 };
 

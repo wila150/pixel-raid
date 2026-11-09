@@ -70,7 +70,7 @@ function doJob() {
     flashT = 0.35; flashColor = "255,235,170"; shake = 10; sfx("win");
     burst(W0.x, W0.y, "#ffe066", 60, 160, 1); W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.8, r: 140, c: "255,230,150" });
     floatText(W0.x, W0.y - 40, `${J.n}！`, "#ffe066", true);
-    if (ns) floatText(W0.x, W0.y - 56, `解鎖護身法術「${SAVES[ns].n}」（角色→修行）`, "#9fe8ff", true);
+    if (ns) notice(`解鎖護身法術「${SAVES[ns].n}」（角色→修行）`, "#9fe8ff");
   }
   if (w.job >= 2 && typeof netAnnounce === "function") netAnnounce(`完成${J.n}！`);
   return true;

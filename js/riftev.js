@@ -1,4 +1,4 @@
-// 萬劍仙途 — 秘境第二版（企劃 16 第 3-6、9 節）：每張秘境 1 個隨機事件；精髓放在鑰匙上可以指定事件
+// 萬劍仙途 — 秘境第二版（企劃 16 第 3-6、9 節）：每張秘境 2 個不同的隨機事件（v6.1，第 10-2 節）；精髓放在鑰匙上可以指定其中一個
 "use strict";
 const RIFT_EV = {
   crack: { n: "天裂之隙", c: "255,120,200", d: "碰一下裂縫，10 秒內四面八方湧出大量妖獸，殺越多獎勵越多" },
@@ -34,26 +34,41 @@ function evRing(cx, cy, r) { // 圓周上找一個走得到的點
   for (let i = 0; i < 12; i++) { const a = Math.random() * Math.PI * 2, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r; if (RIFT.reach[evIdx(x, y)] && !blockedCircle(x, y, 6)) return { x, y }; }
   return { x: cx + rand(-20, 20), y: cy + rand(-20, 20) };
 }
-// 進秘境：選事件、選位置
+// 進秘境：選 2 個不同事件、各自找位置（事件天賦樹會加權，atlas.js 的 atlasEvW）
+const RIFT_EV_N = 2;
+function evPickKind(not) {
+  const ks = RIFT_EV_KEYS.filter((k) => !not.includes(k)), w = ks.map((k) => (typeof atlasEvW === "function" ? atlasEvW(k) : 1));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ks.length; i++) if ((r -= w[i]) < 0) return ks[i];
+  return ks[ks.length - 1];
+}
+function evPlace(R, k) {
+  let pos = null;
+  for (let i = 0; i < 900 && !pos; i++) {
+    const p = riftT2W(6 + Math.floor(Math.random() * (RIFT_IW - 12)), 5 + Math.floor(Math.random() * (RIFT_IH - 10)));
+    if (!R.reach[evIdx(p.x, p.y)] || blockedCircle(p.x, p.y, 10)) continue;
+    if (Math.hypot(p.x - R.ent.x, p.y - R.ent.y) < 260 || Math.hypot(p.x - R.boss.x, p.y - R.boss.y) < 260 || R.pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 90)) continue;
+    if (R.evs.some((e) => Math.hypot(e.x - p.x, e.y - p.y) < (i < 600 ? 360 : 220))) continue; // 兩個事件分開放
+    pos = p;
+  }
+  if (!pos) pos = R.pts[Math.floor(R.pts.length * (R.evs.length ? 0.25 : 0.6))] || R.ent;
+  clearAround(pos.x, pos.y, 3);
+  const E = { k, x: pos.x, y: pos.y, st: "idle", t: 0, mobs: [], kills: 0 };
+  if (k === "altar") { E.alt = [0, 1, 2].map((i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / 3; return { x: pos.x + Math.cos(a) * 40, y: pos.y + Math.sin(a) * 40, st: "idle", mobs: [], curse: null }; }); for (const a of E.alt) clearAround(a.x, a.y, 1); }
+  R.evs.push(E);
+  return E;
+}
 const _riftEnterV = riftEnter;
 riftEnter = function (id) {
   const key = save.keys.find((k) => k.id === id);
   _riftEnterV.apply(this, arguments);
   if (!RIFT || !key) return;
-  const R = RIFT, k = key.ev && RIFT_EV[key.ev] ? key.ev : RIFT_EV_KEYS[Math.floor(Math.random() * RIFT_EV_KEYS.length)];
-  let pos = null;
-  for (let i = 0; i < 600 && !pos; i++) {
-    const p = riftT2W(6 + Math.floor(Math.random() * (RIFT_IW - 12)), 5 + Math.floor(Math.random() * (RIFT_IH - 10)));
-    if (!R.reach[evIdx(p.x, p.y)] || blockedCircle(p.x, p.y, 10)) continue;
-    if (Math.hypot(p.x - R.ent.x, p.y - R.ent.y) < 260 || Math.hypot(p.x - R.boss.x, p.y - R.boss.y) < 260 || R.pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 90)) continue;
-    pos = p;
-  }
-  if (!pos) pos = R.pts[Math.floor(R.pts.length / 2)] || R.ent;
-  clearAround(pos.x, pos.y, 3);
-  R.ev = { k, x: pos.x, y: pos.y, st: "idle", t: 0, mobs: [], kills: 0 };
-  if (k === "altar") R.ev.alt = [0, 1, 2].map((i) => { const a = -Math.PI / 2 + i * Math.PI * 2 / 3; return { x: pos.x + Math.cos(a) * 40, y: pos.y + Math.sin(a) * 40, st: "idle", mobs: [], curse: null }; });
-  if (k === "altar") for (const a of R.ev.alt) clearAround(a.x, a.y, 1);
-  setTimeout(() => { if (RIFT === R) notice(`秘境事件：${RIFT_EV[k].n}（小地圖金點）`, "#ffe066"); }, 1200);
+  const R = RIFT; R.evs = [];
+  const kinds = [key.ev && RIFT_EV[key.ev] ? key.ev : evPickKind([])];
+  if (key.ev2 && RIFT_EV[key.ev2] && !kinds.includes(key.ev2)) kinds.push(key.ev2); // 輿圖節點固定事件
+  while (kinds.length < RIFT_EV_N) kinds.push(evPickKind(kinds));
+  for (const k of kinds) evPlace(R, k);
+  setTimeout(() => { if (RIFT === R) notice(`秘境事件：${kinds.map((k) => RIFT_EV[k].n).join("、")}（小地圖金點）`, "#ffe066"); }, 1200);
 };
 const EV_CURSES = [["妖獸血量 +50%", { hp: 1.5 }], ["妖獸傷害 +30%", { dmg: 1.3 }], ["妖獸移速 +30%", { spd: 1.3 }], ["多一隻精英", { extra: 1 }]];
 function evReward(E, kind) {
@@ -66,8 +81,11 @@ function evReward(E, kind) {
 const _updateWorldV = updateWorld;
 updateWorld = function (dt) {
   _updateWorldV.apply(this, arguments);
-  if (!RIFT || !RIFT.ev || state !== "world" || !W0) return;
-  const R = RIFT, E = R.ev, p = W0, d = Math.hypot(p.x - E.x, p.y - E.y);
+  if (!RIFT || !RIFT.evs || state !== "world" || !W0) return;
+  for (const E of RIFT.evs) evTick(E, dt);
+};
+function evTick(E, dt) {
+  const R = RIFT, p = W0, d = Math.hypot(p.x - E.x, p.y - E.y);
   E.t += dt;
   if (E.k === "crack") {
     if (E.st === "idle" && d < 20) { E.st = "run"; E.t = 0; E.spT = 0; shake = 6; sfx("crit"); floatText(E.x, E.y - 30, "天裂之隙開啟！撐住 10 秒", "#ff8ad8", true); }
@@ -126,13 +144,16 @@ updateWorld = function (dt) {
       }
     }
   }
-};
+}
 // 畫事件（世界座標）
 const _drawCampsV = drawCamps;
 drawCamps = function () {
   _drawCampsV.apply(this, arguments);
-  if (!RIFT || !RIFT.ev) return;
-  const E = RIFT.ev, V = RIFT_EV[E.k], done = E.st === "done";
+  if (!RIFT || !RIFT.evs) return;
+  for (const E of RIFT.evs) evDraw(E);
+};
+function evDraw(E) {
+  const V = RIFT_EV[E.k], done = E.st === "done";
   ctx.save();
   const c = done ? "150,150,150" : V.c;
   if (E.k === "altar") for (const a of E.alt) { const ac = a.st === "done" ? "150,150,150" : V.c; ctx.fillStyle = `rgba(${ac},0.25)`; ctx.beginPath(); ctx.ellipse(a.x, a.y, 10, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = `rgb(${ac})`; ctx.fillRect(a.x - 1, a.y - 14, 2, 12); ctx.fillRect(a.x - 4, a.y - 10, 8, 1.5); }
@@ -144,24 +165,26 @@ drawCamps = function () {
   const lab = done ? `${V.n}（完成）` : E.k === "tomb" && E.st === "run" ? `劍冢 ${Math.ceil(15 - E.hold)} 秒` : E.k === "goblin" && E.st === "run" ? "" : V.n;
   if (lab) { ctx.strokeText(lab, E.x, E.y - 22); ctx.fillStyle = `rgb(${c})`; ctx.fillText(lab, E.x, E.y - 22); }
   ctx.restore();
-};
+}
 // HUD：秘境資訊下面加事件，小地圖金點
 const _drawWorldHudV = drawWorldHud;
 drawWorldHud = function () {
   _drawWorldHudV.apply(this, arguments);
-  if (!RIFT || !RIFT.ev) return;
+  if (!RIFT || !RIFT.evs) return;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const E = RIFT.ev, V = RIFT_EV[E.k];
-  const bw = Math.min(200, W * 0.46), bx = 10 + SAFE.l, by = 10 + SAFE.t + (curQuest() ? 94 : 50) + (riskyItems().length ? 22 : 0) + 42;
-  ctx.fillStyle = "rgba(14,8,24,0.7)"; ctx.fillRect(bx, by, bw, 16);
-  ctx.textAlign = "left"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = E.st === "done" ? "#9a9a9a" : `rgb(${V.c})`;
-  const st = E.st === "done" ? "完成" : E.k === "goblin" && E.st === "run" ? `追！${Math.max(0, Math.ceil(10 - E.t))} 秒` : E.k === "crack" && E.st === "run" ? `${Math.max(0, Math.ceil(10 - E.t))} 秒` : E.k === "altar" ? `${E.alt.filter((a) => a.st === "done").length}/3` : E.k === "tomb" && E.st === "run" ? `${Math.floor(E.hold)}/15 秒` : "地圖金點";
-  ctx.fillText(`事件：${V.n}・${st}`, bx + 7, by + 11);
-  if (E.st !== "done") {
-    const mw = Math.min(104, W * 0.26), mx0 = W - mw - 12 - SAFE.r, my0 = 58 + SAFE.t, sc = mw / (RIFT_IW * TS);
-    const a = mx0 + (E.x - RIFT_IX0 * TS) * sc, b = my0 + (E.y - RIFT_IY0 * TS) * sc;
-    ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(time * 6)})`; ctx.fillRect(a - 2.5, b - 2.5, 5, 5);
-  }
+  RIFT.evs.forEach((E, i) => {
+    const V = RIFT_EV[E.k];
+    const bw = Math.min(200, W * 0.46), bx = 10 + SAFE.l, by = 10 + SAFE.t + (curQuest() ? 94 : 50) + (riskyItems().length ? 22 : 0) + 42 + i * 17;
+    ctx.fillStyle = "rgba(14,8,24,0.7)"; ctx.fillRect(bx, by, bw, 16);
+    ctx.textAlign = "left"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = E.st === "done" ? "#9a9a9a" : `rgb(${V.c})`;
+    const st = E.st === "done" ? "完成" : E.k === "goblin" && E.st === "run" ? `追！${Math.max(0, Math.ceil(10 - E.t))} 秒` : E.k === "crack" && E.st === "run" ? `${Math.max(0, Math.ceil(10 - E.t))} 秒` : E.k === "altar" ? `${E.alt.filter((a) => a.st === "done").length}/3` : E.k === "tomb" && E.st === "run" ? `${Math.floor(E.hold)}/15 秒` : "地圖金點";
+    ctx.fillText(`事件：${V.n}・${st}`, bx + 7, by + 11);
+    if (E.st !== "done") {
+      const mw = Math.min(104, W * 0.26), mx0 = W - mw - 12 - SAFE.r, my0 = 58 + SAFE.t, sc = mw / (RIFT_IW * TS);
+      const a = mx0 + (E.x - RIFT_IX0 * TS) * sc, b = my0 + (E.y - RIFT_IY0 * TS) * sc;
+      ctx.fillStyle = `rgba(255,216,74,${0.6 + 0.4 * Math.sin(time * 6)})`; ctx.fillRect(a - 2.5, b - 2.5, 5, 5);
+    }
+  });
 };
 // 精髓放在鑰匙上指定事件（秘境畫面）
 const _renderRiftV = renderRift;
@@ -172,9 +195,9 @@ renderRift = function (msg) {
   const c = ov.querySelector(".col.c.rift"); if (!c) return;
   const essN = Object.values(save.ess || {}).reduce((a, b) => a + b, 0);
   const div = document.createElement("div"); div.className = "evpick";
-  div.innerHTML = `<div class="winhead">秘境事件${sel.ev ? `：必出 <b>${RIFT_EV[sel.ev].n}</b>` : "（隨機一種）"}</div>
-    <div class="evlist">${RIFT_EV_KEYS.map((k) => `<button data-ev="${k}" class="${sel.ev === k ? "on" : ""}" ${essN && sel.ev !== k ? "" : "disabled"} title="${RIFT_EV[k].d}"><b>${RIFT_EV[k].n}</b><small>${RIFT_EV[k].d}</small></button>`).join("")}</div>
-    <p class="dim">用 1 顆精髓（任何種類，你有 ${essN} 顆）放在鑰匙上，這張秘境必定出現你選的事件。</p>`;
+  div.innerHTML = `<div class="winhead">秘境事件（每張 2 種）${sel.ev ? `：其中一個必出 <b>${RIFT_EV[sel.ev].n}</b>` : "：隨機"}</div>
+    <div class="evlist">${RIFT_EV_KEYS.map((k) => `<button data-ev="${k}" class="${sel.ev === k ? "on" : ""}" ${essN && sel.ev !== k && !sel.cor ? "" : "disabled"} title="${RIFT_EV[k].d}"><b>${RIFT_EV[k].n}</b><small>${RIFT_EV[k].d}</small></button>`).join("")}</div>
+    <p class="dim">用 1 顆精髓（任何種類，你有 ${essN} 顆）放在鑰匙上，這張秘境必定出現你選的事件${sel.cor ? "（渡劫過的鑰匙不能再改）" : ""}。</p>`;
   c.appendChild(div);
   div.querySelectorAll("[data-ev]").forEach((b) => b.addEventListener("click", () => {
     const k = Object.keys(save.ess || {}).find((x) => save.ess[x] > 0); if (!k) return;

@@ -38,11 +38,16 @@ function renderSkills(msg = "") {
   if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
   w.sk = w.sk || {};
   if (typeof B !== "undefined") B = worldStats();
-  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">招式${typeof triPending === "function" && triPending().length ? " ●" : ""}</button>${SKILL_TABS.map(([n, r], i) => `<button class="btab${i === skTab ? " on" : ""}" data-st="${i}">${n}${j < r ? " 🔒" : ""}</button>`).join("")}</div>`;
+  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">招式${typeof triPending === "function" && triPending().length ? " ●" : ""}</button>${SKILL_TABS.map(([n, r], i) => `<button class="btab${i === skTab ? " on" : ""}" data-st="${i}">${n}${j < r ? " 🔒" : ""}</button>`).join("")}${typeof renderPara === "function" ? `<button class="btab${skTab === "para" ? " on" : ""}" data-st="para">巔峰${paraFree() > 0 ? " ●" : w.lv < PARA_LV ? " 🔒" : ""}</button>` : ""}</div>`;
   if (skTab === "tri") {
     ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${renderTri(msg)}</div></div>`;
-    ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st === "tri" ? "tri" : +b.dataset.st; renderSkills(); }));
+    ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
     bindTri(); return;
+  }
+  if (skTab === "para") {
+    ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${renderPara(msg)}</div></div>`;
+    ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
+    bindPara(); return;
   }
   const [tn, need] = SKILL_TABS[skTab], locked = j < need;
   const list = Object.keys(SKT).filter((k) => SKT[k].t === need).map((k) => {
@@ -59,7 +64,7 @@ function renderSkills(msg = "") {
     <div class="sklist${locked ? " locked" : ""}">${list}</div>
     <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${30 * w.lv} 靈石`}</button></div>
     <p class="sub">每升 1 級得 1 點，每次轉職再 +3。招式本身跟著武器走，這裡學的是心法（全部武器都吃）。</p></div></div>`;
-  ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st === "tri" ? "tri" : +b.dataset.st; renderSkills(); }));
+  ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
   ov.querySelectorAll("[data-sk]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.sk; if (spFree() <= 0 || skLv(k) >= SK_MAX) return;
     w.sk[k] = skLv(k) + 1; writeSave(); sfx("good"); renderSkills(`${SKT[k].n} 升到 ${w.sk[k]} 級`);
@@ -75,5 +80,5 @@ setInterval(() => {
   const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
   const a = q("ap"), s = q("skill");
   if (a) a.classList.toggle("dot", (w.free || 0) > 0 || (!!J && w.lv >= J.lv));
-  if (s) s.classList.toggle("dot", spFree() > 0 || (typeof triPending === "function" && triPending().length > 0));
+  if (s) s.classList.toggle("dot", spFree() > 0 || (typeof paraFree === "function" && paraFree() > 0) || (typeof triPending === "function" && triPending().length > 0));
 }, 1000);

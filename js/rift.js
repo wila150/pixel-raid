@@ -4,10 +4,10 @@
 // 所以碰撞、畫地形、子彈都不用改；zoneAt 在秘境裡固定回傳主題地區（畫面、怪物種類跟著換）。
 "use strict";
 
-const RIFT_IX0 = 140, RIFT_IY0 = 46, RIFT_IW = 76, RIFT_IH = 64; // x 2240–3456、y 736–1760（v5.7 加大，企劃 16 第 10 節）
+const RIFT_IX0 = 120, RIFT_IY0 = 46, RIFT_IW = 95, RIFT_IH = 64; // x 1920–3440、y 736–1760（v6.1 再加寬 1.25 倍，企劃 16 第 10-2 節；避開沼澤傳送陣 3560）
 const RIFT_LIVES = 3;
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
-const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier % 2 ? "volcano" : "snow");
+const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : ["swamp", "thunder", "sky", "volcano", "snow"][tier % 5]);
 const riftUnlocked = () => !!save.w && ((save.w.wp || []).includes("swamp") || save.w.lv >= 30);
 const riftT2W = (tx, ty) => ({ x: (RIFT_IX0 + tx) * TS + 8, y: (RIFT_IY0 + ty) * TS + 8 });
 
@@ -20,6 +20,9 @@ function riftTile(z, n, v) { // 跟 buildWorld 同一套地形規則（障礙少
   if (z === "forest") return n > 0.5 && v < 0.5 ? 1 : n < 0.08 ? 4 : v > 0.988 ? 2 : 0;
   if (z === "volcano") return n > 0.7 && v < 0.5 ? 3 : v > 0.97 ? 2 : 0;
   if (z === "snow") return n > 0.68 && v < 0.45 ? 1 : n < 0.1 ? 4 : v > 0.98 ? 2 : 0;
+  if (z === "swamp") return n < 0.14 ? 4 : n > 0.72 && v < 0.45 ? 1 : v > 0.985 ? 2 : 0;
+  if (z === "thunder") return n > 0.7 && v < 0.5 ? 2 : v > 0.975 ? 2 : 0;
+  if (z === "sky") return n > 0.76 && v < 0.4 ? 1 : v > 0.99 ? 2 : 0;
   return 0;
 }
 function riftBuild(R) {
@@ -32,7 +35,7 @@ function riftBuild(R) {
   R.ent = riftT2W(4, Math.floor(RIFT_IH / 2));
   R.boss = riftT2W(RIFT_IW - 14, Math.floor(RIFT_IH / 2));
   const pts = [];
-  for (let i = 0; i < 900 && pts.length < 17; i++) {
+  for (let i = 0; i < 1200 && pts.length < 21; i++) {
     const p = riftT2W(8 + Math.floor(r() * (RIFT_IW - 26)), 4 + Math.floor(r() * (RIFT_IH - 8)));
     if (Math.hypot(p.x - R.ent.x, p.y - R.ent.y) < 150 || Math.hypot(p.x - R.boss.x, p.y - R.boss.y) < 210) continue;
     if (pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 110)) continue;
@@ -107,7 +110,7 @@ function riftEnter(id) {
   writeSave(); sfx("arrive"); shake = 6; flashT = 0.2; flashColor = "170,120,255";
   burst(W0.x, W0.y, "#c8a0ff", 40, 120, 0.7);
   floatText(W0.x, W0.y - 46, `第 ${R.tier} 層秘境・Lv.${R.lv}`, "#e0c8ff", true);
-  floatText(W0.x, W0.y - 30, "清怪讓秘境之力到 100%，王門就會打開", "#cfc4dc", true);
+  notice("清怪讓秘境之力到 100%，王門就會打開", "#cfc4dc");
   if (typeof seenHint === "function") seenHint("rift", "秘境：3 條命，死掉從入口重來。走回入口的門可以撤退（撿到的都帶回）");
 }
 function riftClearFx() { for (const k of ["eshots", "pshots", "fires", "walls", "rings", "tornados", "voids"]) if (W0[k]) W0[k] = []; if (typeof wbZones !== "undefined") wbZones = []; }
@@ -148,14 +151,14 @@ function riftBossKilled(m) {
   const n = 2 + Math.floor(Q / 50) + (Math.random() < (Q % 50) / 50 ? 1 : 0);
   for (let i = 0; i < n; i++) wDropItem(roll(1), m);
   wDrop({ kind: "key", k: makeKey(R.tier) }, m); // 必掉同層
-  if (R.tier < RIFT_MAX && Math.random() < 0.3 + (mods.includes("keyf") ? 0.3 : 0)) wDrop({ kind: "key", k: makeKey(R.tier + 1) }, m);
+  if (R.tier < riftCap() && Math.random() < 0.3 + (mods.includes("keyf") ? 0.3 : 0)) wDrop({ kind: "key", k: makeKey(R.tier + 1) }, m);
   for (let i = 0; i < (R.tier >= 6 ? 2 : 1); i++) wDrop({ kind: "gem", g: randGem(Math.random() < 0.25 ? 2 : 1) }, m);
   for (let i = 0; i < 2; i++) wDrop({ kind: "ess", k: randEss() }, m);
   if (Math.random() < 0.08 && typeof CARDS !== "undefined" && CARDS[m.type]) wDrop({ kind: "card", c: m.type }, m);
   wDrop({ kind: "stone", v: 60 + lv * 3 }, m);
   save.w.riftMax = Math.max(save.w.riftMax || 0, R.tier);
   writeSave();
-  floatText(m.x, m.y - 56, "王門變成出口：撿完東西走進去就回營地", "#ffe9a0", true);
+  notice("王門變成出口：撿完東西走進去就回營地", "#ffe9a0");
 }
 // 死掉：扣一條命，未帶回的裝備照仙界規則掉一半在屍體旁
 function riftDead() {

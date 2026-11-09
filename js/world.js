@@ -330,7 +330,7 @@ function enterWorld() {
   screenEl.classList.add("hidden");
   pad.classList.remove("hidden");
   setPadLabels(true);
-  if (heroNote) { floatText(W0.x, W0.y - 70, "英雄系統改版（選英雄拿掉了）", "#9fe8ff", true); heroNote.split("；").forEach((t, i) => floatText(W0.x, W0.y - 54 + i * 12, t.replace("英雄改版：", ""), "#cfe8ff")); }
+  if (heroNote) { notice("英雄系統改版（選英雄拿掉了）", "#9fe8ff"); heroNote.split("；").forEach((t) => notice(t.replace("英雄改版：", ""), "#cfe8ff")); }
   if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 56, "得到 2 顆技能寶石！", "#ffb347", true); floatText(W0.x, W0.y - 40, "打開背包鑲到武器上", "#ffb347"); }
   last = performance.now();
 }
@@ -482,7 +482,7 @@ function gainExp(n) {
     w.exp -= expNext(w.lv); w.lv++; w.free += 4;
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; W0.mp = B.maxMp;
     floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4、技能點 +1）`, "#ffe066", true);
-    if (typeof JOBS !== "undefined") { const J = JOBS[jobLv()]; if (J && w.lv === J.lv) floatText(W0.x, W0.y - 50, `可以${J.n}了！打開角色（C）轉職`, "#ffcf6b", true); }
+    if (typeof JOBS !== "undefined") { const J = JOBS[jobLv()]; if (J && w.lv === J.lv) notice(`可以${J.n}了！打開角色（C）轉職`, "#ffcf6b"); }
     sfx("arrive"); burst(W0.x, W0.y, "#ffe066", 40, 120, 0.8); flashT = 0.2; flashColor = "255,240,180";
   }
   writeSave();
@@ -1567,7 +1567,7 @@ function checkQuest() {
   save.stone += st;
   floatText(W0.x, W0.y - 46, `任務完成！靈石 +${st}`, "#ffe066", true);
   sfx("win");
-  if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) floatText(W0.x, W0.y - 60, `得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b", true); }
+  if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) notice(`得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b"); }
   if (!q.main && Math.random() < 0.5) { const g = randGem(1); addGem(g); floatText(W0.x, W0.y - 74, `◆ ${gemName(g)}`, GEMS[g.split(":")[0]].c, true); }
   gainExp(exp);
 }

@@ -24,17 +24,18 @@ const MAP_MODS = {
 };
 const KEY_MAX = 20, RIFT_MAX = 10;
 const KEY_RARITY = [{ n: "凡", c: "#d8d2e0", mods: [0, 0] }, { n: "靈", c: "#6fb8ff", mods: [1, 2] }, { n: "玄", c: "#ffd84a", mods: [3, 4] }];
-const riftLv = (tier) => 25 + 5 * tier; // 1–10 層：Lv.30 → 75
+const riftLv = (tier) => (tier <= 10 ? 25 + 5 * tier : 75 + 4 * (tier - 10)); // 1–10 層：Lv.30 → 75；11 層以上每層 +4 級（企劃 16 第 9 節，劍尊後）
+const riftCap = () => (save.w && typeof rbKilled === "function" && rbKilled("sky") ? 9999 : RIFT_MAX); // 打倒無相劍尊才沒有上限
 const keyTierFor = (lv) => (lv < 28 ? 0 : clamp(Math.round((lv - 25) / 5), 1, RIFT_MAX));
 function makeKey(tier, q = null) {
   if (q === null) { const r = Math.random(); q = r < 0.15 ? 2 : r < 0.55 ? 1 : 0; }
-  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: clamp(tier, 1, RIFT_MAX), q, mods: [], v: 2 };
+  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: clamp(tier, 1, riftCap()), q, mods: [], v: 2 };
   const [a, b] = KEY_RARITY[q].mods;
   rollKeyMods(k, a + Math.floor(Math.random() * (b - a + 1)));
   return k;
 }
 function rollKeyMods(k, n) { // 一半前綴一半後綴（單數時後綴多一條）
-  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p"), suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s");
+  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x), suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
   const ns = Math.ceil(n / 2), np = n - ns, pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
   k.mods = [];
   for (let i = 0; i < ns; i++) k.mods.push(pick(suf));

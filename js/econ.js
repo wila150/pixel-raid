@@ -3,7 +3,7 @@
 
 // ───────── 通貨 ─────────
 const CUR = {
-  gold: { n: "點金符", g: "金", c: "#ffd84a", r: 0.0045, d: "白→藍、藍→紫（升一級品質，多一條詞綴）" },
+  gold: { n: "點金符", g: "金", c: "#ffd84a", r: 0.0016, d: "白→藍、藍→紫（升一級品質，多一條詞綴）" },
   chaos: { n: "混元石", g: "混", c: "#c88aff", r: 0.0009, d: "重骰一件藍／紫裝的全部詞綴（數量也會重骰）" },
   regret: { n: "洗心丹", g: "洗", c: "#9aff9a", r: 0.001, d: "重置能力點或技能點時用它代替靈石" },
   exalt: { n: "淬靈石", g: "淬", c: "#7ab8ff", r: 0.00015, d: "在紫裝上加一條隨機詞綴（有空位才能用）" },
@@ -112,7 +112,7 @@ killMob = function (m) {
   for (const k of CUR_KEYS) if (Math.random() < CUR[k].r * zl * em * dm) wDrop({ kind: "cur", c: k }, m);
   if (MAT_Z[z]) {
     if (Math.random() < 0.2 * dm) wDrop({ kind: "mat", k: MAT_Z[z][0] }, m);
-    if (Math.random() < (m.elite ? 0.2 : 0.005) * dm) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m);
+    if (Math.random() < (m.elite ? 0.1 : 0.0025) * dm) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m);
   }
 };
 function dropPick(o, p) {
@@ -123,7 +123,7 @@ function dropPick(o, p) {
   } else if (o.kind === "mat") {
     addMat(o.k); const tr = trackNeedOf(o.k);
     floatText(p.x, p.y - 16, `${MATS[o.k].n} +1${tr ? `（${matN(o.k)}/${tr}）` : ""}`, MATS[o.k].c, MATS[o.k].rare > 0); sfx("good");
-    for (const id of (save.w.track || [])) { const r = recipe(id); if (r && r.need[o.k] && matHas(r.need) && !(W0.trackDone || {})[id]) { (W0.trackDone = W0.trackDone || {})[id] = 1; floatText(p.x, p.y - 34, `${r.n}：可以做了！回營地打開行囊 → 工藝`, "#ffe066", true); sfx("win"); } }
+    for (const id of (save.w.track || [])) { const r = recipe(id); if (r && r.need[o.k] && matHas(r.need) && !(W0.trackDone || {})[id]) { (W0.trackDone = W0.trackDone || {})[id] = 1; notice(`${r.n}：可以做了！回營地打開行囊 → 工藝`, "#ffe066"); sfx("win"); } }
   }
 }
 function dropDraw(o) {
