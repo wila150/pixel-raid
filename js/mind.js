@@ -22,7 +22,7 @@ const KEYSTONE = {
   ],
 };
 const ksOf = (t) => (save.w && save.w.ks && save.w.ks[t]) || null;
-// 18 §8：技能點門檻沒到不生效（已選的不清掉，補到就生效）
+// v6.7：技能點拿掉，只看轉職
 const ksOn = (k) => { if (!save.w || !save.w.ks) return false; const j = typeof jobLv === "function" ? jobLv() : 0; for (const t in save.w.ks) if (save.w.ks[t] === k && +t <= j && (typeof skGateOk !== "function" || skGateOk(+t))) return true; return false; };
 const ksDef = (k) => { for (const t in KEYSTONE) for (const o of KEYSTONE[t]) if (o.k === k) return o; return null; };
 const _jobStatsM = jobStats;
@@ -39,13 +39,13 @@ function ksHtml(t) {
 const _renderSkillsM = renderSkills;
 renderSkills = function (msg) {
   _renderSkillsM.apply(this, arguments);
-  if (typeof skTab !== "number" || !KEYSTONE[skTab] || !ov) return;
-  const list = ov.querySelector(".sklist"); if (!list) return;
-  list.insertAdjacentHTML("beforebegin", ksHtml(skTab));
+  if (skTab !== "ks" || !ov) return;
+  const box = ov.querySelector(".ksall"); if (!box) return;
+  box.innerHTML = Object.keys(KEYSTONE).map((t) => `<div class="kst"><small>${JOBS[t - 1].n}（Lv.${JOBS[t - 1].lv}）</small>${ksHtml(+t)}</div>`).join("");
   ov.querySelectorAll("[data-ks]").forEach((b) => b.addEventListener("click", () => {
     const [t, k] = b.dataset.ks.split(":"), w = save.w; w.ks = w.ks || {};
     if (w.ks[t] === k) return;
-    if (jobLv() < +t || !skGateOk(+t)) { sfx("bad"); renderSkills(`前面還要再點 ${SK_NEED[+t] - spBelow(+t)} 點才能選大節點`); return; }
+    if (jobLv() < +t) { sfx("bad"); renderSkills("轉職後才能選這組大節點"); return; }
     if (w.ks[t] && !(W0 && safeAt(W0.x, W0.y))) { sfx("bad"); renderSkills("在城裡或營地結界裡才能換大節點"); return; }
     w.ks[t] = k; writeSave(); sfx("good");
     B = worldStats(); if (W0) { W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp); }

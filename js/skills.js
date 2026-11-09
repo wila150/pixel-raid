@@ -1,96 +1,51 @@
-// 萬劍仙途 — 技能頁：升級拿技能點（每升 1 級 1 點，每次轉職 +3），分頁＝基礎／一轉～四轉，每招最多 10 級
-// 技能點不另外存：總點數＝(Lv−1)＋轉職×3，花掉的＝w.sk 加總（舊存檔自動有點數）
-const SKILL_TABS = [["基礎", 0], ["一轉", 1], ["二轉", 2], ["三轉", 3], ["四轉", 4]];
-const SKT = {
-  sword: { t: 0, g: "劍", c: "#ffcf6b", n: "劍心", d: (l) => `攻擊 +${l * 3}%`, f: (b, l) => { b.atk *= 1 + l * 0.03; } },
-  body: { t: 0, g: "體", c: "#ff7a6a", n: "金剛體", d: (l) => `生命 +${l * 4}%`, f: (b, l) => { b.maxHp = Math.round(b.maxHp * (1 + l * 0.04)); } },
-  step: { t: 0, g: "行", c: "#9fe8ff", n: "疾行", d: (l) => `移動速度 +${(l * 1.5).toFixed(1)}%`, f: (b, l) => { b.spdMul *= 1 + l * 0.015; } },
-  qi: { t: 0, g: "氣", c: "#7aa8ff", n: "吐納", d: (l) => `真氣上限 +${l * 4}、真氣回復 +${l * 8}%`, f: (b, l) => { b.maxMp += l * 4; b.mpRegen *= 1 + l * 0.08; } },
-  qmast: { t: 1, g: "斬", c: "#ffcf6b", n: "劍氣斬精通", d: (l) => `Q 冷卻 −${l * 4}%、真氣消耗 −${l * 4}%`, f: (b, l) => { b.skCd.spin = 1 - l * 0.04; b.skMp.spin = 1 - l * 0.04; } },
-  dodge: { t: 1, g: "影", c: "#b8ffd0", n: "靈巧身法", d: (l) => `閃身冷卻 −${l * 4}%、閃避 +${(l * 0.8).toFixed(1)}%`, f: (b, l) => { b.rollCd *= 1 - l * 0.04; b.dodge = Math.min(0.6, (b.dodge || 0) + l * 0.008); } },
-  guard: { t: 1, g: "罡", c: "#d8c8a0", n: "護體罡氣", d: (l) => `護甲 +${l * 6}、法術壓制 +${l}%`, f: (b, l) => { b.armor = (b.armor || 0) + l * 6; b.supp = Math.min(0.7, (b.supp || 0) + l * 0.01); } },
-  crit: { t: 2, g: "會", c: "#ffe066", n: "會心", d: (l) => `爆擊率 +${l}%`, f: (b, l) => { b.crit = (b.crit || 0) + l * 0.01; } },
-  pierce: { t: 2, g: "破", c: "#ff9a4a", n: "破甲", d: (l) => `爆擊傷害 +${l * 6}%`, f: (b, l) => { b.critDmg = (b.critDmg || 2) + l * 0.06; } },
-  gale: { t: 2, g: "風", c: "#9fffc8", n: "疾風劍", d: (l) => `攻擊速度 +${l * 2}%`, f: (b, l) => { b.aspd = (b.aspd || 1) * (1 + l * 0.02); } },
-  tian: { t: 3, g: "雷", c: "#c8a0ff", n: "天罰精通", d: (l) => `天罰能量獲得 +${l * 6}%、E 冷卻 −${l * 3}%`, f: (b, l) => { b.enMul *= 1 + l * 0.06; b.skCd.ult = 1 - l * 0.03; } },
-  blood: { t: 3, g: "血", c: "#ff5a6a", n: "嗜血", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%`, f: (b, l) => { b.leech = (b.leech || 0) + l * 0.005; } },
-  wuxing: { t: 3, g: "五", c: "#7fd890", n: "五行抗性", d: (l) => `元素抗性 +${l * 2}%`, f: (b, l) => { b.res = Math.min(0.75, (b.res || 0) + l * 0.02); } },
-  origin: { t: 4, g: "源", c: "#ffd27a", n: "起源劍意", d: (l) => `攻擊 +${l * 4}%`, f: (b, l) => { b.atk *= 1 + l * 0.04; } },
-  undying: { t: 4, g: "滅", c: "#a0d8ff", n: "不滅", d: (l) => `生命 +${l * 5}%、能量護盾 +${l * 12}`, f: (b, l) => { b.maxHp = Math.round(b.maxHp * (1 + l * 0.05)); b.maxEs = (b.maxEs || 0) + l * 12; } },
-  dan: { t: 4, g: "丹", c: "#ff8a7a", n: "丹道", d: (l) => `丹藥上限 +${Math.floor(l / 2)}、攻速 +${l}%`, f: (b, l) => { b.potMax += Math.floor(l / 2); b.aspd = (b.aspd || 1) * (1 + l * 0.01); } },
-};
-const SK_MAX = 10;
-// 企劃 18：學第 N 階前，前面幾階合計要先花到門檻（只擋整階跳過）
-const SK_NEED = [0, 5, 15, 30, 50];
-const spBelow = (t) => Object.keys(SKT).reduce((a, k) => a + (SKT[k].t < t ? skLv(k) : 0), 0);
-const skGateOk = (t) => spBelow(t) >= SK_NEED[t];
-function skMig() { // 舊存檔：違反門檻的送一次免費重置（已點的不扣）
-  const w = save.w; if (!w || w.skChk) return;
-  w.skChk = 1;
-  if (Object.keys(SKT).some((k) => skLv(k) > 0 && !skGateOk(SKT[k].t))) { w.skFree = 1; if (typeof notice === "function") notice("心法規則改了：要先學前面的，才能學後面的。送你一次免費重新分配（技能 → 重置）", "#ffe066"); }
-  writeSave();
-}
-let skTab = 0;
-const skLv = (k) => (save.w && save.w.sk && save.w.sk[k]) || 0;
-const spTotal = () => Math.max(0, save.w.lv - 1) + jobLv() * 3;
-const spUsed = () => Object.values(save.w.sk || {}).reduce((a, b) => a + b, 0);
-const spFree = () => spTotal() - spUsed();
-// 技能效果接在轉職被動後面（worldStats 最後會呼叫 jobStats）
+// 萬劍仙途 — 技能頁（企劃 21 §8-2，v6.7）：心法點數拿掉，改成每升 1 級自動成長；分頁＝技能鏈｜大節點｜巔峰
+// 舊存檔點過的心法（save.w.sk）自動退掉，不用重置費
+"use strict";
+// 每級自動成長（取代 16 招心法；舊心法平均點法 Lv.120 約傷害 ×2.3、生命 ×1.9，這裡抓接近）
+const SK_AUTO = { atk: 0.01, hp: 0.008, mp: 1 / 3, mpRegen: 0.006, spd: 0.001 };
+const autoTxt = (lv) => `攻擊 +${Math.round(lv * SK_AUTO.atk * 100)}%、生命 +${Math.round(lv * SK_AUTO.hp * 100)}%、真氣上限 +${Math.floor(lv * SK_AUTO.mp)}、真氣回復 +${Math.round(lv * SK_AUTO.mpRegen * 100)}%、移動 +${(lv * SK_AUTO.spd * 100).toFixed(1)}%`;
+// 舊程式還會查的名字（大節點以前看技能點門檻）
+const SK_NEED = [0, 0, 0, 0, 0];
+const spBelow = () => 0;
+const skGateOk = () => true;
+const spFree = () => 0;
+let skTab = "tri";
 const _jobStatsSk = jobStats;
 jobStats = function (b) {
   b = _jobStatsSk(b);
   b.skCd = {}; b.skMp = {}; b.enMul = 1;
-  for (const k in SKT) { const l = skLv(k); if (l) SKT[k].f(b, l); }
+  const lv = Math.max(0, ((save.w && save.w.lv) || 1) - 1);
+  b.atk *= 1 + lv * SK_AUTO.atk; b.maxHp = Math.round(b.maxHp * (1 + lv * SK_AUTO.hp));
+  b.maxMp += Math.floor(lv * SK_AUTO.mp); b.mpRegen *= 1 + lv * SK_AUTO.mpRegen; b.spdMul *= 1 + lv * SK_AUTO.spd;
   return b;
 };
-function renderSkills(msg = "") {
-  const w = save.w, j = jobLv(), free = spFree();
-  if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
-  w.sk = w.sk || {};
-  if (typeof B !== "undefined") B = worldStats();
-  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">招式${typeof triPending === "function" && triPending().length ? " ●" : ""}</button>${SKILL_TABS.map(([n, r], i) => `<button class="btab${i === skTab ? " on" : ""}" data-st="${i}">${n}${j < r ? " 🔒" : ""}</button>`).join("")}${typeof renderPara === "function" ? `<button class="btab${skTab === "para" ? " on" : ""}" data-st="para">巔峰${paraFree() > 0 ? " ●" : w.lv < PARA_LV ? " 🔒" : ""}</button>` : ""}</div>`;
-  if (skTab === "tri") {
-    ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${renderTri(msg)}</div></div>`;
-    ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
-    bindTri(); return;
-  }
-  if (skTab === "para") {
-    ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${renderPara(msg)}</div></div>`;
-    ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
-    bindPara(); return;
-  }
-  skMig();
-  const [tn, need] = SKILL_TABS[skTab], jobLock = j < need, gateLock = !jobLock && !skGateOk(need), locked = jobLock || gateLock;
-  const list = Object.keys(SKT).filter((k) => SKT[k].t === need).map((k) => {
-    const s = SKT[k], l = skLv(k), full = l >= SK_MAX;
-    return `<div class="skrow${l ? " has" : ""}" style="--c:${s.c}"><span class="skico">${s.g}</span>
-      <div class="skmain"><b>${s.n}</b><small>${l ? s.d(l) : "未學"}${full ? "（滿級）" : `　下一級：${s.d(l + 1)}`}</small></div>
-      <span class="sklv">${l}<small>/${SK_MAX}</small></span>
-      <button class="skup" data-sk="${k}" ${!locked && free > 0 && !full ? "" : "disabled"}>＋</button></div>`;
-  }).join("");
-  ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">
-    ${tabs}
-    <div class="skjob">${need ? (typeof JOBS !== "undefined" && JOBS[need - 1] ? JOBS[need - 1].n : tn) : "基礎心法"}${jobLock ? `<small>完成${tn}（Lv.${JOBS[need - 1].lv}）才能學</small>` : gateLock ? `<small>前面的心法還要再點 ${SK_NEED[need] - spBelow(need)} 點才能學（目前 ${spBelow(need)}／${SK_NEED[need]}）</small><div class="skgate"><i style="width:${Math.round(100 * spBelow(need) / SK_NEED[need])}%"></i></div>` : ""}</div>
-    ${msg ? `<div class="emsg">${msg}</div>` : ""}
-    <div class="sklist${locked ? " locked" : ""}">${list}</div>
-    <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 ${w.skFree ? "（這次免費）" : typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${30 * w.lv} 靈石`}</button></div>
-    <p class="sub">每升 1 級得 1 點，每次轉職再 +3。招式本身跟著武器走，這裡學的是心法（全部武器都吃）。</p></div></div>`;
-  ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
-  ov.querySelectorAll("[data-sk]").forEach((b) => b.addEventListener("click", () => {
-    const k = b.dataset.sk; if (spFree() <= 0 || skLv(k) >= SK_MAX) return;
-    if (!skGateOk(SKT[k].t)) { sfx("bad"); renderSkills(`前面的心法還要再點 ${SK_NEED[SKT[k].t] - spBelow(SKT[k].t)} 點`); return; }
-    w.sk[k] = skLv(k) + 1; writeSave(); sfx("good"); renderSkills(`${SKT[k].n} 升到 ${w.sk[k]} 級`);
-  }));
-  document.getElementById("skReset").onclick = () => {
-    const c = 30 * w.lv;
-    if (w.skFree) delete w.skFree; else if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); renderSkills(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } w.sk = {}; writeSave(); renderSkills("技能點數全部退回");
-  };
+function skMig() { // 舊存檔：心法點數退掉
+  const w = save.w; if (!w || !w.sk) return;
+  const had = Object.values(w.sk).some((v) => v > 0);
+  delete w.sk; delete w.skFree; delete w.skChk; writeSave();
+  if (had && typeof notice === "function") notice("心法改成每升一級自動成長了，點過的點數已經退掉；招式改到「技能 → 技能鏈」自己選", "#ffe066");
 }
-// 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有技能點 → 技能
+function renderSkills(msg = "") {
+  const w = save.w;
+  if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
+  skMig();
+  if (!["tri", "ks", "para"].includes(skTab)) skTab = "tri";
+  if (typeof B !== "undefined") B = worldStats();
+  const nw = typeof triNew === "function" && triNew().length;
+  const tabs = `<div class="btabs"><button class="btab${skTab === "tri" ? " on" : ""}" data-st="tri">技能鏈${nw ? " ●" : ""}</button><button class="btab${skTab === "ks" ? " on" : ""}" data-st="ks">大節點${jobLv() < 1 ? " 🔒" : ""}</button>${typeof renderPara === "function" ? `<button class="btab${skTab === "para" ? " on" : ""}" data-st="para">巔峰${paraFree() > 0 ? " ●" : w.lv < PARA_LV ? " 🔒" : ""}</button>` : ""}</div>`;
+  let body = "";
+  if (skTab === "tri") body = renderTri(msg);
+  else if (skTab === "para") body = renderPara(msg);
+  else body = `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="skauto"><b>每級自動成長</b><small>Lv.${w.lv}：${autoTxt(Math.max(0, w.lv - 1))}</small></div><div class="ksall"></div><p class="sub">大節點每次轉職開一組二選一，選了有好有壞；在城裡或營地結界可以免費換。</p>`;
+  ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${body}</div></div>`;
+  ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st; renderSkills(); }));
+  if (skTab === "tri") bindTri(); else if (skTab === "para") bindPara();
+}
+// 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有新技能／巔峰點 → 技能
 setInterval(() => {
   const w = save.w; if (!w || !w.created) return;
   const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
   const a = q("ap"), s = q("skill");
   if (a) a.classList.toggle("dot", (w.free || 0) > 0 || (!!J && w.lv >= J.lv));
-  if (s) s.classList.toggle("dot", spFree() > 0 || (typeof paraFree === "function" && paraFree() > 0) || (typeof triPending === "function" && triPending().length > 0));
+  if (s) s.classList.toggle("dot", (typeof paraFree === "function" && paraFree() > 0) || (typeof triNew === "function" && triNew().length > 0));
 }, 1000);

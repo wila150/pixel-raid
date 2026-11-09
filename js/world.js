@@ -481,7 +481,7 @@ function gainExp(n) {
   while (w.exp >= expNext(w.lv)) {
     w.exp -= expNext(w.lv); w.lv++; w.free += 4;
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; W0.mp = B.maxMp;
-    floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4、技能點 +1）`, "#ffe066", true);
+    floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4）`, "#ffe066", true);
     if (typeof JOBS !== "undefined") { const J = JOBS[jobLv()]; if (J && w.lv === J.lv) notice(`可以${J.n}了！打開角色（C）轉職`, "#ffcf6b"); }
     sfx("arrive"); burst(W0.x, W0.y, "#ffe066", 40, 120, 0.8); flashT = 0.2; flashColor = "255,240,180";
   }

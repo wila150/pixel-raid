@@ -146,7 +146,22 @@ const GEM_KEYS = Object.keys(GEMS);
 const GEM_MAX = 5;
 const SOCKETS = [3, 3, 3, 3]; // 舊的；現在孔數看轉職 sockN()（build.js）
 const gemName = (g) => { const [k, l] = g.split(":"); return `${GEMS[k].n}寶石 ${l} 級`; };
-const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":")) n += +g.split(":")[1]; return n; };
+// 企劃 21 §8-3：寶石（符文）需要等級＋顏色（紅力量／綠敏捷／藍智力，只用來分類）
+const GEM_REQ0 = { power: 1, haste: 1, thrift: 1, frost: 1, blood: 1, multi: 10, pierce: 10, lmp: 20, chain: 20, burst: 20, ice: 30, fire: 30, volt: 30, venom: 30, det: 30 };
+const GEM_REQ_ADD = [0, 0, 10, 20, 35, 50];
+const gemReq = (g) => { const [k, l] = g.split(":"); return (GEM_REQ0[k] || 1) + (GEM_REQ_ADD[+l] || 0); };
+const gemReqOk = (g) => !save.w || (save.w.lv || 1) >= gemReq(g);
+const GEM_COL = { power: "r", blood: "r", burst: "r", multi: "r", haste: "g", lmp: "g", pierce: "g", frost: "b", thrift: "b", chain: "b", ice: "b", fire: "b", volt: "b", venom: "b", det: "b" };
+const GEM_COLN = { r: ["紅", "#ff5a5a"], g: ["綠", "#5adc78"], b: ["藍", "#5a9cff"] };
+const gemCol = (g) => GEM_COLN[GEM_COL[g.split(":")[0]] || "b"];
+const gemSortKey = (g) => "rgb".indexOf(GEM_COL[g.split(":")[0]] || "b") + g;
+const gemSort = (a, b) => (gemSortKey(a) < gemSortKey(b) ? -1 : 1);
+// 等級不夠的寶石鑲著也不生效
+const gemLv = (k) => { const so = save.eq.sword && save.eq.sword.so; let n = 0; if (so) for (const g of so) if (g && g.startsWith(k + ":") && gemReqOk(g)) n += +g.split(":")[1]; return n; };
+const gemCantMsg = (g) => (gemReqOk(g) ? null : `${gemName(g)}需要 Lv.${gemReq(g)}`);
+// 寶石按鈕（鏈格／背包共用）：邊框＝顏色，等級不夠紅字
+const gemTag = (g) => { const c = gemCol(g); return `<i class="gcol" style="background:${c[1]}">${c[0]}</i>`; };
+const gemReqTxt = (g) => (gemReqOk(g) ? "" : `<em class="greq">需要 Lv.${gemReq(g)}</em>`);
 const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
 const randGem = (lv = 1) => `${GEM_KEYS[Math.floor(Math.random() * GEM_KEYS.length)]}:${lv}`;
 // 武器元素（企劃 06／07）：看鑲的元素轉化寶石；一把武器只能一種元素
@@ -434,6 +449,7 @@ function renderEquip(msg = "") {
     const w = save.eq.sword, g = b.dataset.g;
     if (!w) { renderEquip("先裝備一把武器"); return; }
     { const ec = eleClash(w, g); if (ec) { renderEquip(ec); return; } }
+    { const rq = gemCantMsg(g); if (rq) { sfx("bad"); renderEquip(rq); return; } }
     w.so = w.so || []; const n = sockN();
     let i = -1; for (let j = 0; j < n; j++) if (!w.so[j]) { i = j; break; }
     if (i < 0) { renderEquip(`武器的孔都滿了（${n} 孔），點孔裡的寶石可以拆下`); return; }
@@ -479,12 +495,12 @@ function renderEquip(msg = "") {
   });
 }
 function gemHtml() {
-  const w = save.eq.sword, gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort();
+  const w = save.eq.sword, gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
   const n = w ? sockN() : 0, so = (w && w.so) || [];
-  const socks = w ? Array.from({ length: n }, (_, i) => { const g = so[i]; return g ? `<button class="gsock" data-i="${i}" style="border-color:${GEMS[g.split(":")[0]].c}"><b style="color:${GEMS[g.split(":")[0]].c}">◆ ${gemName(g)}</b><small>${GEMS[g.split(":")[0]].d(+g.split(":")[1])}</small></button>` : `<span class="gsock empty">空孔</span>`; }).join("") : `<span class="sub">沒有武器</span>`;
-  return `<div class="gems"><div class="baghead">技能寶石（武器 ${n} 孔，效果作用在全部招式上；點孔裡的寶石拆下）</div>
+  const socks = w ? Array.from({ length: n }, (_, i) => { const g = so[i]; return g ? `<button class="gsock" data-i="${i}" style="border-color:${gemCol(g)[1]}"><b style="color:${GEMS[g.split(":")[0]].c}">${gemTag(g)} ${gemName(g)}</b>${gemReqTxt(g)}<small>${GEMS[g.split(":")[0]].d(+g.split(":")[1])}</small></button>` : `<span class="gsock empty">空孔</span>`; }).join("") : `<span class="sub">沒有武器</span>`;
+  return `<div class="gems"><div class="baghead">技能寶石（武器 ${n} 孔，效果作用在全部招式上；點孔裡的寶石拆下。等級不夠的寶石不能鑲）</div>
     <div class="gsocks">${socks}</div>
-    <div class="gbag">${gs.length ? gs.map((g) => { const [k, l] = g.split(":"); return `<button class="gem" data-g="${g}" style="border-color:${GEMS[k].c}"><b style="color:${GEMS[k].c}">◆ ${gemName(g)} ×${save.gems[g]}</b><small>${GEMS[k].d(+l)}</small>${save.gems[g] >= 3 && +l < GEM_MAX ? `<span class="gmerge" data-g="${g}">3 顆合成 ${+l + 1} 級</span>` : ""}</button>`; }).join("") : `<p class="sub">還沒有寶石：精英怪、獵寶妖、任務會掉。點寶石就鑲到武器上</p>`}</div></div>`;
+    <div class="gbag">${gs.length ? gs.map((g) => { const [k, l] = g.split(":"); return `<button class="gem" data-g="${g}" style="border-color:${gemCol(g)[1]}"><b style="color:${GEMS[k].c}">${gemTag(g)} ${gemName(g)} ×${save.gems[g]}</b>${gemReqTxt(g)}<small>${GEMS[k].d(+l)}</small>${save.gems[g] >= 3 && +l < GEM_MAX ? `<span class="gmerge" data-g="${g}">3 顆合成 ${+l + 1} 級</span>` : ""}</button>`; }).join("") : `<p class="sub">還沒有寶石：精英怪、獵寶妖、任務會掉。點寶石就鑲到武器上</p>`}</div></div>`;
 }
 function equipItem(it) {
   if (!slotOpen(it.slot)) { sfx("bad"); if (typeof notice === "function") notice(`${SLOTS[it.slot].n}格要${slotLockTxt(it.slot)}`); return false; }

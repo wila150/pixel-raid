@@ -762,3 +762,27 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .bkmed .sr { grid-template-columns: 1fr; gap: 2px; margin: 6px 0; }
 .bkmed .sr span { justify-self: start; }
 .bkmed .sr b { white-space: normal; }
+/* v6.7 寶石顏色＋需要等級 */
+.gcol { display: inline-block; font-style: normal; font-size: 10px; line-height: 14px; padding: 0 3px; border-radius: 3px; color: #111; margin-right: 2px; vertical-align: 1px; }
+.greq { display: block; font-style: normal; color: #ff6a6a; font-size: 10px; }
+/* v6.7 技能鏈 */
+.tricards.c4 { grid-template-columns: repeat(4, 1fr); }
+.tricard.lock { opacity: 0.4; }
+.chainbox { padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 216, 74, 0.25); background: rgba(40, 32, 16, 0.35); }
+.rchain { display: flex; align-items: center; flex-wrap: wrap; gap: 0; }
+.rcell { width: 64px; min-height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 8px; border: 2px solid var(--c, #4a4060); background: rgba(20, 14, 34, 0.8); color: #f3eada; font: inherit; font-size: 12px; cursor: pointer; padding: 2px; }
+.rcell small { font-size: 10px; color: #cfc4dc; } .rcell b { font-size: 12px; }
+.rcell.empty { border-style: dashed; border-color: #8a7a50; color: #ffd84a; } .rcell.pick { box-shadow: 0 0 0 2px #ffd84a, 0 0 10px #ffd84a; }
+.rcell.lock { border-style: dashed; border-color: #444; color: #777; cursor: default; }
+.rcell.bad { opacity: 0.6; } .rcell.bad small { color: #ff6a6a; }
+.rlink { width: 10px; height: 3px; background: #8a7a50; flex: none; }
+.rpick { margin-top: 8px; } .rpick .gbag { display: flex; flex-wrap: wrap; gap: 6px; } .rpick .gem { flex: 1 1 45%; } .rpick .gem:disabled { opacity: 0.5; }
+.skauto { padding: 8px 10px; margin-bottom: 8px; border-radius: 8px; background: rgba(30, 40, 30, 0.6); border: 1px solid rgba(127, 216, 144, 0.3); text-align: left; }
+.skauto b { color: #9fffc8; display: block; } .skauto small { font-size: 12px; color: #cfe8d0; }
+.kst > small { display: block; color: var(--dim); font-size: 11px; margin: 4px 0 2px; text-align: left; }
+.ksall { max-height: 48vh; overflow-y: auto; }
+@media (orientation: portrait) { .tricards.c4 { grid-template-columns: 1fr 1fr; } .rcell { width: 48px; min-height: 40px; font-size: 11px; } .rlink { width: 4px; } }
+.tricard.on:disabled { opacity: 1; color: inherit; } .tricard.on:disabled small { opacity: 0.9; }
+.trilist { max-height: 62vh; }
+.chainbox, .trirow, .rpick { min-width: 0; } .trihead { flex-wrap: wrap; } .rpick .gem { min-width: 0; }
+@media (orientation: portrait) { .rpick .gem { flex-basis: 100%; } .rcell { width: 44px; } }

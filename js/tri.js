@@ -1,5 +1,7 @@
-// 萬劍仙途 — 改招三選一（企劃 04）：一轉＝普攻、二轉＝Q（每種武器各自一組）、三轉＝身法（全武器共用）
-// 存檔用選項代碼：save.w.tri = { sword: { a: "dance", q: "boom" }, bow: {...}, r: "surge" }；沒選＝原本的招式
+// 萬劍仙途 — 技能清單＋技能鏈（企劃 21 §8，總表第 12 項；取代 04 的改招三選一）
+// 每把武器的技能照等級開，開過永遠能用；普攻／Q／E／身法 各一格自由選（第一版：每格從同一類裡選）
+// 存檔：save.w.tri = { sword: { a: "dance", q: "boom" }, bow: {...}, r: "surge" }；沒選＝原本的招式
+// save.w.triOwn：舊存檔三選一選過的（直接當已開，不看等級）；save.w.triSeen：看過技能鏈時的等級（紅點用）
 "use strict";
 const TRI = {
   sword: {
@@ -80,58 +82,135 @@ const TRI = {
     { k: "wave", n: "凌波", d: "閃身冷卻 −30%，每次閃身回 8 真氣" },
   ],
 };
-const TRI_NEED = { a: 1, q: 2, r: 3 }; // 幾轉解鎖
-const TRI_LAYER_N = { a: "普攻", q: "Q 招", r: "身法" };
+// 開放等級（第 i 張卡）；E＝Lv.5
+const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], r: [25, 45, 60] };
+const E_LV = 5;
+const TRI_LAYER_N = { a: "普攻", q: "Q 招", e: "E 招", r: "身法" };
 const triList = (wt, l) => (l === "r" ? TRI.r : TRI[wt] && TRI[wt][l]) || null;
+const wLv = () => (save.w && save.w.lv) || 1;
+function triMig() { // 舊存檔：三選一選過的直接當已開
+  const w = save.w; if (!w || w.triV) return;
+  w.triOwn = w.triOwn || [];
+  for (const wt in w.tri || {}) {
+    if (wt === "r") { if (w.tri.r) w.triOwn.push("r:" + w.tri.r); continue; }
+    for (const l in w.tri[wt]) if (w.tri[wt][l]) w.triOwn.push(`${wt}:${l}:${w.tri[wt][l]}`);
+  }
+  w.triV = 1;
+}
+const triOwnKey = (wt, l, k) => (l === "r" ? "r:" + k : `${wt}:${l}:${k}`);
+function triNeed(wt, l, k) { const L = triList(wt, l); const i = L ? L.findIndex((o) => o.k === k) : -1; return i < 0 ? 999 : TRI_LV[l][i]; }
+function triOpen(wt, l, k) {
+  if (!save.w) return false; triMig();
+  return wLv() >= triNeed(wt, l, k) || (save.w.triOwn || []).includes(triOwnKey(wt, l, k));
+}
 function triOf(wt, l) {
-  const w = save.w; if (!w || !w.tri || jobLv() < TRI_NEED[l]) return null;
+  const w = save.w; if (!w || !w.tri) return null;
   const v = l === "r" ? w.tri.r : w.tri[wt] && w.tri[wt][l];
   const L = triList(wt, l);
-  return L && L.some((o) => o.k === v) ? v : null;
+  return v && L && L.some((o) => o.k === v) && triOpen(wt, l, v) ? v : null;
 }
 const triName = (wt, l) => { const v = triOf(wt, l), L = triList(wt, l); return v ? L.find((o) => o.k === v).n : null; };
-// 還沒選的層（目前武器）
-function triPending() {
-  const wt = curWeapon(), out = [];
-  for (const l of ["a", "q", "r"]) if (jobLv() >= TRI_NEED[l] && triList(wt, l) && !triOf(wt, l)) out.push(l);
+// 上次看技能鏈之後新開的技能（目前武器＋身法）
+function triNew() {
+  const w = save.w; if (!w) return [];
+  const seen = w.triSeen || 1, lv = wLv(), wt = curWeapon(), out = [];
+  for (const l of ["a", "q", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (TRI_LV[l][i] > seen && TRI_LV[l][i] <= lv) out.push(o.n); }); }
+  if (E_LV > seen && E_LV <= lv) out.push(WSKILLS[wt].ult[0]);
   return out;
 }
+const triPending = () => triNew(); // 舊名字（紅點）
 function triSet(wt, l, k) {
   const w = save.w; if (!w.tri) w.tri = {};
-  if (l === "r") w.tri.r = k; else { if (!w.tri[wt]) w.tri[wt] = {}; w.tri[wt][l] = k; }
+  if (l === "r") { if (k) w.tri.r = k; else delete w.tri.r; }
+  else { if (!w.tri[wt]) w.tri[wt] = {}; if (k) w.tri[wt][l] = k; else delete w.tri[wt][l]; }
   writeSave(); applyWeapon(); setPadLabels(true);
 }
-// 技能頁「招式」分頁
+// 換招：營地隨時；野外脫戰 3 秒；打區域王時不行
+function triSwapWhy() {
+  if (typeof W0 === "undefined" || !W0) return null;
+  if (typeof atCamp === "function" && atCamp()) return null;
+  if (typeof wbArena === "function" && wbArena()) return "打王的時候不能換招";
+  if ((W0.combatT || 0) > 0 || (W0.fightAgo !== undefined && W0.fightAgo < 3)) return "戰鬥中不能換招（離開戰鬥 3 秒後就可以）";
+  return null;
+}
+// 原本的招式說明
+const TRI_BASE_D = { a: "原本的普攻", q: "原本的 Q 招", r: "原本的閃身：往前閃一段，短暫無敵" };
+// 技能頁「技能鏈」分頁
+let triPick = null; // 正在選符文的格子
 function renderTri(msg = "") {
-  const wt = curWeapon(), j = jobLv(), camp = typeof atCamp === "function" ? atCamp() : true;
-  const rows = ["a", "q", "r"].map((l) => {
-    const L = triList(wt, l), lock = j < TRI_NEED[l], cur = triOf(wt, l);
-    const head = `<div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "專屬"}　${lock ? `${JOBS[TRI_NEED[l] - 1].n}（Lv.${JOBS[TRI_NEED[l] - 1].lv}）解鎖` : cur ? "已選" : "還沒選"}</small></div>`;
-    if (!L) return `<div class="trirow">${head}<p class="sub">這種武器的${TRI_LAYER_N[l]}選項即將開放</p></div>`;
+  const wt = curWeapon(), lv = wLv(), why = triSwapWhy(), ws = WSKILLS[wt];
+  if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
+  const card = (l, k, n, d, need) => {
+    const cur = (triOf(wt, l) || "") === k, open = !k || triOpen(wt, l, k);
+    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}" data-tl="${l}" data-tk="${k}" ${open && !cur ? "" : "disabled"}><b>${n}</b><small>${open ? d : `🔒 Lv.${need} 開放`}</small>${open && !k ? "" : open ? "" : ""}</button>`;
+  };
+  const row = (l) => {
+    const L = triList(wt, l), base = l === "a" ? ws.attack[0] : l === "q" ? ws.spin[0] : "閃身";
     const over = l === "q" && (B.uq.voidQ || (typeof supOn === "function" && (supOn("meteor") || supOn("swordrain")))) ? `<p class="sub">目前被傳說／超技能改寫的 Q 取代，選了也不會生效</p>` : "";
-    const can = !lock && (!cur || camp);
-    return `<div class="trirow">${head}${over}<div class="tricards">${L.map((o) => `<button class="tricard${cur === o.k ? " on" : ""}" data-tl="${l}" data-tk="${o.k}" ${can && cur !== o.k ? "" : "disabled"}><b>${o.n}</b><small>${o.d}</small></button>`).join("")}</div></div>`;
-  }).join("");
-  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist">${rows}</div>
-    <p class="sub">轉職會解鎖新的一層。第一次選在哪裡都可以；之後要換，回到安全營地免費換${camp ? "" : "（你現在不在營地）"}。</p>`;
+    const cards = [card(l, "", base, TRI_BASE_D[l], 1)].concat((L || []).map((o, i) => card(l, o.k, o.n, o.d, TRI_LV[l][i]))).join("");
+    return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}</small></div>${over}<div class="tricards c4">${cards}</div></div>`;
+  };
+  const eRow = () => {
+    const u = WSKILL.ult && WSKILL.ult.uq, n = u ? WSKILL.ult.n : ws.ult[0];
+    return `<div class="trirow"><div class="trihead"><b>E 招</b><small>集滿天罰能量放；更多 E 招之後開放</small></div><div class="tricards c4"><button class="tricard on" disabled><b>${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : u ? "傳說武器的專屬 E 招" : "原本的 E 招"}</small></button></div></div>`;
+  };
+  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist">${row("a")}${row("q")}${eRow()}${row("r")}${chainHtml()}</div>
+    <p class="sub">技能照等級開放，開過的永遠能用。${why ? `<b style="color:#ff9a7a">${why}</b>` : "現在可以換招。"}（營地裡隨時能換；野外離開戰鬥 3 秒後能換）</p>`;
+}
+// 符文鏈（第一版：整把武器共用，孔數看轉職）
+function chainHtml() {
+  const w = save.eq.sword; if (!w) return `<div class="chainbox"><div class="trihead"><b>符文鏈</b><small>先裝備一把武器</small></div></div>`;
+  const n = sockN(), so = w.so || [], NEED = [["", 0], ["一轉", 4], ["二轉", 5], ["三轉", 6]];
+  let cells = "";
+  for (let i = 0; i < 6; i++) {
+    const g = so[i];
+    if (i >= n) { const nx = NEED.find((x) => x[1] > i) || NEED[3]; cells += `<span class="rcell lock">🔒<small>${nx[0]}</small></span>`; }
+    else if (g) { const [k, l] = g.split(":"); cells += `<button class="rcell has${gemReqOk(g) ? "" : " bad"}" data-rs="${i}" style="--c:${gemCol(g)[1]}" title="${GEMS[k].d(+l)}"><b style="color:${GEMS[k].c}">${GEMS[k].n}</b><small>${l} 級${gemReqOk(g) ? "" : `・要 Lv.${gemReq(g)}`}</small></button>`; }
+    else cells += `<button class="rcell empty${triPick === i ? " pick" : ""}" data-rs="${i}">＋<small>空格</small></button>`;
+    if (i < 5) cells += `<i class="rlink"></i>`;
+  }
+  let pick = "";
+  if (triPick !== null) {
+    const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
+    pick = `<div class="rpick"><div class="trihead"><b>選一顆符文串上去</b><small>紅＝力量、綠＝敏捷、藍＝智力</small></div>${gs.length ? `<div class="gbag">${gs.map((g) => { const [k, l] = g.split(":"); return `<button class="gem" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${gemReqOk(g) ? "" : "disabled"}><b style="color:${GEMS[k].c}">${gemTag(g)} ${gemName(g)} ×${save.gems[g]}</b>${gemReqTxt(g)}<small>${GEMS[k].d(+l)}</small></button>`; }).join("")}</div>` : `<p class="sub">背包裡沒有符文：精英怪、獵寶妖、任務會掉</p>`}</div>`;
+  }
+  return `<div class="chainbox"><div class="trihead"><b>符文鏈</b><small>目前串在${w.name || "武器"}上，全部招式一起吃（之後會改成每招一條）；點格子串上／拆下</small></div><div class="rchain">${cells}</div>${pick}</div>`;
 }
 function bindTri() {
   ov.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
-    const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, o = triList(wt, l).find((x) => x.k === k);
-    triSet(wt, l, k); sfx("good"); renderSkills(`${TRI_LAYER_N[l]}換成「${o.n}」`);
+    const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
+    if (why) { sfx("bad"); renderSkills(why); return; }
+    if (k && !triOpen(wt, l, k)) return;
+    const o = k ? triList(wt, l).find((x) => x.k === k) : null;
+    triSet(wt, l, k); sfx("good"); renderSkills(`${TRI_LAYER_N[l]}換成「${o ? o.n : "原本的招式"}」`);
+  }));
+  ov.querySelectorAll("[data-rs]").forEach((b) => b.addEventListener("click", () => {
+    const w = save.eq.sword, i = +b.dataset.rs, g = w && w.so && w.so[i];
+    if (g) { addGem(g); w.so[i] = null; triPick = null; writeSave(); applyWeapon(); sfx("click"); renderSkills(`拆下 ${gemName(g)}`); return; }
+    triPick = triPick === i ? null : i; sfx("click"); renderSkills();
+  }));
+  ov.querySelectorAll("[data-rg]").forEach((b) => b.addEventListener("click", () => {
+    const w = save.eq.sword, g = b.dataset.rg, i = triPick; if (!w || i === null) return;
+    const ec = eleClash(w, g) || gemCantMsg(g); if (ec) { sfx("bad"); renderSkills(ec); return; }
+    w.so = w.so || []; w.so[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g];
+    triPick = null; writeSave(); applyWeapon(); sfx("good"); renderSkills(`串上 ${gemName(g)}`);
   }));
 }
-// 轉職當下：直接打開招式分頁
-const _doJobTri = doJob;
-doJob = function () {
-  const r = _doJobTri.apply(this, arguments);
-  if (r !== false && triPending().length) { skTab = "tri"; setTimeout(() => { if (state === "pick" || state === "paused") renderSkills("轉職解鎖新招式，選一張"); }, 0); }
-  return r;
-};
-// 有沒選的招式：技能鈕紅點；在安全營地裡才飄字提醒（野外不蓋住戰鬥資訊）
+// E 招 Lv.5 才開：之前天罰能量不會累積，按鈕寫「Lv.5」
+const _applyWeaponT = applyWeapon;
+applyWeapon = function () { _applyWeaponT.apply(this, arguments); if (save.w && wLv() < E_LV && WSKILL.ult) WSKILL.ult.n = `Lv.${E_LV} 開放`; };
+const _updateWorldT = updateWorld;
+updateWorld = function () { const r = _updateWorldT.apply(this, arguments); if (W0 && save.w && wLv() < E_LV) W0.en = 0; return r; };
+// 升級開新技能：劍靈提示＋技能鈕紅點
 setInterval(() => {
   const w = save.w; if (!w || !w.created || typeof W0 === "undefined" || !W0 || !inWorld) return;
-  const pend = triPending().length > 0;
-  const key = curWeapon() + jobLv();
-  if (pend && state === "world" && atCamp() && W0.triHint !== key) { W0.triHint = key; (typeof notice === "function" ? notice("可以選新招式了（技能 → 招式）", "#ffe066") : floatText(W0.x, W0.y - 40, "可以選新招式了（技能 → 招式）", "#ffe066", true)); }
+  const lv = wLv();
+  if (W0.triLv === undefined) { W0.triLv = lv; return; }
+  if (lv > W0.triLv) {
+    const wt = curWeapon(), got = [];
+    for (const l of ["a", "q", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (TRI_LV[l][i] > W0.triLv && TRI_LV[l][i] <= lv) got.push(o.n); }); }
+    if (E_LV > W0.triLv && E_LV <= lv) { got.push(WSKILLS[wt].ult[0]); applyWeapon(); setPadLabels(true); }
+    W0.triLv = lv;
+    if (got.length) (typeof notice === "function" ? notice(`解鎖新技能「${got.join("、")}」（技能 → 技能鏈 換上）`, "#ffe066") : floatText(W0.x, W0.y - 40, `解鎖新技能「${got.join("、")}」`, "#ffe066", true));
+  }
 }, 1000);
