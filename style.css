@@ -758,3 +758,7 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 /* v6.5 字體大小（access.js）：覆蓋層、舊畫面跟著放大縮小 */
 body.fz-l .ov .col, body.fz-l .screen .panel, body.fz-l #updCard { zoom: 1.15; }
 body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
+/* 6.5.2 手冊閉關頁：標籤在上、數值在下（橫向窄欄標籤會蓋到數值） */
+.bkmed .sr { grid-template-columns: 1fr; gap: 2px; margin: 6px 0; }
+.bkmed .sr span { justify-self: start; }
+.bkmed .sr b { white-space: normal; }

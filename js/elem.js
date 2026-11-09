@@ -189,9 +189,9 @@ drawOrbs = function () {
   _drawOrbsE();
   if (!(W0 && W0.brk > 0)) return;
   const R = clamp(Math.min(W, H) * 0.11, 34, 56), hx = SAFE.l + R + 14, hy = H - R - 18, y = hy - R - (B.maxEs > 0 ? 22 : 9);
-  ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(20,10,10,0.9)"; const t = `破體 ×${W0.brk}（回血 −${W0.brk * 20}%）`;
-  ctx.strokeText(t, hx + 10, y); ctx.fillStyle = `rgb(255,${150 - W0.brk * 20},${120 - W0.brk * 20})`; ctx.fillText(t, hx + 10, y);
+  ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.textAlign = "left";
+  ctx.lineWidth = 3; ctx.strokeStyle = "rgba(20,10,10,0.9)"; const t = `破體 ×${W0.brk}（回血 −${W0.brk * 20}%）`, tx = Math.max(SAFE.l + 6, hx + 10 - ctx.measureText(t).width / 2); // 大字體不被左邊切掉
+  ctx.strokeText(t, tx, y); ctx.fillStyle = `rgb(255,${150 - W0.brk * 20},${120 - W0.brk * 20})`; ctx.fillText(t, tx, y);
 };
 const _drawHeldWeaponE = drawHeldWeapon;
 drawHeldWeapon = function (p, wt) {
