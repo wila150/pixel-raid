@@ -849,28 +849,28 @@ function updateWorld(dt) {
   const eAltFx = (k) => {
     const t = near(180), tx = t ? t.x : p.x + Math.cos(p.face) * 70, ty = t ? t.y : p.y + Math.sin(p.face) * 70; if (t) p.face = angTo(p, t);
     const F = p.face, cs = Math.cos(F), sn = Math.sin(F);
-    if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 14, c: "#bfe6ff" }); sfx("volley"); }
-    else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 12, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
+    if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 18, c: "#bfe6ff" }); sfx("volley"); }
+    else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 26, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
     else if (k === "judg") { W0.fires.push({ x: tx, y: ty, t: 0.6, r: 40, dmg: 120, c: "#e8f4ff" }); W0.rings.push({ x: tx, y: ty, t: 0, max: 0.6, r: 40, c: "230,240,255" }); sfx("arrive"); }
     else if (k === "blizz") { for (let i = 0; i < 10; i++) W0.fires.push({ x: tx + rand(-36, 36), y: ty + rand(-26, 26), t: 0.2 + i * 0.13, r: 20, dmg: 14, c: "#bfefff", slow: 2 }); sfx("volley"); }
-    else if (k === "chainl") { shoot(F, { v: 260, life: 1.2, dmg: 30, kind: "orb", pierce: false, kb: 30, bnAdd: 6 }); bolts.push({ x: p.x, y: p.y, life: 0.2 }); sfx("crit"); }
+    else if (k === "chainl") { shoot(F, { v: 260, life: 1.2, dmg: 45, kind: "orb", pierce: false, kb: 30, bnAdd: 6 }); bolts.push({ x: p.x, y: p.y, life: 0.2 }); sfx("crit"); }
     else if (k === "inferno") { for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; W0.walls.push({ x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 30, t: 3, tick: 0 }); } sfx("break"); }
-    else if (k === "barr") { for (let w = 0; w < 3; w++) castLater(w * 0.25, () => { for (let i = -3; i <= 3; i++) shoot(p.face + i * 0.12, { v: 300, life: 0.6, dmg: 10, kind: "arrow", pierce: false, kb: 20 }); sfx("volley"); }); }
-    else if (k === "seekr") { for (let i = 0; i < 8; i++) shoot(F + (i - 3.5) * 0.17, { v: 260, life: 1.0, dmg: 14, kind: "arrow", pierce: false, kb: 20, home: true }); sfx("volley"); }
+    else if (k === "barr") { for (let w = 0; w < 3; w++) castLater(w * 0.25, () => { for (let i = -3; i <= 3; i++) shoot(p.face + i * 0.12, { v: 300, life: 0.6, dmg: 8, kind: "arrow", pierce: false, kb: 20 }); sfx("volley"); }); }
+    else if (k === "seekr") { for (let i = 0; i < 8; i++) shoot(F + (i - 3.5) * 0.17, { v: 260, life: 1.0, dmg: 11, kind: "arrow", pierce: false, kb: 20, home: true }); sfx("volley"); }
     else if (k === "star") { for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + cs * i * 30, y: p.y + sn * i * 30, t: 0.25 + i * 0.1, r: 24, dmg: 40, c: "#ffe9a0" }); sfx("volley"); }
     else if (k === "cyclone") { W0.spinT = 2; W0.spinTick = 0; W0.spinK = "cyc"; sfx("volley"); }
     else if (k === "rift") { for (let i = 1; i <= 8; i++) W0.fires.push({ x: p.x + cs * i * 20, y: p.y + sn * i * 20, t: 0.05 + i * 0.05, r: 20, dmg: 34, c: "#d8c8a0" }); sfx("crit"); shake = Math.max(shake, 6); }
     else if (k === "exec") {
       const r = 60 * AM(); p.swing = p.swingMax = 0.3; p.swingR = 44;
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.2) hitMob(m, wDmg(120) * (m.hp < m.max * 0.3 ? 2 : 1), 150, p, true);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.2) hitMob(m, wDmg(95) * (m.hp < m.max * 0.3 ? 2 : 1), 150, p, true);
       sfx("break"); shake = Math.max(shake, 7); flashT = 0.06; flashColor = "255,230,200";
     }
     else if (k === "hund") { for (let i = 0; i < 12; i++) castLater(i * 0.08, () => { const tg = near(60); if (tg) p.face = angTo(p, tg); p.swing = p.swingMax = 0.08; p.swingR = 14; arcHit(26, 0.9, 9, 20); sfx("hit"); }); }
     else if (k === "dragon") { const tg = near(140); if (tg) p.face = p.rollDir = angTo(p, tg); else p.rollDir = F; p.roll = tg ? clamp((dist(p, tg) - 6) / 250, 0.06, 0.5) : 0.2; p.iframe = Math.max(p.iframe, 0.3); p.land = { r: 50, dmg: 80 }; sfx("dash"); }
     else if (k === "gong") { shoot(F, { v: 240, life: 0.7, dmg: 70, kind: "big", pierce: true, kb: 120 }); sfx("crit"); shake = Math.max(shake, 4); }
-    else if (k === "typh") { for (const da of [-0.4, 0, 0.4]) W0.tornados.push({ x: p.x + Math.cos(F + da) * 14, y: p.y + Math.sin(F + da) * 14, vx: Math.cos(F + da) * 45, vy: Math.sin(F + da) * 45, t: 2, tick: 0, dmg: 12 }); sfx("volley"); }
+    else if (k === "typh") { for (const da of [-0.4, 0, 0.4]) W0.tornados.push({ x: p.x + Math.cos(F + da) * 14, y: p.y + Math.sin(F + da) * 14, vx: Math.cos(F + da) * 45, vy: Math.sin(F + da) * 45, t: 2, tick: 0, dmg: 5.5 }); sfx("volley"); }
     else if (k === "bloom") { const h = Math.min(Math.round(p.maxHp * 0.15 * (CUR_DM < 1 ? 0.4 : 1) * brkMul()), p.maxHp - p.hp); p.hp += h; if (h) floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); for (let i = 0; i < 12; i++) shoot((i / 12) * Math.PI * 2, { v: 200, life: 0.9, dmg: 8, kind: "wind", pierce: true, kb: 20, back: 0.4 }); sfx("heal"); }
-    else if (k === "zephyr") { W0.tornados = W0.tornados.filter((o) => !(o.orbit !== undefined && o.zep && !o.ghost)); W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 5, tick: 0, orbit: 0, dmg: 9, zep: 1 }); sfx("volley"); }
+    else if (k === "zephyr") { W0.tornados = W0.tornados.filter((o) => !(o.orbit !== undefined && o.zep && !o.ghost)); W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 5, tick: 0, orbit: 0, dmg: 5, zep: 1 }); sfx("volley"); }
     return true;
   };
   const SLFX = { a: () => atkFx(), q: () => doSpin(), e: () => ultFx(true) };
@@ -1042,7 +1042,7 @@ function updateWorld(dt) {
   if (W0.focusT > 0) W0.focusT -= dt;
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
-    if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const sr = 40 * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : W0.spinK === "cyc" ? 20 : 17) * (m.boss ? 0.8 : 1), 60, p, true); CUR_SL = null; CUR_DM = 1; sfx("dash"); }
+    if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const sr = 40 * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : W0.spinK === "cyc" ? 8 : 17) * (m.boss ? 0.8 : 1), 60, p, true); CUR_SL = null; CUR_DM = 1; sfx("dash"); }
   }
   for (const t of W0.tornados) {
     t.t -= dt; t.tick -= dt; CUR_SL = t.sl || null; CUR_DM = t.dm || 1;
