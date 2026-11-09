@@ -954,3 +954,20 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 #chatlog .chtag { font-style: normal; font-size: 10px; margin-right: 4px; }
 .chatin .chsel { min-width: 52px; margin-right: 6px; border-radius: 6px; background: rgba(30, 26, 22, 0.9); border: 1px solid rgba(230, 210, 170, 0.4); font-weight: 700; }
 .ov .gem .gtype { color: #cfc4dc; font-size: 10px; }
+/* v7.9 一鍵出售＋鎖定（企劃 38） */
+.ov .bagwin h2 { display: flex; align-items: center; gap: 8px; } .ov .bagwin h2 .sellall { margin-left: auto; min-height: 30px; padding: 0 10px; font-size: 12px; border-radius: 6px; border: 1px solid rgba(255, 120, 110, 0.6); color: #ffb0a8; background: rgba(60, 20, 18, 0.7); }
+.ov .bcell .lockic { position: absolute; left: 1px; bottom: 0; font-style: normal; font-size: 10px; }
+.ov .sellpop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
+.ov .sellbox { width: min(440px, 94vw); max-height: 92%; overflow-y: auto; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(230, 210, 170, 0.45); background: rgba(22, 19, 26, 0.97); display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.ov .sellbox h3 { margin: 0; color: #ffe9a0; }
+.ov .sellq { display: flex; gap: 6px; flex-wrap: wrap; }
+.ov .sellq label, .ov .sellb { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--c, rgba(230, 210, 170, 0.35)); color: var(--c, #e8dcc0); font-size: 13px; min-height: 32px; }
+.ov .sellb { align-self: flex-start; }
+.ov .sellsum { font-size: 14px; } .ov .sellsum b { color: #fff; } .ov .sellsum b.gold { color: #ffd84a; }
+.ov .sellgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px; max-height: 150px; overflow-y: auto; }
+.ov .sellc { position: relative; aspect-ratio: 1; padding: 2px; border-radius: 6px; border: 1px solid var(--c); background: rgba(14, 12, 18, 0.8); }
+.ov .sellc img { width: 100%; height: 100%; image-rendering: pixelated; } .ov .sellc .en { position: absolute; right: 2px; top: 0; font-size: 9px; color: #ffe066; }
+.ov .sellc.ex { opacity: 0.3; } .ov .sellc.ex::after { content: "✕"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #ff6b6b; font-size: 18px; }
+.ov .sellacts { display: flex; gap: 10px; justify-content: flex-end; } .ov .sellacts button { min-width: 96px; min-height: 42px; border-radius: 8px; color: #e8dcc0; background: rgba(50, 44, 36, 0.95); border: 1px solid rgba(230, 210, 170, 0.45); } .ov .sellacts #sellGo { color: #ffd0c8; background: rgba(110, 30, 26, 0.9); border-color: rgba(255, 120, 110, 0.7); }
+.ov .sellacts button:disabled { opacity: 0.45; }
+.ov .lksvg { width: 12px; height: 12px; vertical-align: -1px; margin: 0 2px; } .ov .bcell .lockic .lksvg { width: 11px; height: 11px; } #lockIt .lksvg { width: 14px; height: 14px; margin-right: 4px; }

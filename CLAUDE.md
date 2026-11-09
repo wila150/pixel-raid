@@ -326,3 +326,4 @@
   - 21 §12（使用者改主意後的版本）：名字照舊（`gemName`＝輔助寶石「分裂」N 級，`gemFullN` 只回短名）；類型標籤 `GEM_TYPE`「輔助寶石」寫在說明小字：背包「輔助寶石・綠・Lv.30」、技能鏈寶石清單 `.gtype`。企劃 37 技能寶石之後寫「技能寶石」。
   - 驗收小修：毒池第一次提示（wboss.js）、elem.js 的 `seenHint` 改 `notice`（劍靈說）；render.js 飄字不是數字的，超出畫面 90% 寬就縮字（除掉 access.js 字體倍率）並把位置夾在畫面內（王的招式大字）。直向手機 `hud3Tick` 把 `#wbar` 的 bottom 設到 `#pad .btn` 最高那顆上面 8px（原本疊在血球和劍氣斬上）。
   - 測試 scratchpad `#f23`（22 項：7 顆快捷、右側 6 顆開頁、收合記住、頻道過濾、系統訊息、變淡、打王自動收／恢復、傳說、開介面藏起來、全名）、`#f19` 全過；截圖橫直（野外展開／收起、打王）＋電腦。
+- **v7.9 一鍵出售＋鎖定（總表第 25 項，企劃 38，11/10）**：新檔 `js/sellall.js`（hud3.js 後），包 `renderEquip`（行囊 h2 右邊 `#sellAll`、拿掉舊 `#sellJunk`、格子 `.lockic`、說明 `#lockIt`；鎖住的單件「出售」變灰）、`ovClose`、`ovSub`（返回先關小視窗）。`save.w.sell = {q:[品質], better}`（每個角色記自己的）；`sellPick(all)`：不賣 `it.lock`、武器組 `w.ws` 裡的、`isBetterIt`（除非 better）；`sellEx` 這次手動排除（每次打開清空）。`sellDo` 先 `ungem`（卡片、寶石退回）再加靈石。野外也能賣。鎖頭用 SVG（`LOCK_SVG`，不用 emoji）。測試 `#f38` 全過。
