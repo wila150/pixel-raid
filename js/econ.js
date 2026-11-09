@@ -41,7 +41,7 @@ const matHas = (need) => Object.keys(need).every((k) => k === "stone" ? save.sto
 function matUse(need) { for (const k in need) { if (k === "stone") save.stone -= need[k]; else save.mat[k] -= need[k]; } }
 const matName = (k) => (k === "stone" ? "靈石" : MATS[k].n);
 const matTxt = (need) => Object.keys(need).map((k) => `${matName(k)} ${k === "stone" ? need[k] : `${matN(k)}/${need[k]}`}`).join("、");
-const matWhere = (k) => { const M = MATS[k]; return M.boss ? `${RBOSS[M.boss].n}（打倒必掉 3–6 個；秘境之主也會掉）` : `${ZONES[M.z].n}${M.rare ? "：精英 20%、一般怪 0.5%" : "：區內所有怪 20%"}`; };
+const matWhere = (k) => { const M = MATS[k]; if (M.gz) return `採集點：${M.gz.map((z) => ZONES[z].n).join("、")}（地上的發光植物／礦石，站著不動 1.5 秒）`; return M.boss ? `${RBOSS[M.boss].n}（打倒必掉 3–6 個；秘境之主也會掉）` : `${ZONES[M.z].n}${M.rare ? "：精英 20%、一般怪 0.5%" : "：區內所有怪 20%"}`; };
 function matList() {
   return Object.keys(MATS).filter((k) => matN(k) > 0).map((k) => ({ k: "mat:" + k, g: MATS[k].n[0], c: MATS[k].c, n: matN(k), name: MATS[k].n, d: `哪裡掉：${matWhere(k)}<br>用途：${matUses(k)}` }));
 }
