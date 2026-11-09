@@ -375,6 +375,10 @@ function trDraw() {
     g.lineWidth = Math.max(1.2, (sel ? 3.5 : 2) * Math.min(1.3, z));
     g.strokeStyle = sel ? "#ffffff" : on ? "#fff1b0" : inP ? "#fff3c0" : av ? "#f4f0e6" : N.t === "ks" ? "#8a4a7a" : N.t === "note" ? "#8a7440" : "#5a5446";
     g.stroke();
+    if (rr >= 7 && (N.t === "note" || N.t === "ks" || N.t === "start")) { // 使用者畫的圖示（企劃 31）
+      const ik = N.t === "note" ? (N.th === "duomo" ? "mp" : N.th) : N.t === "ks" ? N.ks : "s" + N.sec, s2 = rr * (N.t === "ks" ? 2.3 : 2.1);
+      if (icoHas("tree", ik)) { g.globalAlpha = on || inP || av || sel ? 1 : 0.55; icoDraw(g, "tree", ik, x - s2 / 2, y - s2 / 2, s2, s2); g.globalAlpha = 1; if (on) { g.lineWidth = Math.max(1.2, 2 * Math.min(1.3, z)); g.strokeStyle = "#fff1b0"; g.beginPath(); g.arc(x, y, s2 / 2, 0, Math.PI * 2); g.stroke(); } }
+    }
     if (col && N.t === "note") { const ring = TR_IDS.filter((o) => TREE[o].cl === id), k = ring.filter((o) => have.has(o)).length + (on ? 1 : 0); g.font = `bold 10px sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#d8ccb0"; g.fillText(`${k}/5`, x, y + 4); }
     if (N.tag && !col && z >= 0.55) { g.font = `bold ${Math.max(8, 10 * z)}px 'Noto Sans TC', sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#9fe8ff"; g.fillText(TR_TAGN[N.tag][0], x, y + 3.5 * Math.max(0.8, z)); }
     if (N.t === "note" || N.t === "ks" || N.t === "start" || N.t === "hub") {

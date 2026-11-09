@@ -827,3 +827,23 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov.k-tree .trq { position: absolute; top: 52px; left: max(8px, env(safe-area-inset-left)); width: min(220px, 46vw); padding: 6px 10px; border-radius: 8px; border: 1px solid #5a4a2a; background: rgba(12,10,8,0.85); color: #f0e2c4; font-size: 13px; user-select: text; -webkit-user-select: text; }
 .ov.k-tree .trq:focus { outline: none; border-color: #9fe8ff; }
 .ov.k-tree .trsp { color: #ffe066; font-weight: normal; }
+/* v7.5 使用者畫的圖示（總表第 21 項，sprites.js） */
+.ico { display: inline-block; flex: none; width: 28px; height: 28px; background-repeat: no-repeat; vertical-align: middle; }
+.ico-card { width: 27px; height: 36px; }
+.bcell.prop .ico { width: 78%; height: 78%; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--c) 60%, transparent)); }
+.bcell.prop .ico-card { width: 60%; height: 80%; }
+.big-ico.prop .ico { width: min(96px, 20vh); height: min(96px, 20vh); filter: drop-shadow(0 0 10px var(--c)); }
+.big-ico.prop .ico-card { width: min(84px, 18vh); height: min(112px, 24vh); }
+.rcell .rico { width: 30px; height: 30px; margin-bottom: -2px; }
+.gem .gico { width: 22px; height: 22px; margin-right: 3px; }
+.tricard b { display: flex; align-items: center; gap: 6px; }
+.tricard .tico { width: 34px; height: 34px; border-radius: 6px; }
+.cardchip { display: inline-flex; flex-direction: column; align-items: flex-start; vertical-align: top; }
+.cardchip .cardico { width: 45px; height: 60px; border-radius: 3px; margin-bottom: 3px; pointer-events: none; }
+#pad .btn .pico { position: absolute; inset: 7%; width: auto; height: auto; border-radius: 22%; opacity: 0.92; pointer-events: none; }
+#pad .btn-ult .pico { opacity: 0.55; }
+#pad .btn .plab { position: relative; display: grid; place-items: center; pointer-events: none; }
+#pad .btn.hasico .plab { font-size: 11px; text-shadow: 0 0 3px #000, 0 0 2px #000, 0 1px 2px #000; align-self: end; margin-bottom: 2px; }
+#pad .btn.hasico .plab small { display: none; }
+@media (orientation: portrait) { .rcell .rico { width: 24px; height: 24px; } }
+.bcell .glv { position: absolute; left: 3px; top: 1px; font-size: 10px; font-style: normal; font-weight: 700; color: #ffe9a0; text-shadow: 0 1px 1px #000; }

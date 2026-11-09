@@ -133,13 +133,17 @@ function dropDraw(o) {
   if (o.kind === "cur") {
     const C = CUR[o.c], hi = o.c !== "gold" && o.c !== "regret";
     if (hi) { ctx.globalAlpha = 0.35; ctx.fillStyle = C.c; ctx.fillRect(o.x - 1, o.y - (o.c === "mirror" ? 60 : o.c === "divine" ? 40 : 24), 2, o.c === "mirror" ? 60 : o.c === "divine" ? 40 : 24); ctx.globalAlpha = 1; }
-    ctx.fillStyle = "#1b1424"; ctx.beginPath(); ctx.arc(o.x, by, 4.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = C.c; ctx.beginPath(); ctx.arc(o.x, by, 3.2, 0, Math.PI * 2); ctx.fill();
+    if (!icoDrawS(ctx, "mat", o.c, o.x - 5.5, by - 5.5, 11, 11)) {
+      ctx.fillStyle = "#1b1424"; ctx.beginPath(); ctx.arc(o.x, by, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = C.c; ctx.beginPath(); ctx.arc(o.x, by, 3.2, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = C.c; ctx.fillText(C.n, o.x, by - 7);
   } else {
     const M = MATS[o.k];
-    ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3.5, by - 3.5, 7, 7);
-    ctx.fillStyle = M.c; ctx.fillRect(o.x - 2.5, by - 2.5, 5, 5);
+    if (!icoDrawS(ctx, "mat", o.k, o.x - 5, by - 5, 10, 10)) {
+      ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3.5, by - 3.5, 7, 7);
+      ctx.fillStyle = M.c; ctx.fillRect(o.x - 2.5, by - 2.5, 5, 5);
+    }
     if (M.rare) { ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = M.c; ctx.fillText(M.n, o.x, by - 6); }
   }
 }

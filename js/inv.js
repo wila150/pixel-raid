@@ -142,6 +142,8 @@ function drawOrbs() {
     for (const [k, n, id] of sk) {
       if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
       const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = !mpCan(p, WSKILL[id].mp || 0);
+      { const sl = { attack: "a", spin: "q", roll: "r" }[id], sk = typeof slotSkill === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
+        if (sk && sk !== "over" && typeof icoHas === "function") { const key = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${curWeapon()}:${sl}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = f > 0 || lack ? 0.45 : 1; icoDrawS(ctx, "skill", key, x + 7, H - 84, 32, 32); ctx.globalAlpha = 1; } }
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
       ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
@@ -303,7 +305,7 @@ function craftHtml() {
 function cardChips() {
   const cs = Object.keys(save.cards || {}).filter((c) => save.cards[c] > 0);
   if (!cs.length) return `<div class="cards0 dim">魔物卡片：還沒有（打怪很低機率掉，精英較高）</div>`;
-  return `<div class="cardbox"><small>魔物卡片：拖到左上的武器或道袍（或點卡片再點裝備）</small>${cs.map((c) => `<div class="cardchip${cardSel === c ? " sel" : ""}" data-card="${c}"><b>${CARDS[c].n} ×${save.cards[c]}</b><small>${CARDS[c].slot === "sword" ? "武器" : "道袍"}・${cardDesc(c)}</small></div>`).join("")}</div>`;
+  return `<div class="cardbox"><small>魔物卡片：拖到左上的武器或道袍（或點卡片再點裝備）</small>${cs.map((c) => `<div class="cardchip${cardSel === c ? " sel" : ""}" data-card="${c}">${ico("card", c, "cardico")}<b>${CARDS[c].n} ×${save.cards[c]}</b><small>${CARDS[c].slot === "sword" ? "武器" : "道袍"}・${cardDesc(c)}</small></div>`).join("")}</div>`;
 }
 function insertCard(c, slot) {
   const it = save.eq[slot];
@@ -333,11 +335,11 @@ function propList() {
   for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
   return L;
 }
-function propInfo(k) { const p = propList().concat(matList()).find((x) => x.k === k); return p && `<div class="cmp-item"><div class="big-ico prop" style="--c:${p.c}"><b>${p.g}</b></div><h3 style="color:${p.c}">${p.name}</h3><small>持有 ${p.n}</small><p class="sub">${p.d}</p></div>`; }
+function propInfo(k) { const p = propList().concat(matList()).find((x) => x.k === k); return p && `<div class="cmp-item"><div class="big-ico prop" style="--c:${p.c}">${propG(p)}</div><h3 style="color:${p.c}">${p.name}</h3><small>持有 ${p.n}</small><p class="sub">${p.d}</p></div>`; }
 function bagCells(bag) {
   let cells;
-  if (bagTab === "mat") cells = matList().map((p) => `<button class="bcell prop mat${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
-  else if (bagTab === "use") cells = propList().map((p) => `<button class="bcell prop${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}"><b>${p.g}</b><span class="cnt">${p.n}</span></button>`);
+  if (bagTab === "mat") cells = matList().map((p) => `<button class="bcell prop mat${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}">${propG(p)}<span class="cnt">${p.n}</span></button>`);
+  else if (bagTab === "use") cells = propList().map((p) => `<button class="bcell prop${propSel === p.k ? " sel" : ""}" data-prop="${p.k}" title="${p.name}" style="--c:${p.c}">${propG(p)}<span class="cnt">${p.n}</span></button>`);
   else cells = bag.filter((it) => bagTab === "all" || tabOf(it) === bagTab).map((it) => {
     const better = sameWt(it) && itemCP(it) > itemCP(save.eq[it.slot]);
     return `<div class="loot bcell q${it.q}${eqSel === it.id ? " sel" : ""}" data-id="${it.id}" title="${it.name}・戰 ${itemCP(it)}" style="--c:${RARITY[it.q].c}">${itemIcon(it)}${it.en ? `<span class="en">+${it.en}</span>` : ""}${reqTag(it)}${better ? '<em class="up">↑</em>' : ""}${it.risk ? '<em class="risk">!</em>' : ""}</div>`;

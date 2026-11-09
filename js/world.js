@@ -306,7 +306,10 @@ function setPadLabels(world) {
     if (!world) { b.innerHTML = padOrig[b.dataset.act]; return; }
     applyWeapon();
     const k = PAD_KEYS[b.dataset.act], n = WSKILL[b.dataset.act].n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
-    b.innerHTML = `${n}<small>${k}</small>${b.dataset.act === "potion" ? '<b class="count">3</b>' : ""}${b.dataset.act !== "attack" ? '<i class="cd"></i>' : ""}`;
+    const sl = { spin: "q", ult: "e", roll: "r" }[b.dataset.act], sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
+    const pi = sk && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl, sk === "base" ? "" : sk, "pico") : "";
+    b.classList.toggle("hasico", !!pi);
+    b.innerHTML = `${pi}<span class="plab">${n}<small>${k}</small></span>${b.dataset.act === "potion" ? '<b class="count">3</b>' : ""}${b.dataset.act !== "attack" ? '<i class="cd"></i>' : ""}`;
   });
 }
 
@@ -1402,7 +1405,8 @@ function renderWorld() {
     else if (o.kind === "card" || o.kind === "ess") { // 卡片：粉紫卡＋光柱；精髓：青色晶體
       const c = o.kind === "card" ? "#ff9ad8" : "#7dffd8", by = o.y - 3 + Math.sin(time * 4 + o.x) * 1.5;
       ctx.globalAlpha = 0.35; ctx.fillStyle = c; ctx.fillRect(o.x - 1, o.y - (o.kind === "card" ? 40 : 18), 2, o.kind === "card" ? 40 : 18); ctx.globalAlpha = 1;
-      if (o.kind === "card") { ctx.fillStyle = "#2a1830"; ctx.fillRect(o.x - 3, by - 4, 6, 8); ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.strokeRect(o.x - 3, by - 4, 6, 8); }
+      if (o.kind === "card" && icoDrawS(ctx, "card", o.c, o.x - 4.5, by - 6, 9, 12)) {}
+      else if (o.kind === "card") { ctx.fillStyle = "#2a1830"; ctx.fillRect(o.x - 3, by - 4, 6, 8); ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.strokeRect(o.x - 3, by - 4, 6, 8); }
       else { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(o.x, by - 4); ctx.lineTo(o.x + 3, by); ctx.lineTo(o.x, by + 4); ctx.lineTo(o.x - 3, by); ctx.fill(); }
       ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = c; ctx.fillText(o.kind === "card" ? CARDS[o.c].n : essName(o.k), o.x, by - 7);
     }
@@ -1411,6 +1415,7 @@ function renderWorld() {
     else if (o.kind === "gem") { // 寶石：菱形＋光柱
       const c = GEMS[o.g.split(":")[0]].c, by = o.y - 2 + Math.sin(time * 4 + o.x) * 1.5;
       ctx.globalAlpha = 0.3; ctx.fillStyle = c; ctx.fillRect(o.x - 1, o.y - 18, 2, 18); ctx.globalAlpha = 1;
+      if (icoDrawS(ctx, "gem", o.g.split(":")[0], o.x - 5.5, by - 5.5, 11, 11)) continue;
       ctx.fillStyle = "#1b1424"; ctx.beginPath(); ctx.moveTo(o.x, by - 5); ctx.lineTo(o.x + 4, by); ctx.lineTo(o.x, by + 5); ctx.lineTo(o.x - 4, by); ctx.fill();
       ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(o.x, by - 4); ctx.lineTo(o.x + 3, by); ctx.lineTo(o.x, by + 4); ctx.lineTo(o.x - 3, by); ctx.fill();
     }
