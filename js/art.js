@@ -428,7 +428,9 @@ function drawMyName(p) {
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const t = `${myName()} Lv.${save.w.lv}`;
   ctx.fillStyle = "#1b1424"; ctx.fillText(t, p.x + 0.5, p.y - 12.5); ctx.fillStyle = "#ffe066"; ctx.fillText(t, p.x, p.y - 13);
-  ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.moveTo(p.x - 2, p.y - 20); ctx.lineTo(p.x + 2, p.y - 20); ctx.lineTo(p.x, p.y - 17.5); ctx.fill(); // 小箭頭：這是你
+  const ti = typeof myTitle === "function" ? myTitle() : "", ay = ti ? -6 : 0;
+  if (ti) drawTitleTag(ti, p.x, p.y - 19);
+  ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.moveTo(p.x - 2, p.y - 20 + ay); ctx.lineTo(p.x + 2, p.y - 20 + ay); ctx.lineTo(p.x, p.y - 17.5 + ay); ctx.fill(); // 小箭頭：這是你
 }
 // 角色畫面：改暱稱、換時裝
 function fashionHtml() {

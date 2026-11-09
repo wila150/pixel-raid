@@ -704,3 +704,42 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 .ov .atlasw .amap { background: radial-gradient(circle, rgba(70, 40, 120, 0.85), rgba(10, 6, 20, 0.92)); } .ov .atlasw .ainfo { background: rgba(14, 10, 22, 0.85); border-radius: 10px; padding: 8px 10px; }
 .ov .skgate { height: 5px; margin-top: 4px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; } .ov .skgate i { display: block; height: 100%; background: #ffcf6b; }
 .ov .skjob .skgate { display: inline-block; width: 120px; vertical-align: middle; margin: 0 0 0 10px; }
+
+/* v6.3 冒險手冊 */
+.bookwin { max-height: 100%; display: flex; flex-direction: column; }
+.bkbody { overflow-y: auto; min-height: 0; }
+.bksum { font-size: 13px; color: #e8dcc0; padding: 6px 8px 8px; line-height: 1.5; }
+.bksum b { color: #ffe066; }
+.bksum small { color: var(--dim); font-size: 11px; }
+.bkhead { font-size: 12px; color: #ffcf6b; margin: 10px 4px 4px; border-bottom: 1px solid var(--line); }
+.bkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.bkcard { display: flex; gap: 8px; align-items: flex-start; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: rgba(30, 24, 20, 0.55); }
+.bkcard > img, .bkcard .icon { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+.bkcard > div { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bkcard b { font-size: 13px; color: #fff3dc; }
+.bkcard.u b { color: #ff9a4a; }
+.bkcard small { font-size: 10.5px; color: var(--dim); line-height: 1.35; }
+.bkcard em { font-style: normal; font-size: 11px; color: #8dff9a; }
+.bkcard.unseen > img, .bkcard.unseen .icon { filter: brightness(0) opacity(0.45); }
+.bkcard.unseen b { color: #8a8070; }
+.bkboss { width: 32px; height: 32px; border-radius: 50%; flex: none; box-shadow: 0 0 8px currentColor; opacity: 0.85; }
+.bkcard.unseen .bkboss { filter: grayscale(1) brightness(0.4); }
+.bkpips i { font-style: normal; font-size: 11px; color: #4a4038; margin-right: 1px; }
+.bkpips i.on { color: #ffd84a; text-shadow: 0 0 4px #ffb020; }
+.bktis { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; }
+.bkti { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(30, 24, 20, 0.55); }
+.bkti b { font-size: 13px; flex: none; }
+.bkti small { flex: 1; font-size: 10.5px; color: var(--dim); }
+.bkti.lock b { color: #6a6058; }
+.bkti.on { border-color: #ffd84a; box-shadow: 0 0 8px rgba(255, 216, 74, 0.35) inset; }
+.bkti i { font-style: normal; opacity: 0.6; }
+.bkti .sbtn { flex: none; }
+.bkmed { padding: 10px 14px; font-size: 13px; color: #e8dcc0; line-height: 1.6; }
+.bkmed h3 { color: #bfe8ff; margin: 0 0 6px; }
+.bkmed b { color: #ffe066; }
+.bkmed.on { text-align: center; }
+.medt { font-size: 28px; color: #bfe8ff; margin: 4px 0; }
+.medorb { width: 70px; height: 70px; margin: 6px auto; border-radius: 50%; background: radial-gradient(circle, rgba(190, 232, 255, 0.9), rgba(90, 140, 220, 0.15) 70%, transparent); animation: medb 3s ease-in-out infinite; }
+@keyframes medb { 50% { transform: scale(1.18); opacity: 0.7; } }
+.bkcard, .bkti, .bkmed:not(.on) { text-align: left; }
+@media (max-width: 440px) { body.ovopen #quick .qbtn { width: 30px; height: 32px; } body.ovopen #quick { gap: 3px; } }
