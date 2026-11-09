@@ -186,7 +186,12 @@ const GEM_REQ0 = { power: 1, haste: 1, thrift: 1, frost: 1, blood: 1, multi: 10,
 const GEM_NEW = ["split", "bounce", "boomer", "seek", "enlarge", "after", "trail", "rshield", "icepath", "focus", "volley", "rapid", "trigc", "trigh", "totem", "exec", "bell", "spread", "efocus"]; // Lv.30 以後才會掉
 const GEM_REQ_ADD = [0, 0, 10, 20, 35, 50];
 const gemReq = (g) => { const [k, l] = g.split(":"); return (GEM_REQ0[k] || 1) + (GEM_REQ_ADD[+l] || 0); };
-const gemReqOk = (g) => !save.w || (save.w.lv || 1) >= gemReq(g);
+const gemReqOk = (g) => !save.w || ((save.w.lv || 1) >= gemReq(g) && gemAttrOk(g));
+// 企劃 27 A：4、5 級寶石要該顏色的屬性 40／80（天賦樹）
+const GEM_ATTR = [0, 0, 0, 0, 40, 80], GEM_ATTRK = { r: "str", g: "agi", b: "wis" };
+const gemAttrNeed = (g) => { const l = +g.split(":")[1]; return GEM_ATTR[l] ? [GEM_ATTRK[GEM_COL[g.split(":")[0]] || "b"], GEM_ATTR[l]] : null; };
+const gemAttrOk = (g) => { const n = gemAttrNeed(g); return !n || typeof treeAttr !== "function" || treeAttr()[n[0]] >= n[1]; };
+const gemNeedTxt = (g) => { if ((save.w.lv || 1) < gemReq(g)) return `需要 Lv.${gemReq(g)}`; const n = gemAttrNeed(g); return `需要${TR_ATTR[n[0]].n} ${n[1]}（目前 ${treeAttr()[n[0]]}）`; };
 const GEM_COL = { power: "r", blood: "r", burst: "r", multi: "r", enlarge: "r", after: "r", focus: "r", rapid: "r", exec: "r", bell: "r", spread: "b", efocus: "b", haste: "g", lmp: "g", pierce: "g", split: "g", bounce: "g", boomer: "g", seek: "g", volley: "g", trail: "g", frost: "b", thrift: "b", chain: "b", ice: "b", fire: "b", volt: "b", venom: "b", det: "b", rshield: "b", icepath: "b", trigc: "b", trigh: "b", totem: "b" };
 const GEM_COLN = { r: ["紅", "#ff5a5a"], g: ["綠", "#5adc78"], b: ["藍", "#5a9cff"] };
 const gemCol = (g) => GEM_COLN[GEM_COL[g.split(":")[0]] || "b"];
@@ -202,10 +207,10 @@ function gemLv(k, sl) {
   let n = 0; for (const g of chainRow(sl)) if (g && g.startsWith(k + ":") && gemReqOk(g) && gemFits(g, sl)) n += +g.split(":")[1];
   return n;
 }
-const gemCantMsg = (g) => (gemReqOk(g) ? null : `${gemName(g)}需要 Lv.${gemReq(g)}`);
+const gemCantMsg = (g) => (gemReqOk(g) ? null : `${gemName(g)}${gemNeedTxt(g)}`);
 // 寶石按鈕（鏈格／背包共用）：邊框＝顏色，等級不夠紅字
 const gemTag = (g) => { const c = gemCol(g); return `<i class="gcol" style="background:${c[1]}">${c[0]}</i>`; };
-const gemReqTxt = (g) => (gemReqOk(g) ? "" : `<em class="greq">需要 Lv.${gemReq(g)}</em>`);
+const gemReqTxt = (g) => (gemReqOk(g) ? "" : `<em class="greq">${gemNeedTxt(g)}</em>`);
 const addGem = (g, n = 1) => { if (!save.gems) save.gems = {}; save.gems[g] = (save.gems[g] || 0) + n; };
 const randGem = (lv = 1) => { const K = save.w && (save.w.lv || 1) >= 30 ? GEM_KEYS : GEM_KEYS.filter((k) => !GEM_NEW.includes(k)); return `${K[Math.floor(Math.random() * K.length)]}:${lv}`; };
 // 武器元素（企劃 06／07）：看鑲的元素轉化寶石；一把武器只能一種元素

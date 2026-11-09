@@ -12,6 +12,7 @@ const TR_WMAIN = { blade: "str", fist: "str", sword: "agi", bow: "agi", staff: "
 const TR_EFF = { // 效果顯示文字（數字是 %，力量那四個是點數）
   str: "力量 +", agi: "敏捷 +", wis: "智力 +", vit: "體魄 +", atk: "攻擊 +%", crit: "爆擊率 +%", cdmg: "爆擊傷害 +%", aspd: "攻擊速度 +%", spd: "移動速度 +%",
   hp: "生命 +%", armor: "護甲 +%", dodge: "閃避 +%", supp: "法術壓制 +%", es: "能量護盾 +%", mp: "真氣上限 +", mpr: "真氣回復 +%", leech: "吸血 +%", res: "火、冰、雷抗性 +%", loot: "秘境物品數量 +%",
+  tp: "投射招傷害 +%", tm: "近戰招傷害 +%", ta: "範圍招傷害 +%", td: "持續招傷害 +%", tv: "位移招傷害 +%",
 };
 const trEffTxt = (e) => Object.keys(e).map((k) => { const t = TR_EFF[k]; return t.endsWith("%") ? t.slice(0, -1) + e[k] + "%" : t + e[k]; });
 // 天賦群主題：4 小格＋1 重要天賦
@@ -29,15 +30,24 @@ const TR_TH = {
   res: { s: { res: 4 }, n: "避劫", e: { res: 10 } },
   loot: { s: { loot: 4 }, n: "聚寶", e: { loot: 12 } },
   supp: { s: { supp: 3 }, n: "護體", e: { supp: 8 } },
+  duomo: { s: { mpr: 10 }, n: "奪魔", e: { mpr: 15, mp: 20 } }, // 第二版：取代藍區一個吐納
 };
+// 第二版：重要天賦的特殊效果（效果在 tree2.js）
+const TR_SP = {
+  atk: "對精英、王傷害再 +10%", crit: "爆擊後 2 秒內爆擊率 +15%", cdmg: "對 30% 血以下的敵人爆擊傷害再 +30%", aspd: "閃身後 2 秒攻速 +20%（受攻速上限）",
+  life: "生命低於 35% 時受到的傷害 −15%", armor: "站著不動 1 秒後，物理傷害 −8%", dodge: "閃避成功後 1 秒移速 +30%", es: "能量護盾被打破時 1 秒無敵（冷卻 20 秒）",
+  mp: "真氣低於 20% 時，回復速度 ×2", leech: "吸血可以超過生命上限，最多 10% 變成血盾（3 秒沒補就消失）", res: "被元素打到後 3 秒，那個元素抗性 +15%（上限可到 80%）",
+  loot: "精英有 10% 多掉 1 件裝備", supp: "法術壓制成功時回 2% 生命", duomo: "打中時回造成傷害 1% 的真氣（每秒最多真氣上限 10%）",
+};
+const TR_TAGN = { tp: "投射", tm: "近戰", ta: "範圍", td: "持續", tv: "位移" };
 // 6 區：角度、顏色、屬性、4 個天賦群（−分支 A、B，＋分支 A、B）、外圈核心（−、＋）
 const TR_SEC = [
-  { k: "b", n: "藍", a: -90, at: ["wis"], c: "#6aa8ff", th: ["atk", "mp", "es", "res"], ks: ["tiandao", null], fit: "法杖、扇" },
-  { k: "gb", n: "綠藍", a: -30, at: ["agi", "wis"], c: "#6ad8c8", th: ["aspd", "es", "crit", "supp"], ks: [null, "jianyi"], fit: "弓、扇" },
-  { k: "g", n: "綠", a: 30, at: ["agi"], c: "#6adf7a", th: ["aspd", "dodge", "crit", "cdmg"], ks: [null, "huixin"], fit: "弓、劍" },
-  { k: "rg", n: "紅綠", a: 90, at: ["str", "agi"], c: "#d8c85a", th: ["atk", "leech", "crit", "cdmg"], ks: ["wuxin", "shayi"], fit: "劍、拳" },
-  { k: "r", n: "紅", a: 150, at: ["str"], c: "#ff6a5a", th: ["atk", "life", "armor", "cdmg"], ks: ["kuang", "panshi"], fit: "大刀、拳" },
-  { k: "br", n: "藍紅", a: 210, at: ["wis", "str"], c: "#c87aff", th: ["life", "res", "loot", "atk"], ks: ["guzhu", null], fit: "法杖、大刀" },
+  { k: "b", n: "藍", a: -90, at: ["wis"], c: "#6aa8ff", th: ["atk", "duomo", "es", "res"], ks: ["tiandao", "tianren"], tg: [["ta", "td"], ["ta", "td"]], fit: "法杖、扇" },
+  { k: "gb", n: "綠藍", a: -30, at: ["agi", "wis"], c: "#6ad8c8", th: ["aspd", "es", "crit", "supp"], ks: ["jianxin", "jianyi"], tg: [["tp", "td"], ["tp", "ta"]], fit: "弓、扇" },
+  { k: "g", n: "綠", a: 30, at: ["agi"], c: "#6adf7a", th: ["aspd", "dodge", "crit", "cdmg"], ks: ["xueji", "huixin"], tg: [["tp", "tv"], ["ta", "tp"]], fit: "弓、劍" },
+  { k: "rg", n: "紅綠", a: 90, at: ["str", "agi"], c: "#d8c85a", th: ["atk", "leech", "crit", "cdmg"], ks: ["wuxin", "shayi"], tg: [["tm", "tv"], ["tp", "tm"]], fit: "劍、拳" },
+  { k: "r", n: "紅", a: 150, at: ["str"], c: "#ff6a5a", th: ["atk", "life", "armor", "cdmg"], ks: ["kuang", "panshi"], tg: [["tm", "tm"], ["tm", "tv"]], fit: "大刀、拳" },
+  { k: "br", n: "藍紅", a: 210, at: ["wis", "str"], c: "#c87aff", th: ["life", "res", "loot", "atk"], ks: ["guzhu", "xuemo"], tg: [["ta", "tm"], ["td", "tm"]], fit: "法杖、大刀" },
 ];
 const TR_KS_LV = 40; // 核心天賦 Lv.40 才能點
 const TREE = {};
@@ -62,13 +72,17 @@ const TREE = {};
         const T = TR_TH[thk], [cx, cy] = P(rc, ang), base = `${i}b${b}${nm}`, ring = [];
         for (let q = 0; q < 4; q++) { // 0＝入口（靠中間）、2＝出口（靠外面）
           const d = (S.a + da) * Math.PI / 180 + Math.PI + q * Math.PI / 2, id = base + q;
-          add(id, cx + Math.cos(d) * 40, cy + Math.sin(d) * 40, "small", { e: Object.assign({}, T.s), n: trEffTxt(T.s)[0], sec: i, th: thk }); ring.push(id);
+          add(id, cx + Math.cos(d) * 40, cy + Math.sin(d) * 40, "small", { e: Object.assign({}, T.s), n: trEffTxt(T.s)[0], sec: i, th: thk, cl: base + "n" }); ring.push(id);
         }
         for (let q = 0; q < 4; q++) link(ring[q], ring[(q + 1) % 4]);
         add(base + "n", cx, cy, "note", { e: Object.assign({}, T.e), n: T.n, sec: i, th: thk }); link(ring[2], base + "n");
         link(pv, ring[0]); pv = ring[2];
       };
-      chain(525, "a0"); chain(595, "a1");
+      chain(525, "a0");
+      { // 第二版：技能標籤小分支（a0 往外側岔出去 2 格）
+        let tp = pv; S.tg[b].forEach((tk, q) => { const id = `${i}b${b}t${q}`; add(id, ...P(548 + q * 46, S.a + sg * 24), "small", { e: { [tk]: 4 }, n: `${TR_TAGN[tk]}招傷害 +4%`, sec: i, tag: tk }); link(tp, id); tp = id; });
+      }
+      chain(595, "a1");
       cluster(700, "A", S.th[b * 2]);
       chain(805, "a2", 14);
       cluster(910, "B", S.th[b * 2 + 1]);
@@ -87,7 +101,11 @@ const trKsDef = (k) => (typeof ksDef === "function" ? ksDef(k) : null);
 function trNodeName(N) { if (N.t === "ks") { const d = trKsDef(N.ks); return d ? d.n : N.ks; } return N.n; }
 function trNodeLines(N) {
   if (N.t === "ks") { const d = trKsDef(N.ks); return d ? [d.d] : []; }
-  return trEffTxt(N.e);
+  const L = trEffTxt(N.e);
+  if (N.t === "note" && TR_SP[N.th]) L.push(`<b class="trsp">★ ${TR_SP[N.th]}</b>`);
+  if (N.tag === "tv") L.push("閃身冷卻 −3%");
+  if (N.tag) L.push(`<small class="dim">${TR_TAGN[N.tag]}招＝技能頁標籤有「${TR_TAGN[N.tag]}」的招式</small>`);
+  return L;
 }
 
 // ───────── 2. 存檔、點數、舊存檔搬家 ─────────
@@ -113,12 +131,12 @@ const treeHas = (id) => { const T = treeSt(); return !!T && T.n.includes(id); };
 const treeTotal = () => (save.w ? Math.max(0, save.w.lv - 1) + 2 * trJob() : 0);
 const treeUsed = () => { const T = treeSt(); return T ? T.n.filter((id) => id !== T.s).length : 0; };
 const treeFree = () => treeTotal() - treeUsed();
-let TR_SUM = null, TR_SUMK = "";
-function treeSum() {
-  const T = treeSt(), key = T ? T.n.join() : "";
-  if (TR_SUM && key === TR_SUMK) return TR_SUM;
+let TR_SUM = null, TR_SUMA = null, TR_SUML = -1;
+function treeSum() { // 快取：同一個陣列、同樣長度就不重算（寶石門檻每一下都會問）
+  const T = treeSt(), arr = T ? T.n : null, len = arr ? arr.length : 0;
+  if (TR_SUM && arr === TR_SUMA && len === TR_SUML) return TR_SUM;
   const s = {}; if (T) for (const id of T.n) { const N = TREE[id]; if (N) for (const k in N.e) s[k] = (s[k] || 0) + N.e[k]; }
-  TR_SUM = s; TR_SUMK = key; return s;
+  TR_SUM = s; TR_SUMA = arr; TR_SUML = len; return s;
 }
 function treeAttr() { const s = treeSum(); return { str: s.str || 0, agi: s.agi || 0, wis: s.wis || 0, vit: s.vit || 0 }; }
 const treeLoot = () => treeSum().loot || 0;
@@ -205,13 +223,14 @@ function trPickStart(id) {
   const T = treeSt(); if (T.s) return "已經有起點了（全部重置才能換）";
   T.s = id; T.n = [id]; trAfter(); return "";
 }
+const trTagUse = (k) => !window.__nt && (typeof slotTags !== "function" || ["a", "q"].some((sl) => slotTags(sl).includes(k[1]))); // 推薦路線只點用得到的標籤
 // 推薦路線：照現在的武器，每次挑「整條路平均最值」的格子點下去，直到點數用完（不點核心天賦）
 function trValue(N, main) {
   let v = 0;
   for (const k in N.e) {
     const x = N.e[k];
     v += k === main ? x : k === "vit" ? x * 0.45 : ["str", "agi", "wis"].includes(k) ? x * (k === "agi" ? 0.2 : 0.08)
-      : ({ atk: 2.2, crit: 3.2, cdmg: 0.55, aspd: main === "agi" ? 2.2 : 2.6, spd: 0.5, hp: 1.2, armor: 0.2, dodge: 1.2, supp: 0.6, es: main === "wis" ? 0.35 : 0.1, mp: 0.08, mpr: 0.15, leech: 9, res: 0.8, loot: 0.15 }[k] || 0) * x;
+      : ({ atk: 2.2, crit: 3.2, cdmg: 0.55, aspd: main === "agi" ? 2.2 : 2.6, spd: 0.5, hp: 1.2, armor: 0.2, dodge: 1.2, supp: 0.6, es: main === "wis" ? 0.35 : 0.1, mp: 0.08, mpr: 0.15, leech: 9, res: 0.8, loot: 0.15, tp: 1.1, tm: 1.1, ta: 1.0, td: 0.7, tv: 0.5 }[k] || 0) * x * (k[0] === "t" && k.length === 2 && !trTagUse(k) ? 0 : 1);
   }
   return v;
 }
@@ -240,6 +259,7 @@ function treeRecommend() {
 }
 
 // ───────── 4. 畫面 ─────────
+let trQ = "", trHitSet = null; // 搜尋
 let trView = null, trSel = null, trMsg = "", trCv = null, trPtr = new Map(), trPinch = null, trMoved = 0;
 const TR_R = { hub: 24, start: 19, attr: 9, small: 9, note: 16, ks: 21 };
 function renderTree(msg) {
@@ -248,7 +268,12 @@ function renderTree(msg) {
   const T = treeSt();
   if (msg != null) trMsg = msg;
   if (!ov.querySelector(".trwrap")) {
-    ov.innerHTML = `<div class="trwrap"><canvas id="trc"></canvas><div class="trtop"></div><div class="trinfo"></div></div>`;
+    ov.innerHTML = `<div class="trwrap"><canvas id="trc"></canvas><div class="trtop"></div><input class="trq" type="search" placeholder="搜尋：火、投射、爆擊…" value="${trQ}"><div class="trinfo"></div></div>`;
+    const q = ov.querySelector(".trq");
+    q.addEventListener("input", () => { trQ = q.value.trim(); trSearch(); trDraw(); });
+    q.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Escape") q.blur(); });
+    q.addEventListener("pointerdown", (e) => e.stopPropagation()); q.addEventListener("click", (e) => e.stopPropagation());
+    trSearch();
     trCv = ov.querySelector("#trc"); trBindCanvas();
     if (!trView) { trView = { x: 0, y: 0, z: Math.min(innerWidth, innerHeight) < 500 ? 0.5 : 0.7 }; trCenter(); }
     if (save.w.treeHint) { delete save.w.treeHint; writeSave(); }
@@ -261,6 +286,7 @@ function trPanel() {
   top.innerHTML = `<span class="trpts">剩餘 <b class="${free > 0 ? "hot" : ""}">${free}</b> 點<small>已點 ${cnt}・共 ${treeTotal()}</small></span>
     <button id="trHome" class="trb">回到我的格子</button><button id="trRec" class="trb${!cnt && free > 0 ? " gold" : ""}" ${free > 0 ? "" : "disabled"}>推薦路線</button>
     <button id="trReset" class="trb" ${T.s ? "" : "disabled"}>全部重置<small>${T.fr ? "第一次免費" : curN("regret") >= 5 ? "−5 洗心丹" : `−${trResetCost()} 靈石`}</small></button>`;
+  { const q = ov.querySelector(".trq"); if (q) q.style.top = top.offsetHeight + 14 + "px"; } // 搜尋框放在上面那排按鈕底下（直向會換行）
   let h = "";
   if (trSel && TREE[trSel]) {
     const N = TREE[trSel], has = T.n.includes(trSel), path = has ? null : trPath(trSel), why = has ? "" : trWhyNot(trSel, path);
@@ -290,12 +316,18 @@ function trPanel() {
   on("trGo", () => { const N = TREE[trSel], m = trAlloc(trSel); res(m, `點亮：${trNodeName(N)}`); });
   on("trUndo", () => { const N = TREE[trSel], m = trUndo(trSel); res(m, `退掉：${trNodeName(N)}`); });
 }
+function trSearch() { // 名字＋說明文字有這個字就亮起來
+  if (!trQ) { trHitSet = null; return; }
+  const q = trQ.toLowerCase(); trHitSet = new Set();
+  for (const id of TR_IDS) { const N = TREE[id], t = (trNodeName(N) + " " + trNodeLines(N).join(" ") + (N.th && TR_TH[N.th] ? TR_TH[N.th].n : "")).replace(/<[^>]+>/g, "").toLowerCase(); if (t.includes(q)) trHitSet.add(id); }
+}
+const trCollapsed = () => trView && trView.z < 0.42; // 縮很小：天賦群收成一個點
 function trCenter() { // 鏡頭對準已點格子的中心（還沒點就看起點／整棵樹）
   const T = treeSt(), ns = T.n.length > 1 ? T.n : T.s ? [T.s] : ["h"];
   trView.x = ns.reduce((a, id) => a + TREE[id].x, 0) / ns.length; trView.y = ns.reduce((a, id) => a + TREE[id].y, 0) / ns.length;
   if (!T.s) { trView.x = 0; trView.y = 0; }
 }
-function trXY(N) { const c = trCv, z = trView.z; return [c.width / 2 / trDpr() + (N.x - trView.x) * z, c.height / 2 / trDpr() + (N.y - trView.y) * z]; }
+function trXY(N) { if (N.cl && trCollapsed()) N = TREE[N.cl]; const c = trCv, z = trView.z; return [c.width / 2 / trDpr() + (N.x - trView.x) * z, c.height / 2 / trDpr() + (N.y - trView.y) * z]; }
 const trDpr = () => Math.min(2, window.devicePixelRatio || 1);
 function trDraw() {
   const c = trCv; if (!c || !c.isConnected) return;
@@ -320,6 +352,7 @@ function trDraw() {
     for (const v of N.adj) {
       if (v < id) continue;
       const M = TREE[v], [x2, y2] = trXY(M);
+      if (x1 === x2 && y1 === y2) continue;
       if (Math.max(x1, x2) < -40 || Math.min(x1, x2) > W + 40 || Math.max(y1, y2) < -40 || Math.min(y1, y2) > H + 40) continue;
       const both = have.has(id) && have.has(v), pth = (pset.has(id) || have.has(id)) && (pset.has(v) || have.has(v)) && (pset.has(id) || pset.has(v));
       g.strokeStyle = both ? "#e8b84a" : pth ? "#fff3c0" : "rgba(160,130,70,0.32)"; g.lineWidth = Math.max(1.5, (both || pth ? 5 : 3.5) * z);
@@ -327,9 +360,11 @@ function trDraw() {
     }
   }
   // 格子
-  const small = z < 0.55;
+  const small = z < 0.55, col = trCollapsed();
   for (const id of TR_IDS) {
-    const N = TREE[id], [x, y] = trXY(N), rr = Math.max(N.t === "attr" || N.t === "small" ? 3 : 6, TR_R[N.t] * z);
+    if (col && TREE[id].cl) continue;
+    const N = TREE[id], [x, y] = trXY(N), rr = Math.max(N.t === "attr" || N.t === "small" ? 3 : 6, TR_R[N.t] * z) * (col && N.t === "note" ? 1.5 : 1);
+    if (trHitSet && (trHitSet.has(id) || (col && N.t === "note" && TR_IDS.some((o) => TREE[o].cl === id && trHitSet.has(o))))) { g.beginPath(); g.arc(x, y, rr + 6 + 2 * Math.sin(performance.now() / 200), 0, Math.PI * 2); g.fillStyle = "rgba(120,220,255,0.35)"; g.fill(); }
     if (x < -60 || x > W + 60 || y < -60 || y > H + 60) continue;
     const on = have.has(id), av = avail.has(id) || (!T.s && N.t === "start"), inP = pset.has(id), sel = trSel === id;
     const ac = N.at ? TR_ATTR[N.at].c : N.t === "start" ? TR_SEC[N.sec].c : null;
@@ -340,6 +375,8 @@ function trDraw() {
     g.lineWidth = Math.max(1.2, (sel ? 3.5 : 2) * Math.min(1.3, z));
     g.strokeStyle = sel ? "#ffffff" : on ? "#fff1b0" : inP ? "#fff3c0" : av ? "#f4f0e6" : N.t === "ks" ? "#8a4a7a" : N.t === "note" ? "#8a7440" : "#5a5446";
     g.stroke();
+    if (col && N.t === "note") { const ring = TR_IDS.filter((o) => TREE[o].cl === id), k = ring.filter((o) => have.has(o)).length + (on ? 1 : 0); g.font = `bold 10px sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#d8ccb0"; g.fillText(`${k}/5`, x, y + 4); }
+    if (N.tag && !col && z >= 0.55) { g.font = `bold ${Math.max(8, 10 * z)}px 'Noto Sans TC', sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#9fe8ff"; g.fillText(TR_TAGN[N.tag][0], x, y + 3.5 * Math.max(0.8, z)); }
     if (N.t === "note" || N.t === "ks" || N.t === "start" || N.t === "hub") {
       if (small && N.t !== "note" && N.t !== "ks" && N.t !== "start") continue;
       const fs = Math.max(10, Math.min(15, 12 * Math.sqrt(z)));
@@ -351,7 +388,7 @@ function trDraw() {
 }
 function trHit(px, py) {
   let best = null, bd = 1e9;
-  for (const id of TR_IDS) { const [x, y] = trXY(TREE[id]), d = Math.hypot(x - px, y - py), lim = Math.max(16, TR_R[TREE[id].t] * trView.z + 8); if (d < lim && d < bd) { bd = d; best = id; } }
+  for (const id of TR_IDS) { if (TREE[id].cl && trCollapsed()) continue; const [x, y] = trXY(TREE[id]), d = Math.hypot(x - px, y - py), lim = Math.max(16, TR_R[TREE[id].t] * trView.z + 8); if (d < lim && d < bd) { bd = d; best = id; } }
   return best;
 }
 function trBindCanvas() {

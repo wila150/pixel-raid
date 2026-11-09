@@ -80,9 +80,9 @@ let forgeSlot = "sword", forgeAff = "atk", econTab = "forge";
 
 // ───────── 裝備軟限制（企劃 11 第 4 節）─────────
 const reqLv = (it) => Math.max(1, (it.il || 0) * 3 - 8);
-const reqMul = (it) => { const d = reqLv(it) - ((save.w && save.w.lv) || 1); return d <= 0 ? 1 : Math.max(0.6, 1 - 0.04 * d); };
-const reqTag = (it) => (save.w && save.w.lv < reqLv(it) ? `<span class="rq">Lv${reqLv(it)}</span>` : "");
-const reqLine = (it) => { const d = reqLv(it) - save.w.lv; return d > 0 ? `<div class="reqline">建議等級 ${reqLv(it)}・境界不足，只能發揮 ${Math.round(reqMul(it) * 100)}%（再升 ${d} 級完全發揮）</div>` : `<div class="reqline ok">建議等級 ${reqLv(it)}</div>`; };
+const reqMul = (it) => { const d = reqLv(it) - ((save.w && save.w.lv) || 1); return (d <= 0 ? 1 : Math.max(0.6, 1 - 0.04 * d)) * (typeof attrReqMul === "function" ? attrReqMul(it) : 1); };
+const reqTag = (it) => (save.w && save.w.lv < reqLv(it) ? `<span class="rq">Lv${reqLv(it)}</span>` : typeof attrReqShort === "function" && attrReqShort(it) ? `<span class="rq">${TR_ATTR[attrReq(it)[0]].n}不足</span>` : "");
+const reqLine = (it) => { const d = reqLv(it) - save.w.lv; return (typeof attrReqHtml === "function" ? attrReqHtml(it) : "") + (d > 0 ? `<div class="reqline">建議等級 ${reqLv(it)}・境界不足，只能發揮 ${Math.round(reqMul(it) * 100)}%（再升 ${d} 級完全發揮）</div>` : `<div class="reqline ok">建議等級 ${reqLv(it)}</div>`); };
 
 // ───────── 精煉高段要素材（+7 以上稀有素材、+10 以上王素材）─────────
 function zoneOfIl(il) { const lv = il * 3; let best = "grass"; for (const z of ["grass", "forest", "waste", "volcano", "snow", "swamp", "thunder", "sky"]) if (lv >= ZONES[z].lv[0]) best = z; return best; }

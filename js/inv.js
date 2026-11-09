@@ -141,7 +141,7 @@ function drawOrbs() {
     const cg = comboGlow();
     for (const [k, n, id] of sk) {
       if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
-      const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = p.mp < (WSKILL[id].mp || 0);
+      const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = !mpCan(p, WSKILL[id].mp || 0);
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
       ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
@@ -329,7 +329,7 @@ function propList() {
   if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
   if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；工藝台用來換超技能寶石" });
   for (const k in save.ess || {}) if (save.ess[k] > 0) L.push({ k: "ess:" + k, g: "精", c: "#7fd890", n: save.ess[k], name: essName(k), d: `點選裝備後注入：保底「${AFFIX[k].n}」詞條，直接變紫裝（要在營地）` });
-  for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: `${gemCol(g)[0]}色・需要 Lv.${gemReq(g)}${gemReqOk(g) ? "" : "（等級不夠）"}<br>${gemDesc(g)}<br>（技能 → 技能鏈，點那一招後面的空格串上去）` }); }
+  for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: `${gemCol(g)[0]}色・需要 Lv.${gemReq(g)}${gemAttrNeed(g) ? `、${TR_ATTR[gemAttrNeed(g)[0]].n} ${gemAttrNeed(g)[1]}` : ""}${gemReqOk(g) ? "" : `（${gemNeedTxt(g)}）`}<br>${gemDesc(g)}<br>（技能 → 技能鏈，點那一招後面的空格串上去）` }); }
   for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
   return L;
 }

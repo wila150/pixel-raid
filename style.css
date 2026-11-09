@@ -823,3 +823,7 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov.k-tree .tract { margin-top: 6px; } .ov.k-tree .tract .trb { width: 100%; } .ov.k-tree .bad { color: #ff8a7a; }
 .ov.k-tree .trmsg { margin-top: 6px; text-align: center; color: #ffe9a0; font-size: 12px; }
 @media (max-height: 440px) { .ov.k-tree .trcard { padding: 6px 10px; } .ov.k-tree .trlines { margin: 2px 0; } }
+/* v7.4 天賦樹第二版：搜尋框、重要天賦特殊效果 */
+.ov.k-tree .trq { position: absolute; top: 52px; left: max(8px, env(safe-area-inset-left)); width: min(220px, 46vw); padding: 6px 10px; border-radius: 8px; border: 1px solid #5a4a2a; background: rgba(12,10,8,0.85); color: #f0e2c4; font-size: 13px; user-select: text; -webkit-user-select: text; }
+.ov.k-tree .trq:focus { outline: none; border-color: #9fe8ff; }
+.ov.k-tree .trsp { color: #ffe066; font-weight: normal; }

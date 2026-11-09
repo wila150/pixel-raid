@@ -411,7 +411,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
   const crit = W0.sureCast || W0.sureNow || Math.random() < B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0);
-  if (crit) { dmg *= B.critDmg; if (CUR_SL && CUR_SL !== "e") W0.critEv = 1; } // 觸發：暴擊
+  if (crit) { dmg *= B.critDmg; W0.lastCrit = time; if (CUR_SL && CUR_SL !== "e") W0.critEv = 1; } // 觸發：暴擊
   dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs["e" + d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
   if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
@@ -531,11 +531,11 @@ function resPen() { // 這裡扣多少元素抗性
   return ZONE_RES_PEN[zoneAt(W0.x, W0.y)] || 0;
 }
 const pillRes = (e) => (typeof buffOn === "function" && buffOn(ELE_PILL[e]) ? 0.3 : 0);
-const resCap = (e) => (pillRes(e) ? 0.8 : RES_CAP);
-const rawRes = (e, b = B) => ((b && b["res" + e]) || 0) + pillRes(e); // 裝備＋丹藥，還沒扣地區
+const resCap = (e) => Math.max(pillRes(e) ? 0.8 : RES_CAP, typeof trResCapX === "function" ? trResCapX(e) : 0) + ((B && B.resCapAdd) || 0); // 天賦樹：避劫、天人合一
+const rawRes = (e, b = B) => ((b && b["res" + e]) || 0) + pillRes(e) + (typeof trResBuf === "function" ? trResBuf(e) : 0); // 裝備＋丹藥，還沒扣地區
 const effRes = (e, b = B) => Math.max(RES_MIN, Math.min(resCap(e), rawRes(e, b) - resPen()));
 const BUFFS_N = (e) => (typeof BUFFS !== "undefined" && BUFFS[ELE_PILL[e]] ? BUFFS[ELE_PILL[e]].n : "丹藥");
-const armorRed = (armor, dmg) => Math.min(0.75, armor / (armor + 5 * dmg));
+const armorRed = (armor, dmg) => Math.min(0.75 - ((B && B.physCapSub) || 0), armor / (armor + 5 * dmg));
 const refHit = () => 10 * (1 + 0.22 * ((save.w ? save.w.lv : 1) - 1)); // 同等級一般怪一下（顯示物理減免用）
 const physRed = (b = B) => armorRed((b && b.armor) || 0, refHit());
 // 這一下是什麼元素：招式直接帶（F/W/T/P）＞打人的怪＞打王場地裡的王；都沒有＝物理
@@ -547,6 +547,9 @@ function hitEle(from, kind) {
 }
 let chillHit = false; // 冰靈的冰彈打中時設成 true
 // kind：phys 物理（怪物近戰）、spell 法術（子彈）、ele 元素法術（火、冰，吃抗性）
+// 天賦樹「血魔法」：招式改花生命（1 真氣＝1% 最大生命），不會花到死
+const mpCan = (p, c) => (B.bloodMagic ? !c || p.hp > (c * p.maxHp) / 100 : p.mp >= c);
+function mpPay(p, c) { if (!c) return; if (B.bloodMagic) { p.hp -= Math.round((c * p.maxHp) / 100); p.hurt = 0.1; } else p.mp -= c; }
 function hurtW(dmg, from, kind) {
   const p = W0;
   if (p.shield > 0 || safeAt(p.x, p.y)) return; // 太極護罩、營地結界：完全不受傷
@@ -655,14 +658,14 @@ function updateWorld(dt) {
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" && W0.spinK !== "cyc" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" && W0.spinK !== "cyc" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); p.mp -= WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { const mc = WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -923,7 +926,7 @@ function updateWorld(dt) {
   if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && wLv() >= E_LV) {
     const gc = p.critEv ? gemLv("trigc", "e") : 0, gh = p.hurtEv ? gemLv("trigh", "e") : 0, l = Math.max(gc, gh);
     const cost = Math.round(TRIG_MP * chainMpMul("e"));
-    if (l && p.mp >= cost) { p.trigCd = 1; p.mp -= cost; cast("e", () => ultFx(true), 0.8); }
+    if (l && mpCan(p, cost)) { p.trigCd = 1; mpPay(p, cost); cast("e", () => ultFx(true), 0.8); }
   }
   p.critEv = 0; p.hurtEv = 0;
   for (const sl of ["a", "q", "e"]) if (W0["rc" + sl] > 0 && (W0["rc" + sl] -= dt) <= 0) { W0["rc" + sl] = 0; cast(sl, SLFX[sl]); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
@@ -1712,7 +1715,7 @@ function drawWorldHud() {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
     if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
-    if (btn) btn.style.opacity = p.mp < WSKILL[k].mp ? 0.45 : 1;
+    if (btn) btn.style.opacity = !mpCan(p, WSKILL[k].mp) ? 0.45 : 1;
   }
   const cnt = pad.querySelector(".count"); if (cnt) cnt.textContent = w.potions;
   if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.5, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }

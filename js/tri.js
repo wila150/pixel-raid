@@ -224,14 +224,14 @@ function chainCells(l) {
   for (let i = 0; i < 5; i++) {
     const g = row[i];
     if (i >= n) cells += `<span class="rcell lock">🔒<small>${JOB_N[i]}</small></span>`;
-    else if (g) { const [k, lv] = g.split(":"), why = !gemReqOk(g) ? `要 Lv.${gemReq(g)}` : gemWhy(g, l, i) ? "這招用不到" : ""; cells += `<button class="rcell has${why ? " bad" : ""}" data-cs="${l}:${i}" style="--c:${gemCol(g)[1]}"><b style="color:${GEMS[k].c}">${GEMS[k].n}</b><small>${lv} 級${why ? "・" + why : ""}</small></button>`; }
+    else if (g) { const [k, lv] = g.split(":"), why = !gemReqOk(g) ? gemNeedTxt(g) : gemWhy(g, l, i) ? "這招用不到" : ""; cells += `<button class="rcell has${why ? " bad" : ""}" data-cs="${l}:${i}" style="--c:${gemCol(g)[1]}"><b style="color:${GEMS[k].c}">${GEMS[k].n}</b><small>${lv} 級${why ? "・" + why : ""}</small></button>`; }
     else cells += `<button class="rcell empty${triPick && triPick.l === l && triPick.i === i ? " pick" : ""}" data-cs="${l}:${i}">＋<small>輔助</small></button>`;
     if (i < 4) cells += `<i class="rlink"></i>`;
   }
   let pick = "";
   if (triPick && triPick.l === l) {
     const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
-    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? `需要 Lv.${gemReq(g)}` : gemWhy(g, l, triPick.i); return `<button class="gem" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemTag(g)}${GEMS[k].n} ${lv} 級 ×${save.gems[g]}</b><small>${gemDesc(g)}</small>${why ? `<em class="greq">${why}</em>` : ""}</button>`; };
+    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i); return `<button class="gem" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemTag(g)}${GEMS[k].n} ${lv} 級 ×${save.gems[g]}</b><small>${gemDesc(g)}</small>${why ? `<em class="greq">${why}</em>` : ""}</button>`; };
     const merge = gs.filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).map((g) => `<button class="gmerge2" data-gm="${g}">${GEMS[g.split(":")[0]].n} ${g.split(":")[1]} 級 ×3 → ${+g.split(":")[1] + 1} 級</button>`).join("");
     pick = `<div class="rpick"><div class="trihead"><b>選一顆輔助寶石串上去</b><small>紅＝力量、綠＝敏捷、藍＝智力；灰色的寫了為什麼不能串</small></div>${gs.length ? `<div class="gbag">${gs.map(btn).join("")}</div>` : `<p class="sub">背包裡沒有輔助寶石（精英、王、秘境會掉）</p>`}${merge ? `<div class="gmrow"><small>3 顆合成高一級：</small>${merge}</div>` : ""}</div>`;
   }
