@@ -42,7 +42,7 @@ questTarget = function () {
 function evNamedSpawn(camp) {
   spawnWMob(camp); const m = W0.mobs[W0.mobs.length - 1];
   m.type = "golem"; m.elite = true; m.mod = "鐵壁"; m.mod2 = "狂暴"; m.named = EVQ_NAMED; m.noRespawn = true; m.evq = 1;
-  m.lv = camp.lv + 2; m.hp = m.max = WMOBS.golem.hp * 1.2 * (1 + 0.35 * (m.lv - 1)) * 4 * 3;
+  m.lv = camp.lv + 2; m.hp = m.max = WMOBS.golem.hp * mobHpMul(m.lv) * 4 * 3;
   m.x = camp.x; m.y = camp.y + 10; burst(m.x, m.y, "#ffd84a", 24, 90, 0.5);
   return m;
 }

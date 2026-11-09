@@ -68,7 +68,7 @@ function atlasEvW(k) { return 1 + 0.5 * talLv(k); } // riftev.js 選事件時用
 // ───────── 巔峰點 ─────────
 const PARA_LV = 120;
 const PARA = {
-  atk: { n: "攻擊", g: "攻", c: "#ffcf6b", d: (l) => `攻擊 +${(l * 0.5).toFixed(1)}%`, f: (b, l) => { b.atk *= 1 + l * 0.005; } },
+  atk: { n: "攻擊", g: "攻", c: "#ffcf6b", d: (l) => `攻擊 +${(l * 0.5).toFixed(1)}%`, f: (b, l) => { b.inc += l * 0.005; } },
   def: { n: "防禦", g: "防", c: "#d8c8a0", d: (l) => `護甲 +${(l * 0.5).toFixed(1)}%`, f: (b, l) => { b.armor = (b.armor || 0) * (1 + l * 0.005); } },
   life: { n: "生存", g: "命", c: "#ff7a6a", d: (l) => `生命 +${(l * 0.5).toFixed(1)}%`, f: (b, l) => { b.maxHp = Math.round(b.maxHp * (1 + l * 0.005)); } },
   loot: { n: "打寶", g: "寶", c: "#ffd84a", d: (l) => `秘境物品數量 +${(l * 0.5).toFixed(1)}%`, f: () => {} },

@@ -9,15 +9,15 @@ const KEYSTONE = {
     { k: "jianyi", n: "劍意", c: "#7aa8ff", d: "真氣不會自己回；每打中一下回 3 真氣", f: (b) => { b.mpRegen = 0; } },
   ],
   2: [
-    { k: "guzhu", n: "孤注", c: "#ff9a4a", d: "生命上限 −30%；攻擊 +25%", f: (b) => { b.maxHp = Math.round(b.maxHp * 0.7); b.atk *= 1.25; } },
+    { k: "guzhu", n: "孤注", c: "#ff9a4a", d: "生命上限 −30%；攻擊 +25%", f: (b) => { b.maxHp = Math.round(b.maxHp * 0.7); b.more *= 1.25; } },
     { k: "panshi", n: "磐石", c: "#d8c8a0", d: "受到的傷害 −20%；移動速度 −12%", f: (b) => { b.spdMul *= 0.88; } },
   ],
   3: [
-    { k: "wuxin", n: "無心", c: "#9fffc8", d: "不會爆擊；攻擊 +35%", f: (b) => { b.crit = -9; b.atk *= 1.35; } },
-    { k: "huixin", n: "會心", c: "#ffe066", d: "爆擊率 +12%、爆擊傷害 +40%；攻擊 −15%", f: (b) => { b.crit = (b.crit || 0) + 0.12; b.critDmg = (b.critDmg || 2) + 0.4; b.atk *= 0.85; } },
+    { k: "wuxin", n: "無心", c: "#9fffc8", d: "不會爆擊；攻擊 +35%", f: (b) => { b.crit = -9; b.more *= 1.35; } },
+    { k: "huixin", n: "會心", c: "#ffe066", d: "爆擊率 +12%、爆擊傷害 +40%；攻擊 −15%", f: (b) => { b.crit = (b.crit || 0) + 0.12; b.critDmg = (b.critDmg || 2) + 0.4; b.more *= 0.85; } },
   ],
   4: [
-    { k: "tiandao", n: "天道", c: "#c8a0ff", d: "天罰能量獲得 ×2；攻擊 −10%", f: (b) => { b.enMul = (b.enMul || 1) * 2; b.atk *= 0.9; } },
+    { k: "tiandao", n: "天道", c: "#c8a0ff", d: "天罰能量獲得 ×2；攻擊 −10%", f: (b) => { b.enMul = (b.enMul || 1) * 2; b.more *= 0.9; } },
     { k: "shayi", n: "殺意", c: "#ff6b6b", d: "天罰能量不會增加；每殺一隻攻擊 +3%（5 秒，最多 10 層）", f: (b) => { b.enMul = 0; } },
   ],
 };
@@ -137,7 +137,7 @@ function tjTick(m, dt) {
       spawnWMob(m.camp); const a = W0.mobs[W0.mobs.length - 1];
       if (R.addType) a.type = R.addType;
       a.x = m.x + rand(-40, 40); a.y = m.y + rand(10, 40); a.st = "chase"; a.noRespawn = true; a.elite = false; a.mod = null; a.lv = TJ_LV - 2; a.emk = 1;
-      a.hp = a.max = WMOBS[a.type].hp * 1.2 * (1 + 0.35 * (a.lv - 1)) * 0.6; burst(a.x, a.y, "#ff7ad8", 14, 80);
+      a.hp = a.max = WMOBS[a.type].hp * mobHpMul(a.lv) * 0.6; burst(a.x, a.y, "#ff7ad8", 14, 80);
     }
   }
   if (m.tj.includes("pool") && (T.pool -= dt) <= 0) { T.pool = 3.5; wbZone({ k: "circle", x: W0.x, y: W0.y, r: 24, max: 0.9, dmg: wbDmg(m, 0.5), kind: "P", c: "120,230,110", pool: { r: 24, dur: 5, dmg: wbDmg(m, 0.12) } }); }

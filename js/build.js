@@ -55,7 +55,7 @@ function jobStats(b) {
   const j = jobLv();
   if (j >= 1) b.spdMul *= 1.05;
   if (j >= 2) b.aspd *= 1.08;
-  if (j >= 4) b.atk *= 1.15;
+  if (j) b.more *= Math.pow(1.08, j); // 企劃 41：每轉「更多」8%
   if (b.uq && b.uq.vamp) b.leech += 0.03; // 血玉佩
   return b;
 }

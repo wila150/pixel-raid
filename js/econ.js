@@ -249,7 +249,7 @@ function bindEcon(again) {
 // ───────── 增益丹效果 ─────────
 const buffOn = (k) => !!(save.w && save.w.buffs && save.w.buffs[k] > Date.now());
 const _worldStatsEc = worldStats;
-worldStats = function () { const b = _worldStatsEc.apply(this, arguments); if (buffOn("atkup")) b.atk *= 1.1; if (buffOn("dropup")) b.drop = (b.drop || 0) + 0.15; return b; };
+worldStats = function () { const b = _worldStatsEc.apply(this, arguments); if (buffOn("atkup")) b.inc += 0.1; if (buffOn("dropup")) b.drop = (b.drop || 0) + 0.15; return b; };
 const _gainExpEc = gainExp;
 gainExp = function (n) { return _gainExpEc.call(this, buffOn("expup") ? Math.round(n * 1.2) : n); };
 // 避火／避寒／避雷／避毒丹：world.js 的 effRes 直接加抗性（企劃 22）

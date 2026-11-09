@@ -24,7 +24,7 @@ function bookVs(m) { if (!save.w || !save.w.book) return 0; const bk = BOSS_OF_T
 const _worldStatsBk = worldStats;
 worldStats = function () {
   const b = _worldStatsBk.apply(this, arguments);
-  if (save.w && save.w.book) { b.atk *= 1 + bookAtkPct() / 100; b.maxHp = Math.round(b.maxHp * (1 + bookHpPct() / 100)); }
+  if (save.w && save.w.book) { b.inc += bookAtkPct() / 100; b.maxHp = Math.round(b.maxHp * (1 + bookHpPct() / 100)); }
   return b;
 };
 const _hitMobBk = hitMob;

@@ -24,7 +24,7 @@ function tideSpawn(T, boss) {
   for (let i = 0; i < 8 && !ok; i++) { const a = Math.random() * Math.PI * 2, x = T.x + Math.cos(a) * rand(90, 140), y = T.y + Math.sin(a) * rand(70, 110); if (!blockedCircle(x, y, 7) && !safeAt(x, y)) { m.x = x; m.y = y; ok = true; } }
   if (!ok) { m.x = T.x + rand(-20, 20); m.y = T.y + rand(-20, 20); }
   m.st = "chase"; m.noRespawn = true; m.tide = 1; m.wx = m.x; m.wy = m.y;
-  { const l0 = m.lv; m.lv += 3; const k = (1 + 0.35 * (m.lv - 1)) / (1 + 0.35 * (l0 - 1)); m.hp *= k; m.max *= k; } // 企劃 27 驗收：等級 +3
+  { const l0 = m.lv; m.lv += 3; const k = mobHpMul(m.lv) / mobHpMul(l0); m.hp *= k; m.max *= k; } // 企劃 27 驗收：等級 +3
   if (!boss && !m.elite && Math.random() < 0.076) { m.elite = true; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; m.hp *= 4; m.max *= 4; } // 精英約 15%
   if (boss) {
     const mul = (m.elite ? 1 : 4) * 4.5; m.elite = true; m.mod = m.mod || ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)];

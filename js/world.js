@@ -245,7 +245,7 @@ function worldStats() {
   const main = (typeof TR_WMAIN !== "undefined" && TR_WMAIN[wt]) || "str"; // 企劃 25 §13：武器看顏色吃主屬性
   const b = bonus();
   b.maxHp = Math.round(b.maxHp + (w.lv - 1) * 12 + a.vit * 12);
-  b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a[main] * (main === "agi" ? 0.017 : 0.03));
+  b.inc += (w.lv - 1) * 0.02 + a[main] * (main === "agi" ? 0.012 : 0.03); // 企劃 41：每級 +2%、主屬性每點 +3%（敏捷 1.2%，§7 劍弓太強），都是「增加」
   b.aspd = (b.aspd || 1) * (1 + (main === "agi" ? a.agi * 0.003 : 0));
   b.spdMul *= 1 + Math.min(a.agi, AGI_SPD_PTS) * 0.005; // 企劃 24：只算前 80 點；總上限在 cap.js
   b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);
@@ -387,10 +387,18 @@ function makeCamps() {
     }
   }
 }
+// 企劃 41 第一版：怪物血量倍率（乘 WMOBS 的 hp）。用 bot 量「該等級推薦天賦＋藍裝、普攻一下平均傷害」，一般怪普攻 3–4 下死（hp 70 的怪 ≈ 3.5 下）
+// 舊的是 1.2×(1＋0.35×(lv−1)) 線性長；新的攻擊是「增加」加總，曲線跟著玩家實際傷害走（70 級三轉段數 +1 那一段比較陡）
+const MOB_HP_T = [[1, 0.9], [10, 2.35], [20, 4.15], [30, 5.9], [40, 8.5], [50, 10.5], [60, 13.5], [70, 21], [80, 27], [90, 30], [100, 36], [110, 46], [120, 63]];
+function mobHpMul(lv) {
+  const T = MOB_HP_T; if (lv <= T[0][0]) return T[0][1];
+  for (let i = 1; i < T.length; i++) if (lv <= T[i][0]) { const [a, x] = T[i - 1], [b, y] = T[i]; return x + (y - x) * (lv - a) / (b - a); }
+  const [a, x] = T[T.length - 2], [b, y] = T[T.length - 1]; return y + (y - x) / (b - a) * (lv - b);
+}
 function spawnWMob(camp) {
   const types = ZONES[camp.z].mobs, type = campPick(camp, types), d = WMOBS[type];
   const lv = Math.max(1, camp.lv + Math.floor(Math.random() * 3) - 1), elite = Math.random() < 0.08;
-  const hp = d.hp * 1.2 * (1 + 0.35 * (lv - 1)) * (elite ? 4 : 1);
+  const hp = d.hp * mobHpMul(lv) * (elite ? 4 : 1);
   const mod = elite ? ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)] : null;
   let x = camp.x, y = camp.y;
   for (let i = 0; i < 10; i++) { const tx = camp.x + rand(-40, 40), ty = camp.y + rand(-40, 40); if (!blockedCircle(tx, ty, d.r)) { x = tx; y = ty; break; } }
@@ -421,7 +429,7 @@ let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
-  const crit = W0.sureCast || W0.sureNow || Math.random() < B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0);
+  const crit = W0.sureCast || W0.sureNow || Math.random() < Math.min(CRIT_CAP, B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0));
   if (crit) { dmg *= B.critDmg; W0.lastCrit = time; if (CUR_SL && CUR_SL !== "e") W0.critEv = 1; } // 觸發：暴擊
   dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs["e" + d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
   if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
@@ -919,7 +927,7 @@ function updateWorld(dt) {
       sfx("crit"); shake = Math.max(shake, 4);
     }
     else if (k === "tstorm") { for (let i = 0; i < 12; i++) castLater(0.1 + i * 0.25, () => { const ms = W0.mobs.filter((m) => !m.dead && dist(m, p) < 110); const tg = ms.length ? ms[(Math.random() * ms.length) | 0] : null, bx = tg ? tg.x : p.x + rand(-70, 70), by = tg ? tg.y : p.y + rand(-50, 50), br = 30 * AM(); bolts.push({ x: bx, y: by, life: 0.25 }); for (const m of W0.mobs) if (!m.dead && dist(m, { x: bx, y: by }) < br + WMOBS[m.type].r) hitMob(m, wDmg(6), 20, { x: bx, y: by }, true); fxBoom(bx, by, br, "190,210,255"); if (i % 3 === 0) sfx("crit"); }); }
-    else if (k === "hole") { W0.voids.push({ x: tx, y: ty, t: 2, tick: 0, mul: 0.8 }); sfx("arrive"); }
+    else if (k === "hole") { W0.voids.push({ x: tx, y: ty, t: 2, max: 2, tick: 0, mul: 0.8 }); sfx("arrive"); }
     else if (k === "blast") { const d = t ? dist(p, t) : 120; shoot(F, { v: 320, life: d / 320, dmg: 15, kind: "arrow", pierce: false, kb: 20 }); W0.fires.push({ x: t ? t.x : p.x + cs * 120, y: t ? t.y : p.y + sn * 120, t: d / 320 + 0.02, r: 42, dmg: 60, c: "#ffb060", kb: 90 }); sfx("volley"); }
     else if (k === "turret") { W0.turret = { x: p.x + cs * 12, y: p.y + sn * 12, t: 6, cd: 0.2, sl: CUR_SL, dm: CUR_DM }; W0.rings.push({ x: W0.turret.x, y: W0.turret.y, t: 0, max: 0.3, r: 18, c: "255,230,160" }); sfx("arrive"); }
     else if (k === "pierce9") { W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.5, r: 30, c: "255,240,180" }); castLater(0.5, () => { const t2 = near(260); if (t2) p.face = angTo(p, t2); shoot(p.face, { v: 700, life: 0.6, dmg: 66, kind: "big", pierce: true, kb: 60 }); sfx("crit"); shake = Math.max(shake, 6); flashT = 0.06; flashColor = "255,245,200"; }); }
@@ -1526,7 +1534,7 @@ function renderWorld() {
   }
   for (const v of W0.voids) { // 黑洞
     ctx.globalAlpha = v.ghost ? allyA() : 1;
-    const q = Math.min(1, (v.max - v.t) * 4), R = 30 * q, g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, R);
+    const q = Math.min(1, ((v.max || v.t) - v.t) * 4), R = 30 * q, g = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, R);
     g.addColorStop(0, "rgba(0,0,0,0.95)"); g.addColorStop(0.6, "rgba(30,10,60,0.8)"); g.addColorStop(1, "rgba(120,80,220,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(v.x, v.y, R, 0, Math.PI * 2); ctx.fill();
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(190,150,255,0.8)"; ctx.lineWidth = 1.5;

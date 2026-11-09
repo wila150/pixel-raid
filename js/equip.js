@@ -352,6 +352,8 @@ function totalCP() {
   return cp;
 }
 // 把身上裝備＋流派加到這一場的數值上（save.js 的 bonus() 最後呼叫）
+// 企劃 41：攻擊 ＝ 基礎 ×（1＋所有「增加」加總）× 所有「更多」相乘。各來源只改 b.inc／b.more，cap.js 最後算一次 b.atk
+const atkFin = (b) => { b.atk = (b.atk0 || 1) * (1 + (b.inc || 0)) * (b.more || 1); return b; };
 function applyBuild(b, daily) {
   const st = {}, uq = {};
   if (!daily) for (const k of SLOT_KEYS) {
@@ -364,7 +366,7 @@ function applyBuild(b, daily) {
   const g = (k) => st[k] || 0, sc = ""; // 不再選流派：玩法由武器決定，數值由裝備詞綴決定
   b.school = sc; b.uq = uq;
   b.maxHp = Math.round((b.maxHp + g("hp")) * (sc === "ti" ? 1.2 : sc === "fa" ? 0.8 : 1));
-  b.atk *= (1 + g("atk") / 100) * (1 + g("atkP") / 100) * (sc === "fa" ? 1.35 : 1);
+  b.atk0 = b.atk; b.inc = (b.inc || 0) + (g("atk") + g("atkP")) / 100; b.more = b.more || 1; atkFin(b); // 企劃 41：裝備攻擊％、攻擊前綴都是「增加」
   b.armor = g("def"); b.dmgTaken = 1; // 護甲在 worldStats／hurtW 算（物理減傷）
   b.es = g("es"); for (const e of ["F", "W", "T"]) b["res" + e] = (g("res" + e) + g("resA") + g("res") / 2) / 100; b.resP = g("resP") / 100; // 全元素抗性不含混沌（PoE） b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
   b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), eF: g("eleF"), eW: g("eleW"), eT: g("eleT"), eP: g("eleP") }; // 屬性卡片用 e 開頭（P 已經是植物系）

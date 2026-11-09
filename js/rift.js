@@ -129,7 +129,7 @@ function riftLeave(ok) {
 // 秘境之主：從區域王裡抽一隻，血量縮小、等級＝鑰匙等級
 function riftSpawnBoss() {
   const R = RIFT, k = RB_KEYS[Math.floor(Math.random() * RB_KEYS.length)], base = RBOSS[k], lv = R.lv, mods = R.key.mods;
-  const hp = Math.round(500000 * Math.pow(lv / 50, 3.54) * 0.5 * (mods.includes("lordhp") ? 1.6 : 1)); // 照區域王實測血量內插（50 萬@Lv.50、210 萬@Lv.75）×0.5
+  const hp = Math.round(122000 * Math.pow(lv / 50, 1.65) * 0.5 * (mods.includes("lordhp") ? 1.6 : 1)); // 企劃 41：照區域王新血量內插（12.2 萬@Lv.50、23 萬@Lv.75、42 萬@Lv.110）×0.5
   const BR = Object.assign({}, base, { x: R.boss.x, y: R.boss.y, lv, hp, cool: 0, n: `秘境之主・${base.n}`, dmgMul: (base.dmgMul || 1) * (mods.includes("dmg") ? 1.3 : 1),
     wake: `${base.n}從裂隙中現身！`, sleep: `${base.n}退回裂隙深處（走進王門可以再挑戰）` });
   W0.mobs.push({ type: base.type, rb: k, R: BR, rift: true, boss: true, lv, elite: false, camp: { x: BR.x, y: BR.y, z: R.theme, lv, respawn: [] }, x: BR.x, y: BR.y - 6, hp, max: hp,

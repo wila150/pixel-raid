@@ -6,7 +6,7 @@
 // ───────── 1. 新核心天賦（放進 mind.js 的 KEYSTONE，ksOn／ksDef／jobStats 迴圈都看得到）─────────
 KEYSTONE.t2 = [
   { k: "xuemo", n: "血魔法", c: "#ff4a5a", d: "招式改花生命不花真氣（1 真氣＝1% 最大生命，不會花到死）；真氣上限變 0；生命 +30%", f: (b) => { b.bloodMagic = 1; b.maxMp = 0; b.mpRegen = 0; b.maxHp = Math.round(b.maxHp * 1.3); } },
-  { k: "jianxin", n: "劍心通明", c: "#9fe8ff", d: "被打一下超過最大生命 20% 的部分減半（不會被秒）；攻擊 −5%", f: (b) => { b.jianxin = 1; b.atk *= 0.95; } },
+  { k: "jianxin", n: "劍心通明", c: "#9fe8ff", d: "被打一下超過最大生命 20% 的部分減半（不會被秒）；攻擊 −5%", f: (b) => { b.jianxin = 1; b.more *= 0.95; } },
   { k: "xueji", n: "血祭", c: "#d84a6a", d: "吸血 ×2；生命不會自然回復、丹藥回血 −50%", f: (b) => { b.leech = (b.leech || 0) * 2; b.regen = 0; b.potionMul = (b.potionMul || 1) * 0.5; } },
   { k: "tianren", n: "天人合一", c: "#c8e0ff", d: "四種元素抗性上限 +5%；物理減免上限 −10%", f: (b) => { b.resCapAdd = 0.05; b.physCapSub = 0.1; } },
 ];

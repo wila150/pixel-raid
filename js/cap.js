@@ -2,9 +2,12 @@
 // 放在所有 worldStats 包裝的最後面：常駐移速最多 ×1.75（坐騎 mountMul、霧化、凌波等暫時效果在 world.js 移動那行另外乘）
 // 攻速最多 ×2，超過的部分每 1% 換 0.5% 攻擊
 "use strict";
+const CRIT_CAP = 0.75;
 const _worldStatsCap = worldStats;
 worldStats = function () {
   const b = _worldStatsCap.apply(this, arguments);
+  atkFin(b); // 企劃 41：增加加總 × 更多相乘
+  if (b.crit > CRIT_CAP) { b.critDmg = (b.critDmg || 2) + (b.crit - CRIT_CAP); b.crit = CRIT_CAP; b.critCap = true; } // 企劃 41 §2-5：暴擊率上限 75%，超過的 1:1 換暴擊傷害
   b.spdCap = b.spdMul >= SPD_CAP - 1e-9; if (b.spdMul > SPD_CAP) b.spdMul = SPD_CAP;
   b.aspdCap = (b.aspd || 1) >= ASPD_CAP - 1e-9;
   if (b.aspd > ASPD_CAP) { b.atk *= 1 + (b.aspd - ASPD_CAP) * 0.5; b.aspd = ASPD_CAP; }

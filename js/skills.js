@@ -2,7 +2,7 @@
 // 舊存檔點過的心法（save.w.sk）自動退掉，不用重置費
 "use strict";
 // 每級自動成長（取代 16 招心法；舊心法平均點法 Lv.120 約傷害 ×2.3、生命 ×1.9，這裡抓接近）
-const SK_AUTO = { atk: 0.01, hp: 0.008, mp: 1 / 3, mpRegen: 0.006, spd: 0.001 };
+const SK_AUTO = { atk: 0.02, /* 企劃 41：每級攻擊 +2%（增加），在 world.js worldStats 加，這裡只給說明用 */  hp: 0.008, mp: 1 / 3, mpRegen: 0.006, spd: 0.001 };
 const autoTxt = (lv) => `攻擊 +${Math.round(lv * SK_AUTO.atk * 100)}%、生命 +${Math.round(lv * SK_AUTO.hp * 100)}%、真氣上限 +${Math.floor(lv * SK_AUTO.mp)}、真氣回復 +${Math.round(lv * SK_AUTO.mpRegen * 100)}%、移動 +${(lv * SK_AUTO.spd * 100).toFixed(1)}%`;
 // 舊程式還會查的名字（大節點以前看技能點門檻）
 const SK_NEED = [0, 0, 0, 0, 0];
@@ -15,7 +15,7 @@ jobStats = function (b) {
   b = _jobStatsSk(b);
   b.skCd = {}; b.skMp = {}; b.enMul = 1;
   const lv = Math.max(0, ((save.w && save.w.lv) || 1) - 1);
-  b.atk *= 1 + lv * SK_AUTO.atk; b.maxHp = Math.round(b.maxHp * (1 + lv * SK_AUTO.hp));
+  b.maxHp = Math.round(b.maxHp * (1 + lv * SK_AUTO.hp));
   b.maxMp += Math.floor(lv * SK_AUTO.mp); b.mpRegen *= 1 + lv * SK_AUTO.mpRegen; b.spdMul *= 1 + lv * SK_AUTO.spd;
   return b;
 };
