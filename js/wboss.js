@@ -47,7 +47,7 @@ function startWorldBossField(k = "volcano") {
   burst(R.x, R.y, `rgb(${R.col})`, 50, 160, 0.8);
   floatText(R.x, R.y - 40, R.wake, `rgb(${R.col})`, true);
 }
-const wbDmg = (m, mul = 1) => WMOBS.wboss.dmg * (1 + 0.22 * (m.lv - 1)) * mul * (rbOf(m).dmgMul || 1);
+const wbDmg = (m, mul = 1) => WMOBS.wboss.dmg * (1 + 0.22 * (m.lv - 1)) * mul * (rbOf(m).dmgMul || 1) * lvGapIn(m);
 function wbZone(o) { o.t = 0; wbZones.push(o); return o; }
 const wbFast = (m) => (m.phase >= 2 ? 0.8 : 1); // 第二階段預警最多縮到 0.8 倍
 // 排程：取代 setTimeout（暫停、切 App 時不會偷跑）

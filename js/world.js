@@ -379,7 +379,10 @@ function spawnWMob(camp) {
 
 // 精英詞綴：狂暴（快、出手快）、鐵壁（很硬）、召喚（半血叫小弟）
 const ELITE_MODS = ["狂暴", "鐵壁", "召喚"];
-const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1); // dmgMul：秘境詞綴
+// v6.7 等級差：怪比你高 5 級以上，每多 1 級你打牠 −3%（最多 −60%）、牠打你 +3%（最多 +60%）。秘境、天劫王不算（它們有自己的難度）
+function lvGap(m) { if (!m || !save.w || m.tj || (typeof RIFT !== "undefined" && RIFT)) return 0; return Math.max(0, Math.min(20, (m.lv || 1) - save.w.lv - 5)); }
+const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
+const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m); // dmgMul：秘境詞綴
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
 }
@@ -398,6 +401,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
   if (d.armor && !B.ignoreDef) dmg *= 1 - d.armor;
+  { const g = lvGap(m); if (g) { dmg *= 1 - 0.03 * g; if (m.boss && W0.gapMsg !== m) { W0.gapMsg = m; if (typeof notice === "function") notice(`${d.n} 比你高 ${m.lv - save.w.lv} 級：你的傷害 −${Math.round(g * 3)}%、受到的傷害 +${Math.round(g * 3)}%`, "#ff9a7a"); } } }
   if (m.mod === "鐵壁") dmg *= 0.55;
   dmg = elemHit(m, dmg); // 輔助寶石：冰凍、燃燒、融化、引爆、毒
   if (m.inPool) dmg *= 1.25; // 王站在毒池裡
