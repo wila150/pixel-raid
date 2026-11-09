@@ -331,7 +331,7 @@ function enterWorld() {
   pad.classList.remove("hidden");
   setPadLabels(true);
   if (heroNote) { notice("英雄系統改版（選英雄拿掉了）", "#9fe8ff"); heroNote.split("；").forEach((t) => notice(t.replace("英雄改版：", ""), "#cfe8ff")); }
-  if (W0gift) { W0gift = false; floatText(W0.x, W0.y - 56, "得到 2 顆技能寶石！", "#ffb347", true); floatText(W0.x, W0.y - 40, "打開背包鑲到武器上", "#ffb347"); }
+  if (W0gift) { W0gift = false; notice("得到 2 顆技能寶石！打開背包鑲到武器上", "#ffb347"); }
   last = performance.now();
 }
 let W0gift = false;

@@ -39,7 +39,7 @@ function drawTut() {
   if (!tutOn()) return;
   const i = save.w.tut, s = TUT[i], txt = s.t();
   ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-  const tw = Math.min(W - 24, ctx.measureText(txt).width + 70), x = W / 2, y = W > H ? Math.max(H * 0.24, 84 + SAFE.t) : Math.max(H * 0.3, 120 + SAFE.t); // v6.1 往下移，不蓋右上快捷列（企劃 15 第 12 節）
+  const tw = Math.min(W - 24, ctx.measureText(txt).width + 70), x = W / 2, y = W > H ? Math.max(H * 0.24, 84 + SAFE.t) : Math.min(H * 0.62, H - 300); // v6.1 直向放角色下方、技能鈕上方（不撞地名大字，企劃 15 第 13 節）；v6.1 往下移，不蓋右上快捷列（企劃 15 第 12 節）
   const pulse = 0.6 + 0.4 * Math.sin(time * 5);
   ctx.fillStyle = "rgba(14,10,24,0.88)"; ctx.fillRect(x - tw / 2, y - 16, tw, 32);
   ctx.strokeStyle = `rgba(255,207,107,${pulse})`; ctx.lineWidth = 2; ctx.strokeRect(x - tw / 2, y - 16, tw, 32);

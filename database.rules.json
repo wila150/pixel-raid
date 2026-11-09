@@ -11,10 +11,10 @@
     },
     "lb": {
       ".read": "auth != null",
-      ".indexOn": ["lv", "cp"],
+      ".indexOn": ["lv", "cp", "rt"],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.hasChildren(['n', 'lv', 'cp', 't']) && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('lv').isNumber() && newData.child('lv').val() >= 1 && newData.child('lv').val() <= 200 && newData.child('cp').isNumber() && newData.child('cp').val() >= 0 && newData.child('cp').val() <= 10000000"
+        ".validate": "newData.hasChildren(['n', 'lv', 'cp', 't']) && newData.child('n').isString() && newData.child('n').val().length <= 12 && newData.child('lv').isNumber() && newData.child('lv').val() >= 1 && newData.child('lv').val() <= 200 && newData.child('cp').isNumber() && newData.child('cp').val() >= 0 && newData.child('cp').val() <= 10000000 && (!newData.child('rt').exists() || (newData.child('rt').isNumber() && newData.child('rt').val() >= 0 && newData.child('rt').val() <= 100000))"
       }
     },
     "chat": {
