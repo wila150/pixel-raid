@@ -21,7 +21,7 @@ function skgOfSlot(sl, wt = curWeapon()) {
   const k = sl === "q" && !B ? triOf(wt, "q") || "base" : slotSkill(sl, wt); if (k === "origin" || k === "uq" || k === "over") return null;
   return skgKey(wt, sl, k);
 }
-const skgDmg = (sl) => { const k = skgOfSlot(sl); return k ? 1 + SKG_DMG * (skgLv(k) - 1) : 1; };
+const skgDmg = (sl) => { const k = skgOfSlot(sl); return typeof SPELL_W !== "undefined" && SPELL_W[curWeapon()] ? 1 : k ? 1 + SKG_DMG * (skgLv(k) - 1) : 1; };
 const skgCdMul = (sl) => { const k = skgOfSlot(sl); return k ? 1 - SKG_CD * Math.floor(skgLv(k) / 5) : 1; };
 function skgName(key) {
   const p = key.split(":");

@@ -411,7 +411,7 @@ const ELITE_MODS = ["狂暴", "鐵壁", "召喚"];
 function lvGap(m) { if (!m || !save.w || m.tj || (typeof RIFT !== "undefined" && RIFT)) return 0; return Math.max(0, Math.min(20, (m.lv || 1) - save.w.lv - 5)); }
 const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
-const DEEP_DMG = { forest: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林 ×1.3（企劃 40 §9 寫森林荒原 ×2、火山 ×1.8，但護甲常數改 10 之後量到荒原火山一般怪本來就 9–16%，再乘會到 24–33%，只加森林）
+const DEEP_DMG = { forest: 1.3, waste: 1.3, volcano: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林、荒原、火山 ×1.3（企劃 41 §8 複驗：有 ES 時荒原火山小怪只掉 0–4%）
 const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1; return DEEP_DMG[zoneAt(m.x, m.y)] || 1; };
 const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1); // dmgMul：秘境詞綴
 function packAggro(m) { // 打一隻，整個營地一起衝過來
@@ -1144,7 +1144,7 @@ function updateWorld(dt) {
     else moveBody(t, t.vx * dt, t.vy * dt, 3);
     if (t.orbit !== undefined && !t.ghost) for (const s of W0.eshots) if (Math.hypot(s.x - p.x, s.y - p.y) < 36) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } // 吹散敵方子彈
     if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40)) { const a = angTo(m, t), f = t.pull || 40; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg(t.dmg || 13), 0, t, true); DOT_HIT = false; if (t.boom && wEle() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
+    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg((t.dmg || 13) * (typeof TORN_K !== "undefined" ? TORN_K : 1)), 0, t, true); DOT_HIT = false; if (t.boom && wEle() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
     if (t.t <= 0 && t.boom) { fxBoom(t.x, t.y, 34, "190,220,255"); bolts.push({ x: t.x, y: t.y, life: 0.25 }); shake = Math.max(shake, 4); sfx("crit"); if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 34 + WMOBS[m.type].r) hitMob(m, wDmg(t.boom), 80, t, true); }
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }

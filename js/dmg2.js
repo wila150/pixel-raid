@@ -10,8 +10,8 @@
 
 // ───────── 1. 基礎傷害 ─────────
 const REF_W = (lv) => (8 + (4 * Math.max(1, lv)) / 3) * 1.12; // 同等級藍武器底材
-// 法術：同等級武器底材 × (0.6 + 0.4 × 寶石等級／上限)：寶石到上限＝100%、上限一半＝80%（一開始寫純看寶石等級，上限一半的 bot 打王 2–4 倍秒數）
-const GEM_BASE = (L) => REF_W(wLv()) * (0.6 + 0.4 * Math.min(1, L / skgCap()));
+// 法術（企劃 41 §8）：同等級藍武器底材 × (0.8 + 0.4 × 寶石等級／上限)：1 級約 0.8、上限一半 1.0、滿 1.2；法術不再吃技能寶石每級「更多 2%」（skgem.js）
+const GEM_BASE = (L) => REF_W(wLv()) * (0.8 + 0.4 * Math.min(1, L / skgCap()));
 const ADD_K = 0.15; // 附加傷害：「攻擊 +N」詞綴 × 0.15 點底材（第一版是增加 N%，同等級換算差不多）
 // 傷害效用（附加傷害乘這個）：沒寫的＝100%；割草、多段招 30–60%
 const SK_EFF = {
@@ -37,7 +37,9 @@ function baseOf(sl, b = B) { // 這一招的基礎（單位：8 點底材＝1）
   return (b0 + ADD_K * ((b && b.flatAtk) || 0) * skEff(sl)) / 8;
 }
 const DOT_K = 1.5; // 持續傷害不吃暴擊，基礎 ×1.5 補回來（PoE 的持續招基礎也比較高；扇的旋風是主力，不補打王慢 1.5 倍）
-const hitBase = (k) => k * baseOf(CUR_SL) * (DOT_HIT ? DOT_K : 1);
+const TORN_K = 1.35; // 旋風每跳（扇的主力）：企劃 41 §8 法系打王要跟攻擊武器差 ≤20%，扇 Lv.50 以上慢 25–47%
+const FAN_A = 1.3; // 扇普攻（企劃 41 §8 複驗：扇打鵬王、劍尊慢 1.35 倍；Q 的旋風是 TORN_K）
+const hitBase = (k) => k * baseOf(CUR_SL) * (DOT_HIT ? DOT_K : 1) * (CUR_SL === "a" && curWeapon() === "fan" ? FAN_A : 1);
 
 // ───────── 2. 怪物元素抗性、感電／曝曬、剋制 ─────────
 const MOB_RES = { snow: 0.2, swamp: 0.25, thunder: 0.3, sky: 0.4 }; // 混沌（毒）減半

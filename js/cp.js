@@ -4,7 +4,7 @@
 // 一定要在 cap.js 後面載入（worldStats 的最後一層包裝）
 "use strict";
 // 每把武器普攻：每 1 點攻擊倍率、攻速 1 的每秒傷害（scratchpad #k 量的，Lv.60 中型木樁、沒爆擊、段數換算成 1）
-const CP_K = { sword: 24, staff: 28, bow: 30, blade: 33, fist: 31, fan: 33 };
+const CP_K = { sword: 24, staff: 28, bow: 30, blade: 33, fist: 31, fan: 43 }; // 扇 33×1.3（v8.5.1 FAN_A）
 function cpParts(b) {
   if (!save.w) return null;
   b = b || worldStats();
