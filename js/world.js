@@ -879,12 +879,12 @@ function updateWorld(dt) {
   const eAltFx = (k) => {
     const t = near(180), tx = t ? t.x : p.x + Math.cos(p.face) * 70, ty = t ? t.y : p.y + Math.sin(p.face) * 70; if (t) p.face = angTo(p, t);
     const F = p.face, cs = Math.cos(F), sn = Math.sin(F);
-    if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 18, c: "#bfe6ff" }); sfx("volley"); }
-    else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 26, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
+    if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 27, c: "#bfe6ff" }); sfx("volley"); }
+    else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 57, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
     else if (k === "judg") { W0.fires.push({ x: tx, y: ty, t: 0.6, r: 40, dmg: 120, c: "#e8f4ff" }); W0.rings.push({ x: tx, y: ty, t: 0, max: 0.6, r: 40, c: "230,240,255" }); sfx("arrive"); }
-    else if (k === "blizz") { for (let i = 0; i < 10; i++) W0.fires.push({ x: tx + rand(-36, 36), y: ty + rand(-26, 26), t: 0.2 + i * 0.13, r: 20, dmg: 14, c: "#bfefff", slow: 2 }); sfx("volley"); }
-    else if (k === "chainl") { shoot(F, { v: 260, life: 1.2, dmg: 45, kind: "orb", pierce: false, kb: 30, bnAdd: 6 }); bolts.push({ x: p.x, y: p.y, life: 0.2 }); sfx("crit"); }
-    else if (k === "inferno") { for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; W0.walls.push({ x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 30, t: 3, tick: 0 }); } sfx("break"); }
+    else if (k === "blizz") { for (let i = 0; i < 10; i++) W0.fires.push({ x: tx + rand(-36, 36), y: ty + rand(-26, 26), t: 0.2 + i * 0.13, r: 20, dmg: 19.6, c: "#bfefff", slow: 2 }); sfx("volley"); }
+    else if (k === "chainl") { shoot(F, { v: 260, life: 1.2, dmg: 72, kind: "orb", pierce: false, kb: 30, bnAdd: 6 }); bolts.push({ x: p.x, y: p.y, life: 0.2 }); sfx("crit"); }
+    else if (k === "inferno") { for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; W0.walls.push({ x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 30, t: 3, tick: 0, mul: 1.3 }); } sfx("break"); }
     else if (k === "barr") { for (let w = 0; w < 3; w++) castLater(w * 0.25, () => { for (let i = -3; i <= 3; i++) shoot(p.face + i * 0.12, { v: 300, life: 0.6, dmg: 8, kind: "arrow", pierce: false, kb: 20 }); sfx("volley"); }); }
     else if (k === "seekr") { for (let i = 0; i < 8; i++) shoot(F + (i - 3.5) * 0.17, { v: 260, life: 1.0, dmg: 11, kind: "arrow", pierce: false, kb: 20, home: true }); sfx("volley"); }
     else if (k === "star") { for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + cs * i * 30, y: p.y + sn * i * 30, t: 0.25 + i * 0.1, r: 24, dmg: 40, c: "#ffe9a0" }); sfx("volley"); }
@@ -913,7 +913,7 @@ function updateWorld(dt) {
     else if (k === "freeze") {
       const rr = 80 * AM(); { let nb = null, bd = rr + 20; for (const m of W0.mobs) if (!m.dead && dist(m, p) < bd) { bd = dist(m, p); nb = m; } if (nb && !(mouseAim() && t)) p.face = angTo(p, nb); } // 沒瞄到也朝最近的怪
       const F2 = p.face;
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.75) { hitMob(m, wDmg(55), 30, p, true); m.frz = m.boss ? 0.5 : 1.5; m.slowT = Math.max(m.slowT || 0, 3); }
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F2 + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.75) { hitMob(m, wDmg(55), 30, p, true); m.frz = Math.max(m.frz || 0, m.boss ? 0.5 : 1.5); m.slowT = Math.max(m.slowT || 0, 3); }
       for (let i = 0; i < 30; i++) { const a = F2 + rand(-0.75, 0.75), v = rand(80, 200); particles.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4, max: 0.4, color: "#bfefff", size: 2 }); }
       sfx("crit"); shake = Math.max(shake, 4);
     }
@@ -927,13 +927,13 @@ function updateWorld(dt) {
       for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.1) hitMob(m, wDmg(60), 230, p, true);
       afterAt(p.x + cs * 30, p.y + sn * 30, rr * 0.7, 60); sfx("break"); shake = Math.max(shake, 7);
     }
-    else if (k === "blades") { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; W0.fires.push({ x: p.x + Math.cos(a) * 34, y: p.y + Math.sin(a) * 26, t: 1, r: 22, dmg: 32, c: "#d8c8a0" }); } sfx("break"); }
+    else if (k === "blades") { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; W0.fires.push({ x: p.x + Math.cos(a) * 34, y: p.y + Math.sin(a) * 26, t: 1, r: 22, dmg: 44.8, c: "#d8c8a0" }); } sfx("break"); }
     else if (k === "titan") { W0.titanT = 5; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r: 26, c: "255,190,110" }); floatText(p.x, p.y - 20, "霸體", "#ffbe6e"); sfx("arrive"); }
-    else if (k === "palm") { W0.fires.push({ x: p.x + cs * 38, y: p.y + sn * 38, t: 0.12, r: 42, dmg: 55, c: "#ffd08a", kb: 200 }); p.swing = p.swingMax = 0.15; p.swingR = 20; sfx("break"); shake = Math.max(shake, 6); }
+    else if (k === "palm") { W0.fires.push({ x: p.x + cs * 38, y: p.y + sn * 38, t: 0.12, r: 42, dmg: 66, c: "#ffd08a", kb: 200 }); p.swing = p.swingMax = 0.15; p.swingR = 20; sfx("break"); shake = Math.max(shake, 6); }
     else if (k === "thous") { for (let i = 0; i < 15; i++) { const d = rand(20, 75), sd = rand(-26, 26); W0.fires.push({ x: p.x + cs * d - sn * sd, y: p.y + sn * d + cs * sd, t: 0.15 + i * 0.1, r: 16, dmg: 12, c: "#ffd08a", kb: 20 }); } sfx("volley"); }
     else if (k === "dragf") { W0.dragT = 5; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r: 26, c: "120,230,200" }); floatText(p.x, p.y - 20, "化龍", "#7ee6c8"); sfx("arrive"); }
     else if (k === "healz") { W0.healZ = { x: p.x, y: p.y, r: 40 * AM(), t: 4 }; sfx("heal"); }
-    else if (k === "petal") { for (let i = 0; i < 10; i++) castLater(i * 0.2, () => { const t2 = near(90); if (t2) p.face = angTo(p, t2); arcHit(70, 0.6, 6, 10); for (let j = 0; j < 4; j++) { const a = p.face + rand(-0.6, 0.6), v = rand(90, 160); particles.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, max: 0.45, color: j % 2 ? "#ffc0d8" : "#fff0f6", size: 2 }); } }); sfx("volley"); }
+    else if (k === "petal") { for (let i = 0; i < 10; i++) castLater(i * 0.2, () => { const t2 = near(90); if (t2) p.face = angTo(p, t2); arcHit(70, 0.6, 7.2, 10); for (let j = 0; j < 4; j++) { const a = p.face + rand(-0.6, 0.6), v = rand(90, 160); particles.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, max: 0.45, color: j % 2 ? "#ffc0d8" : "#fff0f6", size: 2 }); } }); sfx("volley"); }
     else if (k === "wwall") { W0.wwall = { x: p.x + cs * 28, y: p.y + sn * 28, a: F, t: 4, half: 32 * AM() }; sfx("volley"); }
     else if (k === "zephyr") { W0.tornados = W0.tornados.filter((o) => !(o.orbit !== undefined && o.zep && !o.ghost)); W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 5, tick: 0, orbit: 0, dmg: 5, zep: 1 }); sfx("volley"); }
     return true;
@@ -1110,7 +1110,7 @@ function updateWorld(dt) {
   for (const f of W0.walls) { // 火牆：每 0.4 秒燒一次、走過去變慢
     f.t -= dt; f.tick -= dt;
     CUR_SL = f.sl || null; CUR_DM = f.dm || 1;
-    if (!f.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, f) < (f.hr || 10) + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, f.ice ? 1 : 0.4); if (f.tick <= 0 && !f.ice) hitMob(m, wDmg(11), 0, f, true); }
+    if (!f.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, f) < (f.hr || 10) + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, f.ice ? 1 : 0.4); if (f.tick <= 0 && !f.ice) hitMob(m, wDmg(11 * (f.mul || 1)), 0, f, true); }
     CUR_SL = null; CUR_DM = 1;
     if (f.tick <= 0) f.tick = 0.4;
     if (f.ice) { if (Math.random() < 0.08) particles.push({ x: f.x + rand(-5, 5), y: f.y + rand(-2, 2), vx: 0, vy: -8, life: 0.4, max: 0.4, color: "#dff6ff", size: 1.5 }); continue; }
