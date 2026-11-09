@@ -22,7 +22,8 @@ const KEYSTONE = {
   ],
 };
 const ksOf = (t) => (save.w && save.w.ks && save.w.ks[t]) || null;
-const ksOn = (k) => { if (!save.w || !save.w.ks) return false; const j = typeof jobLv === "function" ? jobLv() : 0; for (const t in save.w.ks) if (save.w.ks[t] === k && +t <= j) return true; return false; };
+// 18 §8：技能點門檻沒到不生效（已選的不清掉，補到就生效）
+const ksOn = (k) => { if (!save.w || !save.w.ks) return false; const j = typeof jobLv === "function" ? jobLv() : 0; for (const t in save.w.ks) if (save.w.ks[t] === k && +t <= j && (typeof skGateOk !== "function" || skGateOk(+t))) return true; return false; };
 const ksDef = (k) => { for (const t in KEYSTONE) for (const o of KEYSTONE[t]) if (o.k === k) return o; return null; };
 const _jobStatsM = jobStats;
 jobStats = function (b) {
@@ -31,9 +32,9 @@ jobStats = function (b) {
   return b;
 };
 function ksHtml(t) {
-  const j = jobLv(), lock = j < t, cur = ksOf(t), here = W0 && safeAt(W0.x, W0.y);
-  const cards = KEYSTONE[t].map((o) => `<button class="kscard${cur === o.k ? " on" : ""}" data-ks="${t}:${o.k}" style="--c:${o.c}" ${lock ? "disabled" : ""}><b>${o.n}</b><small>${o.d}</small>${cur === o.k ? "<i>使用中</i>" : ""}</button>`).join("");
-  return `<div class="ksbox"><div class="kshead">大節點・二選一<small>${lock ? "轉職後開放" : cur ? (here ? "點另一張可以換（免費）" : "在城裡或營地結界裡才能換") : "選一個（免費，在城裡或營地結界裡可以換）"}</small></div><div class="ksrow">${cards}</div></div>`;
+  const j = jobLv(), gate = j >= t && typeof skGateOk === "function" && !skGateOk(t), lock = j < t || gate, cur = ksOf(t), here = W0 && safeAt(W0.x, W0.y);
+  const cards = KEYSTONE[t].map((o) => `<button class="kscard${cur === o.k ? " on" : ""}" data-ks="${t}:${o.k}" style="--c:${o.c}" ${lock ? "disabled" : ""}><b>${o.n}</b><small>${o.d}</small>${cur === o.k ? (gate ? "<i>補點後生效</i>" : "<i>使用中</i>") : ""}</button>`).join("");
+  return `<div class="ksbox"><div class="kshead">大節點・二選一<small>${j < t ? "轉職後開放" : gate ? `前面還要再點 ${SK_NEED[t] - spBelow(t)} 點${cur ? "（選了的會在補到後生效）" : ""}` : cur ? (here ? "點另一張可以換（免費）" : "在城裡或營地結界裡才能換") : "選一個（免費，在城裡或營地結界裡可以換）"}</small></div><div class="ksrow">${cards}</div></div>`;
 }
 const _renderSkillsM = renderSkills;
 renderSkills = function (msg) {
@@ -44,6 +45,7 @@ renderSkills = function (msg) {
   ov.querySelectorAll("[data-ks]").forEach((b) => b.addEventListener("click", () => {
     const [t, k] = b.dataset.ks.split(":"), w = save.w; w.ks = w.ks || {};
     if (w.ks[t] === k) return;
+    if (jobLv() < +t || !skGateOk(+t)) { sfx("bad"); renderSkills(`前面還要再點 ${SK_NEED[+t] - spBelow(+t)} 點才能選大節點`); return; }
     if (w.ks[t] && !(W0 && safeAt(W0.x, W0.y))) { sfx("bad"); renderSkills("在城裡或營地結界裡才能換大節點"); return; }
     w.ks[t] = k; writeSave(); sfx("good");
     B = worldStats(); if (W0) { W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp); }
@@ -169,7 +171,7 @@ killMob = function (m) {
 const _hurtWM = hurtW;
 hurtW = function (dmg, from, kind) {
   if (ksOn("panshi")) dmg *= 0.8;
-  if (tjBoss()) dmg *= 1.3;
+  { const tb = tjBoss(); if (tb) dmg *= tb.rb === "swamp" ? 1.1 : 1.3; } // 蟾王天劫 ×1.1（企劃 20 bot 實測勝率 1/12）
   return _hurtWM.call(this, dmg, from, kind);
 };
 const _wbKilledM = wbKilled;
