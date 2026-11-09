@@ -522,6 +522,12 @@ function gainExp(n) {
   writeSave();
 }
 // 天罰：能量集滿放出，除了武器本身的大招，整個畫面的妖獸都被天雷劈一次
+// 企劃 35 §5：放 E 時畫面上方小字顯示招式名
+function eNameShow(n) {
+  if (!n) return; let el = document.getElementById("eName");
+  if (!el) { el = document.createElement("div"); el.id = "eName"; document.body.appendChild(el); }
+  el.textContent = n; el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+}
 function tianfa() {
   const p = W0; W0.enFullFx = false;
   for (const m of W0.mobs) if (!m.dead && Math.abs(m.x - p.x) < 260 && Math.abs(m.y - p.y) < 170) { bolts.push({ x: m.x, y: m.y, life: 0.35 }); hitMob(m, wDmg(30), 50, p, true); }
@@ -837,33 +843,33 @@ function updateWorld(dt) {
     if (wt === "sword") { // 掌心雷：劈最近的怪和牠旁邊的
       const t = near(150); if (!t) return false;
       const r = 38 * AM(); bolts.push({ x: t.x, y: t.y, life: 0.3 });
-      for (const m of W0.mobs) if (!m.dead && dist(m, t) < r) hitMob(m, wDmg(26), 40, t, true);
-      afterAt(t.x, t.y, r, 26);
+      for (const m of W0.mobs) if (!m.dead && dist(m, t) < r) hitMob(m, wDmg(39), 40, t, true); // 企劃 35 §5：原本的 E ×1.5（補回天罰）
+      afterAt(t.x, t.y, r, 39);
       sfx("crit"); shake = Math.max(shake, 6); flashT = 0.08; flashColor = "200,220,255";
       burst(t.x, t.y, "#cfe0ff", 26, 120, 0.6);
     } else if (wt === "staff") { // 冰環：身邊一圈傷害＋減速
       const r = 60 * AM();
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(18), 70, p, true); m.slowT = 3; }
-      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r }); afterAt(p.x, p.y, r, 18);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(27), 70, p, true); m.slowT = 3; }
+      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r }); afterAt(p.x, p.y, r, 27);
       sfx("crit"); shake = Math.max(shake, 5); burst(p.x, p.y, "#bfefff", 30, 140, 0.5);
     } else if (wt === "bow") { // 穿雲箭：一支大箭穿透一整排
       const t = near(220); if (t) p.face = angTo(p, t);
-      shoot(p.face, { v: 380, life: 0.8, dmg: 34, kind: "big", pierce: true, kb: 90 });
+      shoot(p.face, { v: 380, life: 0.8, dmg: 51, kind: "big", pierce: true, kb: 90 });
       sfx("crit"); shake = Math.max(shake, 4);
     } else if (wt === "blade") { // 裂地斬：往前一路炸開
       const t = near(120); if (t) p.face = angTo(p, t);
-      for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + Math.cos(p.face) * i * 22, y: p.y + Math.sin(p.face) * i * 22, t: 0.05 + i * 0.07, r: 18, dmg: 22, c: "#d8c8a0" });
+      for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + Math.cos(p.face) * i * 22, y: p.y + Math.sin(p.face) * i * 22, t: 0.05 + i * 0.07, r: 18, dmg: 33, c: "#d8c8a0" });
       sfx("crit"); shake = Math.max(shake, 6);
     } else if (wt === "fist") { // 震地
       const r = 50 * AM();
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(24), 140, p, true); m.slowT = 1.2; }
-      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r, c: "255,210,140" }); afterAt(p.x, p.y, r, 24);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(36), 140, p, true); m.slowT = 1.2; }
+      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r, c: "255,210,140" }); afterAt(p.x, p.y, r, 36);
       sfx("break"); shake = Math.max(shake, 8); burst(p.x, p.y, "#d8b080", 30, 140, 0.5);
     } else { // 清風：回血＋把怪吹開
       const heal = Math.min(Math.round(p.maxHp * 0.25 * (trig ? 0.4 : 1)), p.maxHp - p.hp); p.hp += heal;
       if (heal) floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a");
       const r = 55 * AM();
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) hitMob(m, wDmg(8), 160, p, true);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) hitMob(m, wDmg(12), 160, p, true);
       W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r, c: "160,255,190" });
       sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6);
     }
@@ -895,7 +901,7 @@ function updateWorld(dt) {
     else if (k === "typh") { for (const da of [-0.4, 0, 0.4]) W0.tornados.push({ x: p.x + Math.cos(F + da) * 14, y: p.y + Math.sin(F + da) * 14, vx: Math.cos(F + da) * 45, vy: Math.sin(F + da) * 45, t: 2, tick: 0, dmg: 5.5 }); sfx("volley"); }
     else if (k === "bloom") { const h = Math.min(Math.round(p.maxHp * 0.15 * (CUR_DM < 1 ? 0.4 : 1) * brkMul()), p.maxHp - p.hp); p.hp += h; if (h) floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); for (let i = 0; i < 12; i++) shoot((i / 12) * Math.PI * 2, { v: 200, life: 0.9, dmg: 8, kind: "wind", pierce: true, kb: 20, back: 0.4 }); sfx("heal"); }
     // 企劃 35：中期 E（Lv.20／35／55）
-    else if (k === "array") { W0.orbs = W0.orbs.filter((o) => !o.eArr); for (let i = 0; i < 4; i++) W0.orbs.push({ t: 5, hit: new Map(), dmg: 70, eArr: 1 }); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 26, c: "200,230,255" }); sfx("arrive"); }
+    else if (k === "array") { W0.orbs = W0.orbs.filter((o) => !o.eArr); for (let i = 0; i < 4; i++) W0.orbs.push({ t: 5, hit: new Map(), dmg: 55, eArr: 1 }); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 26, c: "200,230,255" }); sfx("arrive"); }
     else if (k === "cold") {
       const L = 160, r0 = 16 * AM(); let n = 0;
       for (const m of W0.mobs) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y, along = dx * cs + dy * sn, perp = Math.abs(-dx * sn + dy * cs); if (along > -6 && along < L + 6 && perp < r0 + WMOBS[m.type].r) { hitMob(m, wDmg(90), 60, p, true); n++; } }
@@ -965,9 +971,9 @@ function updateWorld(dt) {
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
     W0.originCast = 0;
     if (wt === "sword" && slotSkill("e") === "base" && !near(150)) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc");
-    else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) p.en = 0; }
+    else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) { p.en = 0; eNameShow("起源覺醒"); } }
   }
-  if (p.cds.ult > ultCd0 && !W0.originCast) { p.en = 0; tianfa(); netCast("e", p.face, p.x, p.y); }
+  if (p.cds.ult > ultCd0 && !W0.originCast) { p.en = 0; W0.enFullFx = false; eNameShow(WSKILL.ult.n); netCast("e", p.face, p.x, p.y); } // 企劃 35 §5：拿掉附帶的天罰（全畫面落雷），改成上方小字顯示招式名
   // 觸發寶石（只能串 E）：暴擊／受傷時自動放 E，不用天罰能量
   if (p.trigCd > 0) p.trigCd -= dt;
   if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && wLv() >= E_LV) {
@@ -1144,9 +1150,10 @@ function updateWorld(dt) {
   CUR_SL = null; CUR_DM = 1;
   W0.voids = W0.voids.filter((v) => v.t > 0);
   W0.orbs = W0.orbs.filter((o) => (o.t -= dt) > 0);
+  W0.orbClk = (W0.orbClk || 0) + dt; const oc = W0.orbClk; // 自己的時鐘（不靠畫面的 time，機器人直接呼叫 updateWorld 也會轉）
   W0.orbs.forEach((o, i) => { // 環身飛劍
-    const a = time * 4 + (i / W0.orbs.length) * Math.PI * 2; o.x = p.x + Math.cos(a) * 24; o.y = p.y - 2 + Math.sin(a) * 18; o.a = a + Math.PI / 2;
-    for (const m of W0.mobs) if (!m.dead && dist(m, o) < WMOBS[m.type].r + 5 && (o.hit.get(m) || 0) < time) { o.hit.set(m, time + 0.35); hitMob(m, wDmg(o.dmg || 5), 20, p, true); }
+    const a = oc * 4 + (i / W0.orbs.length) * Math.PI * 2; o.x = p.x + Math.cos(a) * 24; o.y = p.y - 2 + Math.sin(a) * 18; o.a = a + Math.PI / 2;
+    for (const m of W0.mobs) if (!m.dead && dist(m, o) < WMOBS[m.type].r + 5 && (o.hit.get(m) || 0) < oc) { o.hit.set(m, oc + (o.eArr ? 0.5 : 0.35)); hitMob(m, wDmg(o.dmg || 5), o.eArr ? 0 : 20, p, true); } // 劍陣不擊退（不然怪被推出圈外就打不到）
   });
 
   // 怪物：只更新玩家附近的
