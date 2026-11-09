@@ -18,7 +18,15 @@ const SLOTS = {
   robe: { n: "袍", base: "def", names: ["粗麻袍", "青衫", "鶴紋道袍", "玄鱗甲", "雲錦法衣"] },
   boots: { n: "靴", base: "spd", names: ["草鞋", "布靴", "追風靴", "流光靴", "凌虛靴"] },
   charm: { n: "佩", base: "crit", names: ["木牌", "玉佩", "靈犀佩", "龍紋佩", "太虛佩"] },
+  ring: { n: "戒指", base: "none", acc: true, names: ["銅戒", "銀戒", "青玉戒", "紫晶戒", "太虛戒"] }, // 企劃 12 §2-3：純詞綴飾品，三轉開
+  ear: { n: "耳飾", base: "none", acc: true, names: ["木耳墜", "銀耳環", "翡翠墜", "鳳羽墜", "星河墜"] }, // 四轉開
 };
+const SLOT_JOB = { ring: 3, ear: 4 }; // 部位要幾轉才開
+const slotOpen = (k) => !SLOT_JOB[k] || (typeof jobLv === "function" && save.w ? jobLv() : 0) >= SLOT_JOB[k];
+const slotLockTxt = (k) => `${["", "一", "二", "三", "四"][SLOT_JOB[k]]}轉開放`;
+const ACC_NO = ["def", "es", "thorns"]; // 戒指／耳飾不出護甲類
+// 掉落部位：開放的部位，戒指／耳飾權重一半
+function pickSlot() { const ks = SLOT_KEYS.filter(slotOpen), ws = ks.map((k) => (SLOTS[k].acc ? 1 : 2)); let r = Math.random() * ws.reduce((a, b) => a + b, 0); for (let i = 0; i < ks.length; i++) if ((r -= ws[i]) < 0) return ks[i]; return ks[0]; }
 const SLOT_KEYS = Object.keys(SLOTS);
 // 武器決定招式（沒有職業，拿什麼武器就打什麼路子）
 const WEAPONS = {
@@ -80,7 +88,7 @@ function nameItem(it) {
   const pre = ks.find((k) => AFFIX[k] && AFFIX[k].t === "p"), suf = ks.find((k) => AFFIX[k] && AFFIX[k].t === "s");
   it.name = (it.q === 0 || !ks.length ? base : `${pre ? AFF_WORD[pre] : ""}${base}${suf ? `・${AFF_WORD[suf]}` : ""}`) + en;
 }
-const BASE_VAL = { atk: [8, 4], hp: [30, 15], def: [12, 6], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
+const BASE_VAL = { none: [0, 0], atk: [8, 4], hp: [30, 15], def: [12, 6], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
 const RARITY = [
   { n: "凡品", c: "#ecebf2", aff: [0, 0], sell: 2 }, // 白
   { n: "靈品", c: "#5fa8ff", aff: [1, 2], sell: 6 }, // 藍
@@ -89,12 +97,12 @@ const RARITY = [
 ];
 // 傳說裝：固定名字＋特殊效果
 const UNIQUES = {
-  thunder: { slot: "sword", wt: "sword", n: "九霄引雷劍", d: "爆擊時引下天雷；U 變成「九霄天雷」：一次劈附近 6 隻" },
-  phoenix: { slot: "sword", wt: "staff", n: "朱雀焚天杖", d: "U 變成「朱雀環」：身邊炸出一圈穿透火焰" },
-  sunbow: { slot: "sword", wt: "bow", n: "落日神弓", d: "U 變成「箭雨」：目標一帶落下 12 支箭" },
-  moon: { slot: "sword", wt: "blade", n: "斬月狂刀", d: "U 變成「月輪」：一大圈刀氣，傷害極高" },
-  tiger: { slot: "sword", wt: "fist", n: "伏虎拳套", d: "U 變成「百裂拳」：對眼前的敵人瞬間打 10 拳" },
-  qiankun: { slot: "sword", wt: "fan", n: "乾坤奪魄扇", d: "U 變成「乾坤吸」：把附近的妖獸全吸過來再震飛" },
+  thunder: { slot: "sword", wt: "sword", n: "九霄引雷劍", d: "爆擊時引下天雷；E（天罰能量集滿）變成「九霄天雷」：一次劈附近 6 隻；四轉後起源覺醒變成「起源・九霄天雷」" },
+  phoenix: { slot: "sword", wt: "staff", n: "朱雀焚天杖", d: "E（天罰能量集滿）變成「朱雀環」：身邊炸出一圈穿透火焰；四轉後起源覺醒變成「起源・朱雀環」" },
+  sunbow: { slot: "sword", wt: "bow", n: "落日神弓", d: "E（天罰能量集滿）變成「箭雨」：目標一帶落下 12 支箭；四轉後起源覺醒變成「起源・箭雨」" },
+  moon: { slot: "sword", wt: "blade", n: "斬月狂刀", d: "E（天罰能量集滿）變成「月輪」：一大圈刀氣，傷害極高；四轉後起源覺醒變成「起源・月輪」" },
+  tiger: { slot: "sword", wt: "fist", n: "伏虎拳套", d: "E（天罰能量集滿）變成「百裂拳」：對眼前的敵人瞬間打 10 拳；四轉後起源覺醒變成「起源・百裂拳」" },
+  qiankun: { slot: "sword", wt: "fan", n: "乾坤奪魄扇", d: "E（天罰能量集滿）變成「乾坤吸」：把附近的妖獸全吸過來再震飛；四轉後起源覺醒變成「起源・乾坤吸」" },
   qkhy: { slot: "sword", wt: "sword", n: "太古·乾坤化元劍", mods: ["split", "bounce", "voidQ"], d: "改寫招式：飛出去的劍擊中時分裂成 3 把副劍，副劍會在怪群之間彈跳 2 次；Q 劍陣變成「引力黑洞」" },
   splitbox: { slot: "charm", n: "分光劍匣", mods: ["split"], d: "改寫招式：所有飛出去的招式，擊中第一隻妖獸時分裂成 3 道" },
   starcrown: { slot: "crown", n: "連星折光冠", mods: ["bounce"], d: "改寫招式：所有飛出去的招式，擊中後會彈跳到旁邊的妖獸，最多 2 次" },
@@ -106,8 +114,8 @@ const UNIQUES = {
   cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半，斬妖試煉移動 +25%" },
   heart: { slot: "charm", n: "劍心玉佩", d: "渡劫時飛劍數量 ×1.3" },
   toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit", "psnConv"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；法杖、扇和元素轉化的傷害全部變成可疊 5 層的毒；站在毒池裡不扣血，反而回真氣" },
-  hourglass: { slot: "charm", n: "時之沙漏", mods: ["lbDouble"], d: "每次切換武器（1／2／3），下一招段數翻倍" },
-  bloodjade: { slot: "charm", n: "血玉佩", mods: ["vamp"], d: "吸血 +3%，每斬一隻妖回 1% 生命" },
+  hourglass: { slot: "ring", n: "時之沙漏", mods: ["lbDouble"], d: "每次切換武器（1／2／3），下一招段數翻倍" },
+  bloodjade: { slot: "ear", n: "血玉佩", mods: ["vamp"], d: "吸血 +3%，每斬一隻妖回 1% 生命" },
   tstep: { slot: "boots", n: "踏雷靴", mods: ["tstep"], rb: true, d: "王專屬（九雷鵬王）：閃身結束時在落點劈下落雷（攻擊 ×3）；閃身冷卻 −20%" },
   wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
 };
@@ -215,8 +223,9 @@ function shardItem(slot, q) {
 const rollAffVal = (k, il) => { const a = AFFIX[k], v = (a.lo + Math.random() * (a.hi - a.lo)) * (1 + 0.35 * il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
 function rollAffixes(it, n, force = null) {
   const cap = AFF_CAP[it.q] || 1, cnt = { p: 0, s: 0 };
-  let pool = Object.keys(AFFIX).filter((k) => AFFIX[k].t === "p" || AFFIX[k].t === "s");
+  let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)));
   it.aff = {};
+  if (force && !pool.includes(force)) force = null; // 飾品不吃護甲類保底
   if (force) { it.aff[force] = Math.max(rollAffVal(force, it.il), rollAffVal(force, it.il)); cnt[AFFIX[force].t]++; pool = pool.filter((k) => k !== force); n--; } // 精髓：保底詞條（取兩次較高）
   for (let i = 0; i < n; i++) {
     const ok = pool.filter((k) => cnt[AFFIX[k].t] < cap);
@@ -232,8 +241,8 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   const r = Math.random() * 100, w = boost ? [48, 37, 13.5, 1.5] : [72, 23, 4.7, 0.3]; // 凡／靈／玄／傳說（%）
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
-  let slot = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], u = null;
-  if (q === 3) { const uk = Object.keys(UNIQUES).filter((k) => !UNIQUES[k].rb); u = uk[Math.floor(Math.random() * uk.length)]; slot = UNIQUES[u].slot; }
+  let slot = pickSlot(), u = null;
+  if (q === 3) { const uk = Object.keys(UNIQUES).filter((k) => !UNIQUES[k].rb && slotOpen(UNIQUES[k].slot)); u = uk[Math.floor(Math.random() * uk.length)]; slot = UNIQUES[u].slot; }
   else if (wt) slot = "sword";
   const s = SLOTS[slot], bv = BASE_VAL[s.base];
   const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, u,
@@ -241,7 +250,7 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   if (s.base !== "crit") it.base = Math.round(it.base);
   if (slot === "sword") it.wt = u ? UNIQUES[u].wt : wt || WT_KEYS[Math.floor(Math.random() * WT_KEYS.length)];
   const [a0, a1] = RARITY[q].aff;
-  rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1)));
+  rollAffixes(it, Math.max(s.acc ? 1 : 0, a0 + Math.floor(Math.random() * (a1 - a0 + 1)))); // 飾品沒主屬性：凡品也給 1 條
   nameItem(it);
   return it;
 }
@@ -456,7 +465,7 @@ function renderEquip(msg = "") {
   });
   on("autoEq", () => {
     let n = 0;
-    for (const k of SLOT_KEYS) {
+    for (const k of SLOT_KEYS.filter(slotOpen)) {
       const best = save.bag.filter((b) => b.slot === k && sameWt(b)).sort((a, b) => itemCP(b) - itemCP(a))[0];
       if (best && itemCP(best) > itemCP(save.eq[k])) { equipItem(best); n++; }
     }
@@ -478,10 +487,12 @@ function gemHtml() {
     <div class="gbag">${gs.length ? gs.map((g) => { const [k, l] = g.split(":"); return `<button class="gem" data-g="${g}" style="border-color:${GEMS[k].c}"><b style="color:${GEMS[k].c}">◆ ${gemName(g)} ×${save.gems[g]}</b><small>${GEMS[k].d(+l)}</small>${save.gems[g] >= 3 && +l < GEM_MAX ? `<span class="gmerge" data-g="${g}">3 顆合成 ${+l + 1} 級</span>` : ""}</button>`; }).join("") : `<p class="sub">還沒有寶石：精英怪、獵寶妖、任務會掉。點寶石就鑲到武器上</p>`}</div></div>`;
 }
 function equipItem(it) {
+  if (!slotOpen(it.slot)) { sfx("bad"); if (typeof notice === "function") notice(`${SLOTS[it.slot].n}格要${slotLockTxt(it.slot)}`); return false; }
   const old = save.eq[it.slot];
   save.bag = save.bag.filter((b) => b !== it);
   if (old) save.bag.push(old);
   save.eq[it.slot] = it;
   writeSave();
   sfx("good");
+  return true;
 }

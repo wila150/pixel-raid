@@ -422,7 +422,10 @@ body.inworld #quick { display: flex; }
 .eqc .icon { width: 72%; height: 72%; image-rendering: pixelated; filter: drop-shadow(0 0 5px var(--c)); }
 .eqc .en { position: absolute; left: 3px; bottom: 1px; font-size: 10px; color: #ffcf6b; font-weight: 700; text-shadow: 0 1px 1px #000; }
 .eqc.sel { box-shadow: 0 0 0 2px var(--c), 0 0 10px var(--c); }
-.eqc.lock { cursor: default; opacity: 0.35; border-style: dashed; }
+.eqc.lock { cursor: default; opacity: 0.6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: rgba(40, 40, 50, 0.5); }
+.eqc.lock b { font-size: 14px; line-height: 1; filter: grayscale(0.6); }
+.eqc.lock small { font-size: 9px; }
+.eqc.mount img { width: 86%; image-rendering: pixelated; }
 
 /* 角色資料：左基本＋配點、右戰鬥數值（表格式） */
 .charwin { max-width: 860px; text-align: left; }

@@ -251,6 +251,8 @@ const ICON_SRC = {
   crown: sprite(["..........", ".k..kk..k.", "kGkkGGkkGk", "kGGGGGGGGk", "kGRGGBGGRk", "kGGGGGGGGk", "kkkkkkkkkk"], { k: K, G: "#ffd84a", R: "#ff6b6b", B: "#6fb8ff" }),
   robe: sprite(["..kk..kk..", ".kBBkkBBk.", "kBBBWWBBBk", "kBkBWWBkBk", "kBkBBBBkBk", "..kBBBBk..", "..kBBBBk..", "..kkkkkk.."], { k: K, B: "#4a6ad8", W: "#eef2fa" }),
   boots: sprite(["..kkk.....", "..kBk.....", "..kBk.....", "..kBk.....", "..kBBkk...", "..kBBBBk..", "..kkkkkk.."], { k: K, B: "#8a5a3a" }),
+  ring: sprite(["...kRk....", "..kRWRk...", "...kRk....", "..kGGGk...", ".kG...Gk..", ".kG...Gk..", "..kGGGk...", "...kkk...."], { k: K, R: "#c77dff", W: "#ffffff", G: "#ffd84a" }),
+  ear: sprite(["...kk.....", "..kG.k....", "...kGk....", "....kk....", "...kBk....", "..kBWBk...", "..kBBBk...", "...kBk....", "....k....."], { k: K, G: "#ffd84a", B: "#6fd8ff", W: "#ffffff" }),
   charm: sprite(["....k.....", "...kRk....", "...kRk....", "..kGGGk...", ".kGgGGGk..", ".kGGGgGk..", "..kGGGk...", "...kkk...."], { k: K, R: "#ff6b6b", G: "#7dffb0", g: "#ffffff" }),
 };
 const iconCache = {};
@@ -395,7 +397,7 @@ const SKINS = {
   gold: { n: "金蓮聖者", price: 800, W: "#fff1b0", w: "#e0b040", B: "#ff8a3d", H: "#fff6d0", h: "#ffd84a" },
   void: { n: "虛空魔君", price: 800, W: "#6a3a9a", w: "#3a1a5a", B: "#ff3a5a", H: "#d8d0ff", h: "#9a8ad8" },
 };
-const gearKey = () => { const e = save.eq; return `${e.robe ? e.robe.q : -1},${e.crown ? e.crown.q : -1},${e.boots ? e.boots.q : -1},${(save.w && save.w.skin) || "none"}`; };
+const gearKey = () => { const e = save.eq; return `${e.robe ? e.robe.q : -1},${e.crown ? e.crown.q : -1},${e.boots ? e.boots.q : -1},${(save.w && save.w.skin) || "none"},${(typeof mountRide === "function" && mountRide()) || "none"}`; }; // 第 5 欄：騎著的坐騎
 function heroImg(walk) { const g = gearKey().split(","); return heroImgFor(+g[0], +g[1], +g[2], walk, g[3]); }
 function heroImgFor(rq, cq, bq, walk, skin = "none") {
   const key = `${rq}${cq}${bq}${walk}${skin}`;

@@ -399,7 +399,7 @@ function wbKilled(m) { // 打倒區域王
     for (let i = 0; i < (sky ? 3 : 2); i++) wDrop({ kind: "ess", k: randEss() }, m);
     for (let i = 0; i < (sky ? 2 : 1 + (Math.random() < 0.5 ? 1 : 0)); i++) wDrop({ kind: "gem", g: randGem(Math.random() < 0.3 ? 2 : 1) }, m);
     if (sky && w.rbK.sky === 1) { // 首殺：保底傳說
-      const sl = SLOT_KEYS[Math.floor(Math.random() * SLOT_KEYS.length)], it = shardItem(sl, 3);
+      const sks = SLOT_KEYS.filter(slotOpen), sl = sks[Math.floor(Math.random() * sks.length)], it = shardItem(sl, 3);
       item(it); floatText(m.x, m.y - 84, "首次擊敗無相劍尊：獲得一件傳說！", "#ffcf6b", true);
     }
   }

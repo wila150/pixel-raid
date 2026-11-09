@@ -184,7 +184,7 @@ function econHtml(camp) {
   const row = (r, btn) => { const ok = matHas(r.need), tr = (save.w.track || []).includes(r.id); return `<div class="rcp${ok ? " ok" : ""}"><div><b>${r.n}</b><small>${matTxt(r.need)}</small></div><button data-trk="${r.id}" class="trk${tr ? " on" : ""}" title="追蹤（最多 2 個）">📌</button>${btn(ok)}</div>`; };
   if (econTab === "forge") {
     const affs = Object.keys(AFFIX).filter((k) => AFFIX[k].t === "p" || AFFIX[k].t === "s");
-    body = `<div class="fsel"><select id="fSlot">${SLOT_KEYS.map((k) => `<option value="${k}"${forgeSlot === k ? " selected" : ""}>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</option>`).join("")}</select><select id="fAff">${affs.map((k) => `<option value="${k}"${forgeAff === k ? " selected" : ""}>保底：${AFFIX[k].n}</option>`).join("")}</select></div>`
+    body = `<div class="fsel"><select id="fSlot">${SLOT_KEYS.filter(slotOpen).map((k) => `<option value="${k}"${forgeSlot === k ? " selected" : ""}>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</option>`).join("")}</select><select id="fAff">${affs.map((k) => `<option value="${k}"${forgeAff === k ? " selected" : ""}>保底：${AFFIX[k].n}</option>`).join("")}</select></div>`
       + RECIPES.filter((r) => r.kind === "slot" || r.kind === "forge").filter((r) => r.kind === "forge" || Object.keys(r.need).some((k) => k !== "stone" && matN(k) > 0) || save.w.wp.includes(r.z)).map((r) => row(r, (ok) => `<button data-rcp="${r.id}" ${camp && ok ? "" : "disabled"}>鍛造</button>`)).join("");
   } else if (econTab === "pill") {
     const bf = save.w.buffs || {};

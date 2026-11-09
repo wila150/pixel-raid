@@ -164,11 +164,13 @@ function drawOther(o) {
   ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(o.x, o.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
   if (d.r) ctx.globalAlpha = 0.5;
   const behind = Math.sin(fake.face) < -0.3;
-  if (behind) drawHeldWeapon(fake, d.wt);
-  ctx.save(); ctx.translate(Math.round(o.x), Math.round(o.y)); if (fake.flip) ctx.scale(-1, 1);
-  ctx.drawImage(heroImgFor(r, c, b, Math.floor(o.walk) % 2, sk), -6, -9); ctx.restore();
-  if (!behind) drawHeldWeapon(fake, d.wt);
-  drawSlash(fake, d.wt);
+  const rd = typeof MOUNTS !== "undefined" && MOUNTS[g[4]] ? g[4] : null; // 別人騎的坐騎
+  if (rd) drawMount(rd, o.x, o.y, fake.flip, o.walk);
+  if (behind && !rd) drawHeldWeapon(fake, d.wt);
+  ctx.save(); ctx.translate(Math.round(o.x), Math.round(o.y) - (rd ? 6 : 0)); if (fake.flip) ctx.scale(-1, 1);
+  ctx.drawImage(heroImgFor(r, c, b, rd ? 0 : Math.floor(o.walk) % 2, sk), -6, -9); ctx.restore();
+  if (!behind && !rd) drawHeldWeapon(fake, d.wt);
+  if (!rd) drawSlash(fake, d.wt);
   ctx.globalAlpha = 1;
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const label = `${d.n} Lv.${d.lv}`;
@@ -180,7 +182,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && ne
 let lbLast = "", lbT = 5, rankTab = "lv";
 function lbPush(force) {
   if (!NET_ON || !fbUser || !save.w) return;
-  const d = { n: myName(), lv: save.w.lv, cp: totalCP(), g: gearKey(), wt: curWeapon(), rt: save.w.riftMax || 0 };
+  const d = { n: myName(), lv: save.w.lv, cp: totalCP(), g: gearKey().split(",").slice(0, 4).join(","), wt: curWeapon(), rt: save.w.riftMax || 0 };
   const key = JSON.stringify(d);
   if (!force && key === lbLast) return;
   lbLast = key; d.t = firebase.database.ServerValue.TIMESTAMP;

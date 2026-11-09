@@ -184,7 +184,8 @@ function heroSave() {
 // ───────── 起源覺醒（四轉）：全螢幕時停＋段數炸裂 ─────────
 const ORIGIN_N = { sword: "起源．萬劍歸墟", staff: "起源．終焉隕石滅絕", bow: "起源．射日九天", blade: "起源．斷岳開天", fist: "起源．百裂金剛", fan: "起源．乾坤歸一" };
 function originStart() {
-  W0.originT = 2.2; W0.originN = ORIGIN_N[curWeapon()]; W0.originTick = 0;
+  const u = curUq(); // 企劃 19：傳說武器四轉 → 起源換成那把武器的版本（只換特效，傷害一樣）
+  W0.originT = 2.2; W0.originN = u ? `起源・${WUQ[u][0]}` : ORIGIN_N[curWeapon()]; W0.originTick = 0; W0.originU = u;
   sfx("win"); shake = 6; netCast("e", W0.face, W0.x, W0.y);
   if (typeof netAnnounce === "function" && Math.random() < 0.2) netAnnounce(`放出了 ${W0.originN}！`);
 }
@@ -195,13 +196,26 @@ function originTick(dt) {
   if (W0.originTick <= 0 && W0.originT > 0.4) {
     W0.originTick = 0.12;
     const m = vis[Math.floor(Math.random() * vis.length)];
-    if (m) { bolts.push({ x: m.x, y: m.y, life: 0.3 }); fxBoom(m.x, m.y, 22, "255,220,140"); hitMob(m, wDmg(16), 0, W0, true); }
+    if (m) { originFx(m, false); hitMob(m, wDmg(16), 0, W0, true); }
   }
   if (W0.originT <= 0) { // 最後一擊
     for (const m of vis) hitMob(m, wDmg(60), 120, W0, true);
     flashT = 0.3; flashColor = "255,240,200"; shake = 14; sfx("crit");
-    W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.6, r: 220, c: "255,220,140" });
+    W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.6, r: 220, c: ORIGIN_C[W0.originU] || "255,220,140" });
+    if (W0.originU) { for (const m of vis) originFx(m, true); W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.8, r: 160, c: ORIGIN_C[W0.originU] }); }
   }
+}
+const ORIGIN_C = { thunder: "200,220,255", phoenix: "255,140,60", sunbow: "255,220,120", moon: "220,230,255", tiger: "255,180,120", qiankun: "170,255,200" };
+function originFx(m, big) { // 起源每一擊的樣子：一般＝落雷；傳說武器換成專屬招式的特效
+  const u = W0.originU, c = ORIGIN_C[u] || "255,220,140";
+  if (!u || u === "thunder") { bolts.push({ x: m.x, y: m.y, life: 0.3 }); if (!u) fxBoom(m.x, m.y, 22, c); }
+  if (!u) return;
+  if (u === "phoenix") { W0.rings.push({ x: m.x, y: m.y, t: 0, max: 0.35, r: big ? 34 : 22, c }); burst(m.x, m.y, "#ffb347", 10, 80, 0.4); }
+  else if (u === "sunbow") { for (let i = 0; i < 3; i++) particles.push({ x: m.x + rand(-8, 8), y: m.y - 30, vx: 0, vy: 160, life: 0.2, max: 0.2, color: "#ffe9a0", size: 2 }); fxBoom(m.x, m.y, 16, c); }
+  else if (u === "moon") W0.rings.push({ x: m.x, y: m.y, t: 0, max: 0.3, r: big ? 40 : 26, c });
+  else if (u === "tiger") { for (let i = 0; i < 4; i++) fxHit(m.x + rand(-6, 6), m.y + rand(-6, 6), i === 3, c); }
+  else if (u === "qiankun") { W0.rings.push({ x: m.x, y: m.y, t: 0, max: 0.4, r: big ? 36 : 20, c }); burst(m.x, m.y, "#aaffcc", 8, 60, 0.4); }
+  else fxBoom(m.x, m.y, big ? 34 : 22, c);
 }
 function drawOrigin() {
   if (!W0 || !(W0.originT > 0)) return;

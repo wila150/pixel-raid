@@ -249,8 +249,8 @@ window.addEventListener("keydown", (e) => {
 });
 
 // ───────── 背包：左 星芒裝備位／中 瀑布流／右 詞條對比 ─────────
-const EQ_CELL = { crown: [2, 1], charm: [4, 2], robe: [1, 3], sword: [4, 3], boots: [2, 5] };
-const EQ_LOCK = [["耳飾", 3, 2], ["戒指", 4, 1], ["護手", 1, 4], ["坐騎", 4, 5]]; // 之後開放的部位，先留格子
+const EQ_CELL = { crown: [2, 1], ear: [4, 1], charm: [4, 2], robe: [1, 3], sword: [4, 3], ring: [1, 4], boots: [2, 5] }; // 坐騎在 [4, 5]
+const MOUNT_CELL = [4, 5];
 const STAR_POS = { sword: [-0.95, -0.2], crown: [0, -1], charm: [0.95, -0.2], robe: [-0.62, 0.86], boots: [0.62, 0.86] };
 const statVal = (k, v) => (AFFIX[k].dec || k === "crit" ? Math.round(v * 10) / 10 : Math.round(v));
 function cmpRows(sel, cur) {
@@ -291,7 +291,7 @@ function craftHtml() {
   const sh = save.shards || 0, camp = atCamp(), es = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
   return `<div class="craft"><h3>鐵匠工藝台</h3>${camp ? "" : `<p class="warn">回到安全營地（傳送點或青雲城）才能用工藝台、精煉</p>`}${econHtml(camp)}
     <div class="shards">天罰碎屑 <b>${sh}</b><small>斬妖會掉，精英、獵寶妖、世界王掉更多</small></div>
-    <div class="exch">${SLOT_KEYS.map((k) => `<div class="exrow"><span>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</span>
+    <div class="exch">${SLOT_KEYS.filter(slotOpen).map((k) => `<div class="exrow"><span>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</span>
       <button data-ex="${k}:2" ${camp && sh >= SHARD_RARE ? "" : "disabled"} style="color:${RARITY[2].c}">保底紫裝<small>${SHARD_RARE}</small></button>
       <button data-ex="${k}:3" ${camp && sh >= SHARD_UNIQ ? "" : "disabled"} style="color:${RARITY[3].c}">保底傳說<small>${SHARD_UNIQ}</small></button></div>`).join("")}</div>
     <div class="exrow"><span>超技能</span><button data-buysup="1" ${camp && sh >= SUPER_COST ? "" : "disabled"} style="color:#ffe066">隨機超技能寶石<small>${SUPER_COST}</small></button></div>
@@ -323,7 +323,7 @@ function heroURL() { const c = heroImg(false); return c.toDataURL ? c.toDataURL(
 const BAG_TABS = [["all", "全部"], ["wpn", "武器"], ["arm", "防具"], ["acc", "飾品"], ["use", "道具"], ["mat", "素材"]];
 let bagTab = "all", propSel = null, bagPt = "bag";
 const PORTRAIT = () => window.matchMedia("(orientation: portrait) and (max-width: 700px)").matches;
-const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" ? "acc" : "arm");
+const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" || (SLOTS[it.slot] && SLOTS[it.slot].acc) ? "acc" : "arm");
 function propList() {
   const L = curList(), w = save.w;
   if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
@@ -355,8 +355,9 @@ function renderEquip(msg = "") {
   // 裝備視窗：人物在中間，格子圍一圈，空格寫部位名稱
   const eqCells = SLOT_KEYS.map((k) => {
     const it = save.eq[k], [cx, cy] = EQ_CELL[k], c = it ? RARITY[it.q].c : "#6a6078";
+    if (!slotOpen(k)) return `<span class="eqc lock" style="grid-column:${cx};grid-row:${cy}" title="${SLOTS[k].n}（${slotLockTxt(k)}）"><b>🔒</b><small>${slotLockTxt(k)}</small></span>`;
     return `<button class="eqc${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}${cardSel && CARDS[cardSel] && CARDS[cardSel].slot === k ? " cardok" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="grid-column:${cx};grid-row:${cy};--c:${c}">${it ? itemIcon(it) + (it.en ? `<span class="en">+${it.en}</span>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
-  }).join("") + EQ_LOCK.map(([n, cx, cy]) => `<span class="eqc lock" style="grid-column:${cx};grid-row:${cy}" title="${n}（尚未開放）"><small>${n}</small></span>`).join("");
+  }).join("") + (typeof mountCell === "function" ? mountCell(MOUNT_CELL) : "");
   let right = craftHtml();
   if (propSel && !selItem) right = propInfo(propSel) || right;
   const camp = atCamp(), essK = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
@@ -403,7 +404,7 @@ function renderEquip(msg = "") {
 // 穿上裝備：戰力數字滾動＋綠字（黑色沙漠式回饋）
 let cpRoll = null;
 const _equipItemCp = equipItem;
-equipItem = function (it) { const a = totalCP(); _equipItemCp(it); const b = totalCP(); if (a !== b) cpRoll = { a, b }; };
+equipItem = function (it) { const a = totalCP(), r = _equipItemCp(it); const b = totalCP(); if (a !== b) cpRoll = { a, b }; return r; };
 function cpRollRun() {
   if (!cpRoll) return;
   const { a, b } = cpRoll; cpRoll = null;
@@ -422,7 +423,7 @@ function bindEquip(selItem) {
   ov.querySelectorAll("[data-prop]").forEach((b) => b.addEventListener("click", () => { sfx("click"); eqSel = null; propSel = propSel === b.dataset.prop ? null : b.dataset.prop; again(); }));
   ov.querySelectorAll(".loot").forEach((c) => {
     let t = null, long = false;
-    c.addEventListener("pointerdown", () => { long = false; t = setTimeout(() => { long = true; const it = save.bag.find((b) => b.id === c.dataset.id); if (it) { equipItem(it); eqSel = null; again(`穿上了 ${it.name}`); } }, 450); });
+    c.addEventListener("pointerdown", () => { long = false; t = setTimeout(() => { long = true; const it = save.bag.find((b) => b.id === c.dataset.id); if (it) { if (!equipItem(it)) { again(`${SLOTS[it.slot].n}格要${slotLockTxt(it.slot)}`); return; } eqSel = null; again(`穿上了 ${it.name}`); } }, 450); });
     const stop = () => clearTimeout(t);
     c.addEventListener("pointerup", stop); c.addEventListener("pointerleave", stop); c.addEventListener("pointercancel", stop);
     c.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -430,7 +431,7 @@ function bindEquip(selItem) {
   });
   ov.querySelectorAll(".eqc[data-eq]").forEach((b) => b.addEventListener("click", () => { sfx("click"); if (cardSel) { again(insertCard(cardSel, b.dataset.eq)); return; } eqSel = save.eq[b.dataset.eq] && eqSel !== "eq:" + b.dataset.eq ? "eq:" + b.dataset.eq : null; again(); }));
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = () => { sfx("click"); fn(); }; };
-  on("equip", () => { equipItem(selItem); eqSel = null; again(`穿上了 ${selItem.name}`); });
+  on("equip", () => { if (!equipItem(selItem)) { again(`${SLOTS[selItem.slot].n}格要${slotLockTxt(selItem.slot)}`); return; } eqSel = null; again(`穿上了 ${selItem.name}`); });
   // 魔物卡片：拖曳到星芒裝備位，或點卡片再點裝備
   ov.querySelectorAll(".cardchip").forEach((c) => {
     c.addEventListener("pointerdown", (e) => {
@@ -497,7 +498,7 @@ function bindEquip(selItem) {
   bindCur(selItem, again);
   on("autoEq", () => {
     let n = 0;
-    for (const k of SLOT_KEYS) {
+    for (const k of SLOT_KEYS.filter(slotOpen)) {
       const best = save.bag.filter((b) => b.slot === k && sameWt(b)).sort((a, b) => itemCP(b) - itemCP(a))[0];
       if (best && itemCP(best) > itemCP(save.eq[k])) { equipItem(best); n++; }
     }

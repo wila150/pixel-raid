@@ -268,7 +268,7 @@ function applyWeapon() {
   const ws = WSKILLS[curWeapon()];
   WSKILL = { roll: { cd: 1.1, mp: 0 }, potion: { cd: 1, mp: 0 } };
   for (const k in ws) WSKILL[k] = { n: ws[k][0], cd: ws[k][1], mp: ws[k][2] };
-  const u = curUq(); if (u) WSKILL.ult = { n: WUQ[u][0], cd: WUQ[u][1], mp: WUQ[u][2], uq: u };
+  const u = curUq(); if (u) WSKILL.ult = { n: (typeof jobLv === "function" && jobLv() >= 4 ? "起源・" : "") + WUQ[u][0], cd: WUQ[u][1], mp: WUQ[u][2], uq: u };
   const cdm = Math.max(0.4, 1 - 0.07 * gemLv("haste")), mpm = Math.max(0.3, 1 - 0.1 * gemLv("thrift")); // 寶石：疾風、省元
   for (const k of ["attack", "spin", "ult"]) { WSKILL[k].cd *= cdm; WSKILL[k].mp = Math.round(WSKILL[k].mp * mpm); }
   WSKILL.ult.mp = 0; WSKILL.ult.cd = 1; // 天罰：不吃真氣，改成集滿天罰能量才能放
@@ -597,7 +597,7 @@ function updateWorld(dt) {
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -725,7 +725,7 @@ function updateWorld(dt) {
   }
   if (W0.recastT > 0 && (W0.recastT -= dt) <= 0) { W0.recastT = 0; doSpin(); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
   const ultCd0 = p.cds.ult;
-  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
+  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `${WSKILL.ult.uq ? WSKILL.ult.n + "：" : ""}天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
   if (p.enMsgT > 0) p.enMsgT = Math.max(0, p.enMsgT - dt) || 0;
   if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
     if (jobLv() >= 4) { if (useSkill("ult")) { originStart(); p.en = 0; } } // 四轉：起源覺醒
@@ -1218,14 +1218,15 @@ function renderWorld() {
     } else if (o.me && state !== "worldDead") {
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
-        const wt = curWeapon(), behind = Math.sin(p.face) < -0.3;
+        const wt = curWeapon(), behind = Math.sin(p.face) < -0.3, rd = typeof mountRide === "function" ? mountRide() : null;
         drawHeroAura(p);
-        if (behind) drawHeldWeapon(p, wt);
-        ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y)); if (p.flip) ctx.scale(-1, 1);
-        ctx.drawImage(heroImg(Math.floor(p.walk) % 2), -6, -9); ctx.restore();
-        if (!behind) drawHeldWeapon(p, wt);
-        drawSlash(p, wt);
-        drawMyName(p);
+        if (rd) drawMount(rd, p.x, p.y, p.flip, p.walk);
+        if (behind && !rd) drawHeldWeapon(p, wt);
+        ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y) - (rd ? 6 : 0)); if (p.flip) ctx.scale(-1, 1);
+        ctx.drawImage(heroImg(rd ? 0 : Math.floor(p.walk) % 2), -6, -9); ctx.restore();
+        if (!behind && !rd) drawHeldWeapon(p, wt);
+        if (!rd) drawSlash(p, wt);
+        if (rd) { p.y -= 6; drawMyName(p); p.y += 6; } else drawMyName(p);
       }
     }
   }
