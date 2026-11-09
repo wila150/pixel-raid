@@ -4,6 +4,10 @@
 "use strict";
 
 const turnTo = (cur, want, max) => { const da = ((want - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI; return cur + clamp(da, -max, max); };
+// 企劃 28 §7 驗收：荒原／雪域風箏太安全 → 撲擊更遠更頻繁；雷谷／仙域弓太痛 → 遠程子彈 ×0.75、射程最多 190
+const zIs = (m, a) => !!m.camp && a.includes(m.camp.z);
+const MID_Z = ["waste", "snow"], DEEP_Z = ["thunder", "sky"];
+const mobRange = (m, d) => (zIs(m, DEEP_Z) ? Math.min(d.range, 190) : d.range);
 const MOB_SPECIAL = (t) => { const d = WMOBS[t]; return !!d && (["ranged", "dive", "witch", "healer"].includes(d.ai) || d.shield || d.fast); };
 
 // 營地配置：Lv.11 以後每營至少 1 隻遠程／新角色，Lv.30 以後 2 隻；妖巫、靈醫一營最多 1 隻
@@ -11,7 +15,7 @@ function campPick(camp, types) {
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const live = W0.mobs.filter((o) => !o.dead && o.camp === camp);
   let type = pick(types);
-  const need = camp.lv >= 30 ? 2 : camp.lv >= 11 ? 1 : 0;
+  const need = camp.lv >= 11 ? 2 : 0;
   if (need && live.filter((o) => MOB_SPECIAL(o.type)).length < need) { const sp = types.filter(MOB_SPECIAL); if (sp.length) type = pick(sp); }
   const one = (t) => (t === "witch" || t === "healer") && live.some((o) => o.type === t);
   if (one(type)) { const sp = types.filter((t) => MOB_SPECIAL(t) && !one(t)), rest = types.filter((t) => !one(t)); type = pick(sp.length && need ? sp : rest.length ? rest : types); }
@@ -31,7 +35,8 @@ function trackPlayerVel(dt) {
 // 回傳 true＝這幀開始出招了（不走一般近戰）
 function meleeMove(m, d, p, dp, a) {
   if (!d.mv || (m.mvCd = (m.mvCd == null ? rand(1, 3) : m.mvCd)) > 0 || m.atkT > 0.3) return false;
-  if (d.mv === "pounce" && dp > 60 && dp < 130) { mvStart(m, "pounce", a, Math.min(dp + 12, 140), m.elite ? 0.4 : 0.45); return true; }
+  const far = zIs(m, MID_Z) ? 160 : 130;
+  if (d.mv === "pounce" && dp > 60 && dp < far) { mvStart(m, "pounce", a, Math.min(dp + 12, far + 10), m.elite ? 0.4 : 0.45); return true; }
   if (d.mv === "charge" && dp > 55 && dp < 170) { mvStart(m, "charge", a, 160, 0.6); return true; }
   if (d.mv === "blink" && dp > 50 && dp < 200) { mvStart(m, "blink", a, 0, 0.4); return true; }
   return false;
@@ -80,7 +85,7 @@ function mvTick(m, d, p, dt) {
   }
   if (v.t <= 0 || (Math.hypot(m.x - ox, m.y - oy) < 0.3 * v.spd * dt)) {
     if (v.k !== "pounce") { shake = Math.max(shake, 2); sfx("break"); }
-    m.mv = null; m.mvCd = v.k === "pounce" ? rand(4, 6) : v.k === "rush" ? Math.max(m.mvCd || 0, 1) : rand(6, 8);
+    m.mv = null; m.mvCd = v.k === "pounce" ? (zIs(m, MID_Z) ? rand(3, 4) : rand(4, 6)) : v.k === "rush" ? Math.max(m.mvCd || 0, 1) : rand(6, 8);
     m.atkT = v.k === "pounce" ? 0.5 : 0.8; m.tired = v.k === "pounce" ? 0 : 0.5; // 衝完喘一下（受傷 +30%）
   }
 }
@@ -91,7 +96,7 @@ function mobAiTick(m, dt) { if (m.mvCd > 0) m.mvCd -= dt; if (m.tired > 0 && WMO
 const volsAlive = (m) => { const s = new Set(); for (const e of W0.eshots) if (e.src === m) s.add(e.vol); return s.size; };
 function rangedAI(m, d, p, dp, a, dt) {
   let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1) * (m.spdMul || 1) * (m.slowT > 0 ? 0.45 : 1);
-  const R = d.range, homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
+  const R = mobRange(m, d), homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
   if (dp < 80) m.flee = true; else if (dp > 150) m.flee = false; // 你靠近 80 內：往後退到 150
   let dir = m.flee && homeD < 230 ? -0.9 : dp > R * 0.8 ? 1 : dp < R * 0.55 ? -0.5 : 0;
   let mx = Math.cos(a) * dir, my = Math.sin(a) * dir;
@@ -118,9 +123,9 @@ function rangedAI(m, d, p, dp, a, dt) {
   }
 }
 function eShot(m, d, a, o) {
-  const sp = (o && o.sp) || d.shot, life = (o && o.life) || Math.min(3, (d.range * 1.25) / sp);
+  const sp = (o && o.sp) || d.shot, life = (o && o.life) || Math.min(3, (mobRange(m, d) * 1.25) / sp);
   const s = Object.assign({ x: m.x, y: m.y - 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff3a3a" : d.chill ? "#d050ff" : m.type === "healer" ? "#7dff9a" : "#ff4aa0", chill: d.chill, ele: mobEle(m), src: m, vol: m.volN }, o || {});
-  delete s.sp; W0.eshots.push(s); return s;
+  delete s.sp; if (zIs(m, DEEP_Z)) s.dmg *= 0.75; W0.eshots.push(s); return s;
 }
 function fireShots(m, d, p, a) {
   m.volN = (m.volN || 0) + 1;
