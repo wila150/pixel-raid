@@ -318,9 +318,15 @@ function insertCard(c, slot) {
   const it = save.eq[slot];
   if (!it) return "那個位置沒有裝備";
   if (CARDS[c].slot !== slot) return `${CARDS[c].n}只能插在${CARDS[c].slot === "sword" ? "武器" : "道袍"}上`;
-  const old = it.card; it.card = c; save.cards[c]--; if (!save.cards[c]) delete save.cards[c];
+  const old = it.card;
+  if (old) { // 26 §9：換卡＝先花靈石拔下舊卡（回收集冊），不再碎掉
+    if (typeof atCamp === "function" && !atCamp()) return "回安全營地才能換卡（要先拔下舊卡）";
+    const cost = cardPullCost(old); if (save.stone < cost) return `要 ${cost} 靈石才能拔下${CARDS[old].n}`;
+    save.stone -= cost; save.cards[old] = (save.cards[old] || 0) + 1;
+  }
+  it.card = c; save.cards[c]--; if (!save.cards[c]) delete save.cards[c];
   cardSel = null; writeSave(); sfx("arrive"); if (typeof B !== "undefined" && W0) { B = worldStats(); W0.maxHp = B.maxHp; }
-  return `${CARDS[c].n} 融進 ${it.name}${old ? `（原本的${CARDS[old].n}碎掉了）` : ""}`;
+  return `${CARDS[c].n} 融進 ${it.name}${old ? `（${CARDS[old].n}拔下來放回收集冊，−${cardPullCost(old)} 靈石）` : ""}`;
 }
 function apHtml() {
   const w = save.w; if (!w) return "";

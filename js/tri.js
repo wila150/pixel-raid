@@ -180,9 +180,15 @@ function chainRaw(sl, wt = curWeapon()) {
   const c = w.chain[wt] || (w.chain[wt] = {}); return c[sl] || (c[sl] = []);
 }
 const chainRow = (sl, wt) => chainRaw(sl, wt).slice(0, slotsN());
+// 企劃 21 §11：互斥組（同一招每組只能一顆）、法術／攻擊（法杖、扇＝法術）
+const GEM_GRP = { lmp: "數量", volley: "數量", split: "數量", enlarge: "範圍", focus: "範圍", totem: "放法", trigc: "放法", trigh: "放法", rapid: "放法", ice: "元素", fire: "元素", volt: "元素", venom: "元素", efocus: "元素" };
+const isSpellWt = (wt) => wt === "staff" || wt === "fan";
 // 為什麼這顆不能串在這一招（空字串＝可以）；skipI：檢查同列重複時略過自己那格
 function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
   const k = g.split(":")[0], tags = slotTags(sl, wt), al = GEM_TAGS[k] || "pmad";
+  if (sl === "e" && slotSkill(sl, wt) === "origin") return "起源覺醒不能串輔助";
+  if (k === "multi" && sl !== "r" && !isSpellWt(wt)) return "連發只能串法術（法杖、扇）";
+  if (k === "rapid" && isSpellWt(wt)) return "連打只能串攻擊（不能串法杖、扇）";
   if ((k === "trigc" || k === "trigh") && sl !== "e") return "只能串在 E";
   if (k === "totem" && sl !== "a" && sl !== "q") return "只能串在普攻或 Q";
   if (k === "multi" && sl === "r") return "身法不能串";
@@ -191,6 +197,7 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
   const row = chainRaw(sl, wt);
   if (row.some((x, i) => i !== skipI && x && x.split(":")[0] === k)) return "這招已經串了同一種";
   { const o = gemElse(k, sl, wt); if (o) return `已經串在 ${o.label}`; } // 企劃 21 §10-1：每種輔助寶石整個角色只能一顆
+  { const gp = GEM_GRP[k]; if (gp) { const o = row.find((x, i) => i !== skipI && x && x.split(":")[0] !== k && GEM_GRP[x.split(":")[0]] === gp); if (o) return `跟${GEMS[o.split(":")[0]].n}同一組：${gp}`; } }
   const e = ELE_GEM[k]; if (e && row.some((x, i) => i !== skipI && x && ELE_GEM[x.split(":")[0]] && ELE_GEM[x.split(":")[0]] !== e)) return "一招只能一種元素";
   if (k === "spread" && !row.some((x) => x && x.startsWith("fire:"))) return "要先串火元素";
   return "";
@@ -222,6 +229,21 @@ function gemDupMig() {
   const used = new Set(); for (const wt of Object.keys(w.chain)) if (wt !== "r") for (const l of ["a", "q", "e"]) for (const g of w.chain[wt][l] || []) if (g) used.add(g.split(":")[0]);
   (w.chain.r || []).forEach((g, i) => { if (g && used.has(g.split(":")[0])) { addGem(g); w.chain.r[i] = null; n++; } });
   w.gemOne = 1; return n;
+}
+// 企劃 21 §11 舊存檔：衝突的（互斥組、連發／連打、起源）保留第一顆，其他退回背包
+function gemGrpMig() {
+  const w = save.w; if (!w || !w.chain || w.gemGrp) return 0;
+  let n = 0;
+  for (const wt of Object.keys(w.chain)) {
+    const ls = wt === "r" ? [["r", null]] : ["a", "q", "e"].map((l) => [l, wt]);
+    for (const [l, x] of ls) {
+      const row = wt === "r" ? w.chain.r : w.chain[wt][l]; if (!row) continue;
+      const W = x || curWeapon();
+      const orig = row.slice(); row.fill(null); // 一顆一顆放回去：只跟前面已經放的比，保留第一顆
+      for (let i = 0; i < orig.length; i++) { const g = orig[i]; if (!g) continue; if (WEAPONS[W] && gemWhy(g, l, i, W)) { addGem(g); n++; } else row[i] = g; }
+    }
+  }
+  w.gemGrp = 1; return n;
 }
 function slotEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
 function chainMpMul(sl) { // 真氣倍率：每顆相乘，省元 −15%／級
@@ -324,6 +346,8 @@ enterWorld = function () {
   const r = save.w && save.w.created ? chainMig() : 0, dn = save.w && save.w.created ? gemDupMig() : 0;
   if (dn) setTimeout(() => { if (typeof writeSave === "function") writeSave(); if (typeof say === "function") say(`輔助寶石改成每一種整個角色只能串一顆：重複的 ${dn} 顆退回背包了（技能 → 技能鏈）`, "#ffe066"); }, 1500);
   const out = _enterWorldCh.apply(this, arguments);
+  const gn = save.w && save.w.created ? gemGrpMig() : 0;
+  if (gn) setTimeout(() => { if (typeof writeSave === "function") writeSave(); if (typeof say === "function") say(`輔助寶石新規則：同一招每組只能一顆（數量／範圍／放法／元素）、連發只能串法術、連打只能串攻擊、起源覺醒不能串。衝突的 ${gn} 顆退回背包了（技能 → 技能鏈）`, "#ffe066"); }, 2600);
   if (r) { if (typeof writeSave === "function") writeSave(); if (typeof notice === "function") notice(`輔助寶石改成每一招各自串！原本武器上的 ${r[1]} 顆，${r[0]} 顆幫你串到普攻那列${r[1] > r[0] ? "，其他的放回背包" : ""}（技能 → 技能鏈）`, "#ffe066"); }
   return out;
 };

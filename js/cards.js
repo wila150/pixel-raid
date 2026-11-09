@@ -13,6 +13,16 @@ function cdWhere(c) {
   if (WMOBS[c]) return `${WMOBS[c].n}・${mobZone(c)}`;
   return "";
 }
+const cardPullCost = (c) => (c === "hunter" ? 1000 : Object.values(BOOK_BOSS_CARD).includes(c) ? 3000 : 300); // 26 §9
+function pullCard(slot) {
+  const it = save.eq[slot], c = it && it.card;
+  if (!c) return "這個卡槽是空的";
+  if (!atCamp()) return "回安全營地才能拔卡";
+  const cost = cardPullCost(c); if (save.stone < cost) return `要 ${cost} 靈石`;
+  save.stone -= cost; delete it.card; save.cards[c] = (save.cards[c] || 0) + 1;
+  writeSave(); sfx("click"); if (typeof B !== "undefined" && W0) { B = worldStats(); W0.maxHp = B.maxHp; }
+  return `${CARDS[c].n}拔下來了，放回收集冊（−${cost} 靈石）`;
+}
 const cdSeen = (c) => book().c.includes(c);
 const cdIn = (c) => CARD_SLOTS.find((s) => save.eq[s] && save.eq[s].card === c);
 function cdSlotsHtml() {
@@ -32,12 +42,15 @@ function cdGridHtml() {
   }).join("")}</div>`;
 }
 function cdInfoHtml() {
-  if (!cdSel) return `<div class="cdinfo"><h3>魔物卡片</h3><p>點一張亮著的卡片，再按「插上」。</p><p class="dim">每件武器、道袍只能插一張，換卡時舊的那張會碎掉。灰色的卡還沒拿過，點了看哪裡掉。</p></div>`;
+  if (!cdSel) return `<div class="cdinfo"><h3>魔物卡片</h3><p>點一張亮著的卡片，再按「插上」。</p><p class="dim">每件武器、道袍插一張；在營地可以花靈石拔下來，賣掉裝備時卡片會自動退回。灰色的卡還沒拿過，點了看哪裡掉。</p></div>`;
   const c = cdSel, C = CARDS[c], n = (save.cards && save.cards[c]) || 0, seen = cdSeen(c), it = save.eq[C.slot], old = it && it.card;
   let act;
-  if (!n) act = `<p class="dim">${seen ? "現在沒有這張（拿過了，已經插掉或碎掉）" : "還沒拿過"}</p>`;
+  const camp = atCamp(), pull = (k) => { const cost = cardPullCost(k), ok = camp && save.stone >= cost; return `<button id="cdPull" class="smmain${ok ? "" : " off"}" ${ok ? "" : "disabled"}>${!camp ? "回營地才能拔" : save.stone < cost ? `要 ${cost} 靈石` : `拔下來（${cost} 靈石）`}</button>`; };
+  if (old === c) act = `<p class="dim">插在 ${it.name} 上</p>${pull(c)}<small class="dim">拔下來會放回收集冊</small>`;
+  else if (!n) act = `<p class="dim">${seen ? "現在沒有這張（插在別件裝備上）" : "還沒拿過"}</p>`;
   else if (!it) act = `<p class="warn">先穿上一件${cdSlotN(C.slot)}</p>`;
-  else act = `${old ? `<p class="warn">${it.name} 已經插著「${CARDS[old].n}」，換上去舊的會碎掉</p>` : ""}<button id="cdIns" class="smmain gold">插到${cdSlotN(C.slot)}上</button><small class="dim">${it.name}</small>`;
+  else if (old) { const cost = cardPullCost(old), ok = camp && save.stone >= cost; act = `<p class="warn">${it.name} 已經插著「${CARDS[old].n}」，要先拔下來（放回收集冊）</p><button id="cdIns" class="smmain gold${ok ? "" : " off"}" ${ok ? "" : "disabled"}>${!camp ? "回營地才能換" : save.stone < cost ? `要 ${cost} 靈石` : `換卡（拔下舊卡 ${cost} 靈石）`}</button><small class="dim">${it.name}</small>`; }
+  else act = `<button id="cdIns" class="smmain gold">插到${cdSlotN(C.slot)}上</button><small class="dim">${it.name}</small>`;
   return `<div class="cdinfo"><div class="cdbig${n ? "" : seen ? " dim" : " unseen"}">${ico("card", c, "cardico")}</div>
     <h3>${seen ? C.n : "？？？"}</h3><small>${cdSlotN(C.slot)}卡・持有 ${n}</small>
     ${seen ? `<p class="cdeff">${cardDesc(c)}</p>` : ""}<p class="dim">掉落：${cdWhere(c)}</p>${act}</div>`;
@@ -60,6 +73,8 @@ function renderCards(msg = "") {
   }));
   const ins = document.getElementById("cdIns");
   if (ins) ins.onclick = () => { const s = CARDS[cdSel].slot; const m = insertCard(cdSel, s); cdSel = null; again(m); };
+  const pl = document.getElementById("cdPull");
+  if (pl) pl.onclick = () => { const m = pullCard(CARDS[cdSel].slot); again(m); };
 }
 const _ovSubCd = ovSub;
 ovSub = function () { if (ovKind === "cards" && cdSel) { cdSel = null; renderCards(); return true; } return _ovSubCd.apply(this, arguments); };
@@ -68,7 +83,7 @@ ovClose = function () { if (ovKind === "cards") { cdSel = null; cdSlot = null; }
 const cardsNew = () => save.w && save.w.created && book().c.length > (save.w.cardSeen || 0);
 
 // ───────── 「⋯更多」：3×3 格子 ─────────
-const MORE = [["cards", "魔物卡片", "卡", "L"], ["quest", "任務", "任", "Y"], ["book", "冒險手冊", "冊", "K"], ["social", "聊天", "聊", "G"], ["rank", "排行", "榜", "R"], ["menu", "設定", "設", "Esc"]];
+const MORE = [["cards", "魔物卡片", "卡", "L"], ["quest", "任務", "任", "Y"], ["book", "冒險手冊", "冊", "K"], ["social", "聊天", "聊", "G"], ["rank", "排行", "榜", "R"], ["altar", "祭壇", "壇", ""], ["menu", "設定", "設", "Esc"]];
 const moreDot = (k) => (k === "cards" ? cardsNew() : k === "book" ? bookBtn.classList.contains("dot") : false);
 function renderMore() {
   if (ovKind !== "more" && !ovOpen("more")) return;

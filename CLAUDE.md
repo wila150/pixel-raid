@@ -94,7 +94,7 @@
 - **會改招式的傳說**（`UNIQUES[*].mods` → `B.uq[mod]`）：`split` 擊中分裂 3 把副劍、`bounce` 彈跳 2 次（怪之間＋撞牆折射，`s.bn`）、`voidQ` Q 變引力黑洞（`W0.voids`）、`orbit` 普攻每 3 下環身飛劍（`W0.orbs`）、`wave` 重斬放刀浪。太古·乾坤化元劍＝split＋bounce＋voidQ；分光劍匣（佩）、連星折光冠、歸墟道袍、御劍步雲靴、斬浪玄鐵劍（大刀）。
 - **三防**（`hurtW(dmg, from, kind)`，kind＝phys／spell／ele）：護甲 `armor/(armor+5×dmg)` 最多 75%（擋下有火花）、閃避只擋物理（飄綠字 DODGE）、壓制法術減半（藍字 SUPPRESSED）、元素抗性擋 ele（火鴉、冰靈、熔岩、世界王火焰）。能量護盾 `W0.es` 先扣、脫戰 3 秒以每秒 33% 回充；左下血球外圈淡藍殼。
 - **配點**：`AP` 還是 str/agi/wis/vit 四個 key（存檔相容），顯示 STR／AGI／INT／VIT。STR 物理武器 +3%、護甲 +3；AGI 攻速 1.5%、閃避 0.4%、壓制 0.3%；INT 法術武器（法杖、扇，`SPELL_WT`）+3%、ES +6；VIT 生命 +12。背包左欄可直接 ＋／＋5（`apHtml`）。
-- **RO 體型**：`WMOBS[*].sz/race/ele`，`SIZE_MOD[武器][S/M/L]`（輕型飛劍 100/75/50、玄鐵重劍 75/100/125、弓／拳 大型 75、法杖扇不吃）。怪名後面顯示（小/中/大）。**魔物卡片** `CARDS`（每種怪一張，只插武器或道袍，一件一張 `it.card`，換卡舊的碎掉）：效果是卡片專用詞綴（對小/中/大型、對大型爆擊、對妖獸/植物/岩石系、對火/水屬性、掉寶率）。一般 0.3%、精英 3%、獵寶妖 20%、世界王 15%。拖曳或點選插卡（`insertCard`）。
+- **RO 體型**：`WMOBS[*].sz/race/ele`，`SIZE_MOD[武器][S/M/L]`（輕型飛劍 100/75/50、玄鐵重劍 75/100/125、弓／拳 大型 75、法杖扇不吃）。怪名後面顯示（小/中/大）。**魔物卡片** `CARDS`（每種怪一張，只插武器或道袍，一件一張 `it.card`；v7.7 起換卡要先花靈石拔下舊卡、不會碎）：效果是卡片專用詞綴（對小/中/大型、對大型爆擊、對妖獸/植物/岩石系、對火/水屬性、掉寶率）。一般 0.3%、精英 3%、獵寶妖 20%、世界王 15%。拖曳或點選插卡（`insertCard`）。
 - **工藝台（只有安全營地能用，`atCamp()`）**：精煉（強化改名，上限 +12，`EN_RATE` 到 12%）、洗練、點金、精髓注入（`essCraft`：白藍直接變紫、保底那條詞條取兩次較高）。精髓 `save.ess`：精英 20%、一般 0.6%×地區、獵寶妖必掉、世界王 3 個。天罰碎屑 `save.shards`：一般 5% 掉 1、精英 3、獵寶妖 5、王 20；60 換指定部位保底紫、250 換保底傳說（`shardItem`）。
 - **掉落過濾器** `save.w.filt`（0 全部、1 藏白、2 藏白藍）：低於設定的直接變靈石（`wDropItem`）。
 - 彈幕配色：玩家淺藍／金（法球改淺藍、朱雀火球改金），怪物亮紅／亮紫／粉紅。
@@ -313,3 +313,8 @@
   - 輔助寶石一種一顆（企劃 21 §10-1）：tri.js `gemElse(k, sl, wt)`（a/q/e 看這把武器＋共用身法；在身法列找時看每把武器），`gemWhy` 回「已經串在 Q（萬劍）」；選寶石清單這種情況按鈕不灰（`.gem.mv`），點了舊位置退回背包、這格串上。舊存檔 `gemDupMig()`（`w.gemOne`，enterWorld 時）照 a→q→e、再身法，重複的退回背包＋劍靈說明。斬殺：一般 8–12%、王 3–5%、天劫王 ×0.5，`GEM_MP.exec` 1.3，`GEM_COST.exec`。
   - 圖示（企劃 34）：tree 圖集加 xuemo/jianxin/xueji/tianren；mat 圖集加 `shard ess sup_meteor sup_swordrain sup_thunder pot fireres iceres psnres thres atkup dropup expup recall`（`propIco` 認 pot/shard/ess:/sup:；快捷欄丹藥／回城符 `.qico`；煉丹列 `.rcpico`；通貨列 `.curico`）。`ICO_VER` 7.6。切圖 scratchpad `cut3.js`（tree_c 要用小間距 3）。畫面上不再出現「符文」（卡片欄、星盤說明改字）；追蹤鈕 📌 換成 SVG 圖釘，canvas 追蹤字改「追蹤」。
   - 測試（Playwright 844×390、390×844）：功能 28 項＋2 項是測試腳本本身的問題（身法標籤本來就串不了斬殺、L 鍵在 ovJust 那一刻送出），沒有 JS 錯誤；10 個畫面橫直截圖企劃驗收過。
+- **v7.7 祭壇頁＋怪潮祭品、拔卡、輔助寶石互斥（總表第 19 項，企劃 27 C、26 §9、21 §11，11/10）**：
+  - 拔卡（cards.js）：`cardPullCost(c)` 一般 300／獵寶妖 1000／王卡（`BOOK_BOSS_CARD` 的值）3000；`pullCard(slot)` 要 `atCamp()`。`insertCard` 有舊卡時＝先付錢拔下（回 `save.cards`）再插，不夠錢回「要 N 靈石」、不會碎。卡片頁選到插著的卡顯示「拔下來（N 靈石）」。equip.js `ungem(it)` 也把 `it.card` 退回收集冊（賣掉、渡劫碎掉、死亡掉落、背包滿丟掉都會走）。
+  - 互斥（tri.js）：`GEM_GRP`（數量 lmp/volley/split、範圍 enlarge/focus、放法 totem/trigc/trigh/rapid、元素 ice/fire/volt/venom/efocus），`gemWhy` 同列同組回「跟X同一組：Y」；`isSpellWt`（法杖、扇）：連發 `multi` 只能串法術、連打 `rapid` 不能串法術；`slotSkill==="origin"` 的 E 不能串任何輔助。舊存檔 `gemGrpMig()`（`w.gemGrp`，enterWorld 之後跑）每列一顆一顆放回、衝突的退背包＋劍靈說明。
+  - 新檔 `js/altar.js`（mind.js 後）：`renderAltar`（#ov k-altar，「⋯更多」多一格「祭壇」）：4 隻王列表，離祭壇 160 內直接「天劫挑戰」（`startTianjie`），否則「御劍前往」（`flyTo` 祭壇南 70）。`CUR.tide` 怪潮祭品（r:0，秘境 ≥5 層秘境之主 30%／≥10 層 50%）；`startTide`：野外、不在秘境、沒王、不在營地結界；`W0.tide` 30 秒每 1.4 秒生 2＋t/10 隻（`spawnWMob` 最近同區營地，`m.tide`、`noRespawn`），25 秒出潮王（精英、血 ×3／一般 ×12、`m.named`）；離中心 420 或死掉就散；清完掉混元 1＋每 6 隻 1 通貨＋每 15 隻 1 件（`rollItem(1, 營地等級)`）＋3 素材＋30% 寶石。地上橘色虛線圈＋倒數。
+  - 測試 scratchpad `#f19` 全過（拔卡／換卡／錢不夠／野外擋、互斥四組、連發連打、起源、搬家、祭壇、天劫、怪潮 50 隻＋掉落），舊 `#func` 沒有新的失敗（「更多」變 7 格）。**怪潮的數量和掉落還沒用 bot 調**，交給企劃。

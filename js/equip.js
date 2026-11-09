@@ -132,7 +132,7 @@ const EN_RATE = [1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.12];
 const enCost = (it) => Math.round(12 * ((it.en || 0) + 1) * (1 + it.il * 0.3));
 // ───────── 輔助寶石（企劃 21 第二版：串在技能鏈上，只影響那一招；3 顆同級合成高一級，最高 5 級）─────────
 const GEMS = {
-  multi: { n: "連發", c: "#ffb347", d: (l) => `這招 ${25 + l * 10}% 機率再放一次` },
+  multi: { n: "連發", c: "#ffb347", d: (l) => `這招 ${25 + l * 10}% 機率再放一次（只能串法術：法杖、扇）` },
   power: { n: "巨力", c: "#ff6b6b", d: (l) => `這招傷害 +${l * 10}%` },
   haste: { n: "疾風", c: "#7dffb0", d: (l) => `這招冷卻 −${l * 7}%` },
   thrift: { n: "省元", c: "#6fb8ff", d: (l) => `這招真氣倍率 −${l * 15}%` },
@@ -159,7 +159,7 @@ const GEMS = {
   icepath: { n: "冰徑", c: "#bfefff", d: (l) => `位移的路上結冰 ${(1.5 + l * 0.5).toFixed(1)} 秒，怪踩到變慢` },
   focus: { n: "集中", c: "#ff9a6a", d: (l) => `取捨：範圍 −30%、傷害 +${25 + l * 5}%` },
   volley: { n: "齊射", c: "#d8ffa0", d: (l) => `多重投射改成並排往前（比較集中）；沒串多重投射時多 2 道並排（${55 + l * 3}%）` },
-  rapid: { n: "連打", c: "#ff8a8a", d: (l) => `近戰招自動再揮 2 次（每下 ${65 + l * 2}%）` },
+  rapid: { n: "連打", c: "#ff8a8a", d: (l) => `近戰攻擊招自動再揮 2 次（每下 ${65 + l * 2}%）` },
   trigc: { n: "觸發：暴擊", c: "#c8a0ff", d: () => `只能串 E：其他招暴擊時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
   trigh: { n: "觸發：受傷", c: "#b090ff", d: () => `只能串 E：受傷時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
   totem: { n: "法壇", c: "#8fb0ff", d: (l) => `這招改成放一座法壇，${6 + l} 秒內自動朝附近的怪放（自己不用打）` },
@@ -219,7 +219,7 @@ const ELE_N = { F: "火", W: "冰", T: "雷", P: "毒" }, ELE_C = { F: "#ff7a3a"
 function itemEle(it) { let best = null, bl = 0; for (const g of (it && it.so) || []) { if (!g) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl) { bl = +l; best = ELE_GEM[k]; } } return best; }
 const dispName = (it) => (it.slot === "sword" && ELE_PRE[itemEle(it)] || "") + it.name; // 元素字首只在畫面加，不寫進 it.name
 function eleClash(w, g) { const e = ELE_GEM[g.split(":")[0]], cur = itemEle(w); return e && cur && cur !== e ? `這把武器已經是${ELE_N[cur]}元素，一把武器只能一種元素（先拆下原本的元素寶石）` : ""; }
-function ungem(it) { if (it && it.so) { for (const g of it.so) if (g) addGem(g); it.so = []; } } // 賣掉、弄丟武器前先把寶石拆回袋子
+function ungem(it) { if (it && it.so) { for (const g of it.so) if (g) addGem(g); it.so = []; } if (it && it.card) { save.cards = save.cards || {}; save.cards[it.card] = (save.cards[it.card] || 0) + 1; delete it.card; } } // 卡片也一起退回（26 §9） // 賣掉、弄丟武器前先把寶石拆回袋子
 const fmtAff = (k, v) => `${AFFIX[k].n} +${AFFIX[k].dec ? v.toFixed(1) : v}${AFFIX[k].pct ? "%" : ""}`;
 // ───────── 魔物卡片（RO）：插在武器或道袍的符文插槽，一件一張 ─────────
 const CARDS = {
