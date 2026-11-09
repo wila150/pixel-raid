@@ -296,6 +296,7 @@ function applyWeapon() {
     const se = slotSkill("e"); // 企劃 35：原本的 E／傳說專屬／起源 各自一格
     if (se === "base" && WSKILL.ult.uq) { WSKILL.ult.n = ws.ult[0]; delete WSKILL.ult.uq; }
     if (se === "uq" && WSKILL.ult.uq) WSKILL.ult.n = WUQ[WSKILL.ult.uq][0];
+    if (se === "origin") WSKILL.ult.n = WSKILL.ult.uq ? "起源・" + WUQ[WSKILL.ult.uq][0] : "起源覺醒"; // 按鈕名字要跟放出來的招一樣
     const tr = triOf(wt, "r"), RM = { blink: ["縮地", 1.3], pull: ["聚妖", 2.5], guard: ["護體", 4.5] }; // 身法通用招
     if (RM[tr]) { WSKILL.roll.n = RM[tr][0]; WSKILL.roll.cd *= RM[tr][1]; }
   }
