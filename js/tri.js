@@ -190,11 +190,39 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
   if (al !== "*" && ![...tags].some((t) => al.includes(t))) return `要${[...al].map((t) => TAG_N[t]).join("／")}招`;
   const row = chainRaw(sl, wt);
   if (row.some((x, i) => i !== skipI && x && x.split(":")[0] === k)) return "這招已經串了同一種";
+  { const o = gemElse(k, sl, wt); if (o) return `已經串在 ${o.label}`; } // 企劃 21 §10-1：每種輔助寶石整個角色只能一顆
   const e = ELE_GEM[k]; if (e && row.some((x, i) => i !== skipI && x && ELE_GEM[x.split(":")[0]] && ELE_GEM[x.split(":")[0]] !== e)) return "一招只能一種元素";
   if (k === "spread" && !row.some((x) => x && x.startsWith("fire:"))) return "要先串火元素";
   return "";
 }
 const gemFits = (g, sl) => { const k = g.split(":")[0]; if (k === "spread") return chainRow(sl).some((x) => x && x.startsWith("fire:")); return !gemWhy(g, sl, chainRaw(sl).indexOf(g)); };
+// 同一種輔助寶石還串在哪裡（這把武器的普攻／Q／E＋全武器共用的身法；在身法列找的時候看每把武器）
+const SL_ORD = ["a", "q", "e", "r"];
+function slLabel(sl, wt) {
+  const k = triOf(wt, sl), L = sl === "r" ? TRI.r : sl === "e" ? (TRI_E[wt] || []) : ((TRI[wt] || {})[sl] || []), o = k && L.find((x) => x.k === k);
+  return `${sl === "r" ? "身法" : sl.toUpperCase() === "A" ? "普攻" : sl.toUpperCase()}${o ? `（${o.n}）` : ""}`;
+}
+function gemElse(k, sl, wt = curWeapon()) {
+  const w = save.w; if (!w || !w.chain) return null;
+  const has = (row) => row && row.slice(0, slotsN()).findIndex((x) => x && x.split(":")[0] === k);
+  const spots = sl === "r" ? Object.keys(w.chain).filter((x) => x !== "r").flatMap((x) => ["a", "q", "e"].map((l) => [l, x])) : SL_ORD.filter((l) => l !== sl).map((l) => [l, wt]);
+  for (const [l, x] of spots) { const row = l === "r" ? w.chain.r : w.chain[x] && w.chain[x][l]; const i = has(row); if (i >= 0) return { l, wt: x, i, label: (sl === "r" && x !== wt ? WEAPONS[x].n + "的" : "") + slLabel(l, x) }; }
+  return null;
+}
+// 舊存檔：同一種只留 a→q→e→r 第一顆，其他退回背包（每把武器各自算，身法共用）
+function gemDupMig() {
+  const w = save.w; if (!w || !w.chain || w.gemOne) return 0;
+  let n = 0;
+  const seenR = new Set((w.chain.r || []).filter(Boolean).map((g) => g.split(":")[0]));
+  for (const wt of Object.keys(w.chain)) {
+    if (wt === "r") continue; const seen = new Set();
+    for (const l of ["a", "q", "e"]) { const row = w.chain[wt][l] || []; row.forEach((g, i) => { if (!g) return; const k = g.split(":")[0]; if (seen.has(k)) { addGem(g); row[i] = null; n++; } else seen.add(k); }); }
+  }
+  // 身法列：跟任何一把武器重複的退回（a→q→e 在前面，留武器那顆）
+  const used = new Set(); for (const wt of Object.keys(w.chain)) if (wt !== "r") for (const l of ["a", "q", "e"]) for (const g of w.chain[wt][l] || []) if (g) used.add(g.split(":")[0]);
+  (w.chain.r || []).forEach((g, i) => { if (g && used.has(g.split(":")[0])) { addGem(g); w.chain.r[i] = null; n++; } });
+  w.gemOne = 1; return n;
+}
 function slotEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
 function chainMpMul(sl) { // 真氣倍率：每顆相乘，省元 −15%／級
   if (!save.w) return 1; let m = 1, th = 0;
@@ -231,7 +259,7 @@ function chainCells(l) {
   let pick = "";
   if (triPick && triPick.l === l) {
     const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
-    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i); return `<button class="gem" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemIco(g, "gico")}${gemTag(g)}${GEMS[k].n} ${lv} 級 ×${save.gems[g]}</b><small>${gemDesc(g)}</small>${why ? `<em class="greq">${why}</em>` : ""}</button>`; };
+    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i), mv = why && why.startsWith("已經串在") && !gemCantMsg(g); return `<button class="gem${mv ? " mv" : ""}" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why && !mv ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemIco(g, "gico")}${gemTag(g)}${GEMS[k].n} ${lv} 級 ×${save.gems[g]}</b><small>${gemDesc(g)}</small>${why ? `<em class="greq">${why}${mv ? "・點了搬過來" : ""}</em>` : ""}</button>`; };
     const merge = gs.filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).map((g) => `<button class="gmerge2" data-gm="${g}">${GEMS[g.split(":")[0]].n} ${g.split(":")[1]} 級 ×3 → ${+g.split(":")[1] + 1} 級</button>`).join("");
     pick = `<div class="rpick"><div class="trihead"><b>選一顆輔助寶石串上去</b><small>紅＝力量、綠＝敏捷、藍＝智力；灰色的寫了為什麼不能串</small></div>${gs.length ? `<div class="gbag">${gs.map(btn).join("")}</div>` : `<p class="sub">背包裡沒有輔助寶石（精英、王、秘境會掉）</p>`}${merge ? `<div class="gmrow"><small>3 顆合成高一級：</small>${merge}</div>` : ""}</div>`;
   }
@@ -273,7 +301,14 @@ function bindTri() {
   }));
   ov.querySelectorAll("[data-rg]").forEach((b) => b.addEventListener("click", () => {
     const g = b.dataset.rg; if (!triPick || !(save.gems[g] > 0)) return;
-    const { l, i } = triPick, why = gemCantMsg(g) || gemWhy(g, l, i);
+    const { l, i } = triPick;
+    let why = gemCantMsg(g) || gemWhy(g, l, i);
+    const o = why && why.startsWith("已經串在") ? gemElse(g.split(":")[0], l) : null;
+    if (o) { // 搬過來：舊的那格退回背包，這格串上
+      const orow = o.l === "r" ? save.w.chain.r : save.w.chain[o.wt][o.l]; addGem(orow[o.i]); orow[o.i] = null;
+      why = gemCantMsg(g) || gemWhy(g, l, i);
+      if (!why) { chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; triPick = null; sfx("good"); again(`從${o.label}搬到${TRI_LAYER_N[l]}：${gemName(g)}`); return; }
+    }
     if (why) { sfx("bad"); renderSkills(why); return; }
     chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g];
     triPick = null; sfx("good"); again(`${TRI_LAYER_N[l]}串上 ${gemName(g)}`);
@@ -286,7 +321,8 @@ function bindTri() {
 // 舊存檔搬家：進世界時
 const _enterWorldCh = enterWorld;
 enterWorld = function () {
-  const r = save.w && save.w.created ? chainMig() : 0;
+  const r = save.w && save.w.created ? chainMig() : 0, dn = save.w && save.w.created ? gemDupMig() : 0;
+  if (dn) setTimeout(() => { if (typeof writeSave === "function") writeSave(); if (typeof say === "function") say(`輔助寶石改成每一種整個角色只能串一顆：重複的 ${dn} 顆退回背包了（技能 → 技能鏈）`, "#ffe066"); }, 1500);
   const out = _enterWorldCh.apply(this, arguments);
   if (r) { if (typeof writeSave === "function") writeSave(); if (typeof notice === "function") notice(`輔助寶石改成每一招各自串！原本武器上的 ${r[1]} 顆，${r[0]} 顆幫你串到普攻那列${r[1] > r[0] ? "，其他的放回背包" : ""}（技能 → 技能鏈）`, "#ffe066"); }
   return out;

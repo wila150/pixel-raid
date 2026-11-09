@@ -198,7 +198,8 @@ ovX.addEventListener("click", (e) => { e.stopPropagation(); sfx("click"); ovClos
 function ovBar() {
   document.body.classList.toggle("ovopen", !!ovKind);
   ovTitle.textContent = ovKind ? OV_NAME[ovKind] || "" : "";
-  document.querySelectorAll("#quick .qbtn").forEach((b) => b.classList.toggle("on", !!ovKind && OV_TAB[ovKind] === b.dataset.q));
+  const inMore = !!ovKind && (ovKind === "more" || !QUICK.some(([k]) => k === OV_TAB[ovKind])); // 「更多」裡的頁面：亮「更多」
+  document.querySelectorAll("#quick .qbtn").forEach((b) => b.classList.toggle("on", b.dataset.q === "more" ? inMore : !!ovKind && OV_TAB[ovKind] === b.dataset.q));
 }
 // 子視窗（選中的物品、星盤選的點、數值說明、離開確認）：返回鍵先關這些
 function ovSub() {
@@ -240,14 +241,14 @@ ov.addEventListener("click", (e) => {
   if (e.target.closest(".trwrap, button, input, form, .wset, .supslot, .fcard, .chatlog, .apbox, .defbox, .cardchip, .craft, .affs, .loot, .star, .cmp-item, .info, .tile, .bagwin, .eqwin, .setrow, .starmap, .gems, .stat, .chap, .chjob, .chhelp, .chme, .fashion, .btabs, .panel, .rmods, .rsum, .rbest, .evpick, h2, h3, p, b, small, img")) return;
   sfx("click"); ovClose();
 });
-const OV_KEYS = { bag: ["i", "b", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
+const OV_KEYS = { bag: ["i", "escape"], map: ["m", "tab", "t", "escape"], menu: ["escape", "p"], social: ["escape", "g"], skill: ["escape", "n"], quest: ["escape", "y"], rank: ["escape", "r"] };
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
   const k = e.key.toLowerCase();
   if (!ovKind || ovJust || e.repeat) return;
   if (k === "tab") e.preventDefault();
   if ((OV_KEYS[ovKind] || []).includes(k)) { ovClose(); return; }
-  const sw = { p: "tree", i: "bag", b: "bag", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
+  const sw = { p: "tree", i: "bag", b: "smith", l: "cards", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
   if (sw && sw !== OV_TAB[ovKind]) ovGo(sw);
 });
 
@@ -269,8 +270,8 @@ function affHtml(it) {
   const ks = Object.keys(it.aff || {}).filter((k) => AFFIX[k]);
   const row = (k) => `<div class="aff ${AFFIX[k].t}"><em>${AFFIX[k].t === "p" ? "前綴" : AFFIX[k].t === "s" ? "後綴" : "舊"}</em>${fmtAff(k, it.aff[k])}<i>${affTier(k, it.aff[k], it.il)}</i></div>`;
   const pre = ks.filter((k) => AFFIX[k].t === "p"), suf = ks.filter((k) => AFFIX[k].t !== "p");
-  return `<div class="affs">${pre.map(row).join("")}${suf.map(row).join("")}${!ks.length ? `<div class="dim">（白裝沒有詞條：拿去工藝台注入精髓）</div>` : ""}
-    ${CARD_SLOTS.includes(it.slot) ? `<div class="rune${it.card ? " on" : ""}">◈ 符文插槽：${it.card ? `<b>${CARDS[it.card].n}</b>（${cardDesc(it.card)}）` : "空（把魔物卡片拖到左邊這件裝備上）"}</div>` : ""}</div>`;
+  return `<div class="affs">${pre.map(row).join("")}${suf.map(row).join("")}${!ks.length ? `<div class="dim">（白裝沒有詞條：拿去鐵匠鋪注入精髓）</div>` : ""}
+    ${CARD_SLOTS.includes(it.slot) ? `<div class="rune${it.card ? " on" : ""}">◈ 卡片：${it.card ? `<b>${CARDS[it.card].n}</b>（${cardDesc(it.card)}）` : "空（到卡片頁插卡・L 鍵）"}</div>` : ""}</div>`;
 }
 // 武器組、超技能插槽、傳授插槽
 function wsetHtml() {
@@ -281,7 +282,7 @@ function extraSlots(it) {
   let h = "";
   if (it === save.eq.sword) {
     const ss = Object.keys(save.sups || {}).filter((k) => save.sups[k] > 0);
-    h += `<div class="supslot${it.sup ? " on" : ""}"><b>✦ 超技能插槽</b>${jobLv() < 2 ? `<small>二轉（Lv.30）解鎖</small>` : it.sup ? `<small style="color:${SUPERS[it.sup].c}">${SUPERS[it.sup].n}：${SUPERS[it.sup].d}</small><button data-supoff="1">拆下</button>` : `<small>空：${ss.length ? "點下面的超技能寶石插上" : "沒有超技能寶石（工藝台用碎屑換、世界王會掉）"}</small>`}
+    h += `<div class="supslot${it.sup ? " on" : ""}"><b>✦ 超技能插槽</b>${jobLv() < 2 ? `<small>二轉（Lv.30）解鎖</small>` : it.sup ? `<small style="color:${SUPERS[it.sup].c}">${SUPERS[it.sup].n}：${SUPERS[it.sup].d}</small><button data-supoff="1">拆下</button>` : `<small>空：${ss.length ? "點下面的超技能寶石插上" : "沒有超技能寶石（鐵匠鋪用碎屑換、世界王會掉）"}</small>`}
       ${jobLv() >= 2 && !it.sup ? ss.map((k) => `<button data-sup="${k}" style="color:${SUPERS[k].c}">${SUPERS[k].n} ×${save.sups[k]}<small>${SUPERS[k].d}</small></button>`).join("") : ""}</div>`;
   }
   if (it.slot === "sword" && save.bag.includes(it)) h += `<div class="acts row">${[0, 1, 2].map((i) => `<button data-wsset="${i}">放到武器 ${i + 1}</button>`).join("")}</div>`;
@@ -301,6 +302,12 @@ function craftHtml() {
     <h3>精髓 <small>${es.reduce((a, k) => a + save.ess[k], 0)}</small></h3>
     <div class="esslist">${es.map((k) => `<span class="ess">${essName(k)} ×${save.ess[k]}<small>${AFFIX[k].t === "p" ? "前綴" : "後綴"}・${AFFIX[k].n}</small></span>`).join("") || `<p class="dim">還沒有精髓。精英怪、獵寶妖、世界王會掉</p>`}</div>
     <p class="dim">用法：點一件白裝或藍裝 → 按精髓注入，直接變紫裝並保底洗出那條詞條</p></div>`;
+}
+// 行囊右欄沒選東西時：一句說明＋兩個小連結（企劃 26 §8：行囊只管東西）
+function bagHint() {
+  return `<div class="baghint"><p>點一件裝備看說明、穿上、比較戰力。</p><p class="dim">長按格子＝直接穿上</p>
+    <div class="golinks"><button class="golink" data-go="smith">鐵匠鋪（B）›</button><button class="golink" data-go="cards">魔物卡片（L）›</button></div>
+    <div class="bkmoney"><span>靈石 <b>${save.stone}</b></span><span>碎屑 <b>${save.shards || 0}</b></span></div></div>`;
 }
 function cardChips() {
   const cs = Object.keys(save.cards || {}).filter((c) => save.cards[c] > 0);
@@ -329,7 +336,7 @@ const tabOf = (it) => (it.slot === "sword" ? "wpn" : it.slot === "charm" || (SLO
 function propList() {
   const L = curList(), w = save.w;
   if (w.potions) L.push({ k: "pot", g: "丹", c: "#ff6a5a", n: w.potions, name: "回春丹", d: "按 1 吃，回血。血量低於 30% 會自動吃（設定裡可關）" });
-  if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；工藝台用來換超技能寶石" });
+  if (save.shards) L.push({ k: "shard", g: "屑", c: "#b8a6ff", n: save.shards, name: "碎屑", d: "分解裝備得到；鐵匠鋪用來換超技能寶石" });
   for (const k in save.ess || {}) if (save.ess[k] > 0) L.push({ k: "ess:" + k, g: "精", c: "#7fd890", n: save.ess[k], name: essName(k), d: `點選裝備後注入：保底「${AFFIX[k].n}」詞條，直接變紫裝（要在營地）` });
   for (const g in save.gems || {}) if (save.gems[g] > 0) { const [k, l] = g.split(":"); L.push({ k: "gem:" + g, g: "◆", c: GEMS[k].c, n: save.gems[g], name: gemName(g), d: `${gemCol(g)[0]}色・需要 Lv.${gemReq(g)}${gemAttrNeed(g) ? `、${TR_ATTR[gemAttrNeed(g)[0]].n} ${gemAttrNeed(g)[1]}` : ""}${gemReqOk(g) ? "" : `（${gemNeedTxt(g)}）`}<br>${gemDesc(g)}<br>（技能 → 技能鏈，點那一招後面的空格串上去）` }); }
   for (const k in save.sups || {}) if (save.sups[k] > 0) L.push({ k: "sup:" + k, g: "✦", c: SUPERS[k].c, n: save.sups[k], name: SUPERS[k].n, d: SUPERS[k].d + "（二轉後點武器插上）" });
@@ -360,9 +367,8 @@ function renderEquip(msg = "") {
     if (!slotOpen(k)) return `<span class="eqc lock" style="grid-column:${cx};grid-row:${cy}" title="${SLOTS[k].n}（${slotLockTxt(k)}）"><b>🔒</b><small>${slotLockTxt(k)}</small></span>`;
     return `<button class="eqc${eqSel === "eq:" + k ? " sel" : ""}${it ? " on" : ""}${cardSel && CARDS[cardSel] && CARDS[cardSel].slot === k ? " cardok" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="grid-column:${cx};grid-row:${cy};--c:${c}">${it ? itemIcon(it) + (it.en ? `<span class="en">+${it.en}</span>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
   }).join("") + (typeof mountCell === "function" ? mountCell(MOUNT_CELL) : "");
-  let right = craftHtml();
+  let right = bagHint();
   if (propSel && !selItem) right = propInfo(propSel) || right;
-  const camp = atCamp(), essK = Object.keys(save.ess || {}).filter((k) => save.ess[k] > 0);
   if (selItem) {
     const worn = eqSel.startsWith("eq:"), cur = save.eq[selItem.slot], diff = itemCP(selItem) - itemCP(cur);
     right = `<div class="cmp-item">
@@ -374,24 +380,22 @@ function renderEquip(msg = "") {
       <div class="cp">戰力 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn ? (() => { const now = totalCP(), d = itemCP(selItem) - itemCP(cur); return `<div class="cpafter">穿上後戰力 ${now} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${now + d}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${Math.abs(d)}</b>）</div>`; })() : ""}
       ${!worn && cur ? `<small class="vs">對比身上：<span style="color:${RARITY[cur.q].c}">${cur.name}</span></small>` : ""}
-      ${affHtml(selItem)}${extraSlots(selItem)}
+      ${affHtml(selItem)}${extraSlots(selItem)}${selItem.slot === "sword" ? wsetHtml() : ""}
       <div class="stats">${cmpRows(selItem, cur)}</div>
       <div class="acts">
         ${worn ? `<button id="unequip">卸下</button>` : `<button id="equip" class="gold">穿上</button><button id="sell" class="red">出售 +${sellPrice(selItem)}</button>`}
-        ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="gold" ${camp ? "" : "disabled"}>精煉 +${(selItem.en || 0) + 1}<small>${Math.round(EN_RATE[selItem.en || 0] * 100)}%・${enCost(selItem)} 靈石${enhNeedTxt(selItem)}</small></button>` : ""}
-        ${curBtns(selItem, camp)}
       </div>
-      ${!selItem.u ? `<div class="essbar"><small>${camp ? "精髓注入（保底詞條，直接變紫裝）" : "回營地才能注入精髓"}</small>${essK.map((k) => `<button data-ess="${k}" ${camp ? "" : "disabled"}>${essName(k)}<small>${AFFIX[k].n}・剩 ${save.ess[k]}</small></button>`).join("") || `<span class="dim">沒有精髓</span>`}</div>` : ""}
-      ${camp ? "" : `<p class="warn">精煉、洗練、點金、精髓要在安全營地</p>`}</div>`;
+      <div class="golinks"><button class="golink" data-go="smith">到鐵匠鋪強化 ›</button>${CARD_SLOTS.includes(selItem.slot) ? `<button class="golink" data-go="cards">插卡片 ›</button>` : ""}</div></div>`;
   }
-  // 企劃 15 第 3-4 節：直向分頁「裝備｜背包｜工藝」，點物品＝從下面滑出的說明面板
+  // 企劃 15 第 3-4 節＋26 §8：直向分頁「裝備｜背包」，點物品＝從下面滑出的說明面板
   const pt = PORTRAIT(), hasSel = !!(selItem || (propSel && propInfo(propSel)));
+  if (bagPt === "craft") bagPt = "bag";
   ov.classList.toggle("pt", pt); ov.classList.toggle("pt-sheet", pt && hasSel);
-  ["eq", "bag", "craft"].forEach((k) => ov.classList.toggle("pt-" + k, bagPt === k));
-  const ptabs = pt ? `<div class="ptabs">${[["eq", "裝備"], ["bag", "背包"], ["craft", "工藝"]].map(([k, n]) => `<button class="ptab${bagPt === k ? " on" : ""}" data-pt="${k}">${n}</button>`).join("")}</div>` : "";
+  ["eq", "bag"].forEach((k) => ov.classList.toggle("pt-" + k, bagPt === k));
+  const ptabs = pt ? `<div class="ptabs">${[["eq", "裝備"], ["bag", "背包"]].map(([k, n]) => `<button class="ptab${bagPt === k ? " on" : ""}" data-pt="${k}">${n}</button>`).join("")}</div>` : "";
   ov.innerHTML = `${ptabs}<div class="col l"><div class="eqwin"><div class="winhead">裝備</div><div class="eqgrid"><img class="eqhero" src="${heroURL()}" alt="">${eqCells}</div></div>
       <div class="info"><b>戰力 ${totalCP()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}・招式 ${WEAPONS[curWeapon()].job}</small></div>
-      ${wsetHtml()}${cardChips()}${apHtml()}${gemHtml()}</div>
+      </div>
     <div class="col c"><div class="bagwin"><h2>行囊 <small>${save.bag.length} / ${BAG_MAX}</small></h2>
       <div class="btabs">${BAG_TABS.map(([k, n]) => `<button class="btab${bagTab === k ? " on" : ""}" data-bt="${k}">${n}</button>`).join("")}</div>
       <div class="bgrid">${bagCells(bag)}</div>
@@ -418,6 +422,7 @@ function cpRollRun() {
 }
 function bindEquip(selItem) {
   const again = (m) => renderEquip(m);
+  ov.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const g = b.dataset.go; if (g === "smith") smSel = selItem || null; else if (g === "cards" && selItem && CARDS) cdSlot = selItem.slot; ovGo(g); }));
   bindEcon(again);
   ov.querySelectorAll("[data-pt]").forEach((b) => b.addEventListener("click", () => { sfx("click"); bagPt = b.dataset.pt; eqSel = null; propSel = null; again(); }));
   const sb = ov.querySelector(".sheetbar"); if (sb) sb.onclick = () => { sfx("click"); eqSel = null; propSel = null; again(); };
@@ -596,7 +601,7 @@ function openStarMap() {
       <div class="stat"><span>掉落</span><b>${s.id === "town" ? "—" : `裝備・寶石・靈石（掉寶 ×${ZONE_LOOT[s.id]}）`}</b></div>
       <p class="dim">${safe ? "落地有太極護罩，營地結界內妖獸進不來" : "你在野外：御劍要原地凝神 3 秒，被打或移動會中斷"}</p>
       <button id="fly" class="fly">一鍵御劍傳送</button></div>`
-    : `<div class="info"><h3>星盤</h3><p>發光的飛劍符文是已點亮的營地，點一下看資訊、御劍過去</p><p class="dim">黑霧是還沒去過的地方；走到營地附近就會點亮符文</p><p class="dim">點旁邊空白處、或再按一次 M 收起</p></div>`;
+    : `<div class="info"><h3>星盤</h3><p>發光的飛劍是已點亮的營地，點一下看資訊、御劍過去</p><p class="dim">黑霧是還沒去過的地方；走到營地附近就會點亮</p><p class="dim">點旁邊空白處、或再按一次 M 收起</p></div>`;
   ov.innerHTML = `<div class="col l">${info}</div><div class="col cr"><canvas class="starmap"></canvas></div>`;
   const cv = ov.querySelector(".starmap");
   cv.addEventListener("click", (e) => {
@@ -676,9 +681,10 @@ function drawStarMap(cv) {
 }
 
 // ───────── 右上快捷列（原本選單裡的功能直接放出來）＋齒輪設定 ─────────
-const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["tree", "天賦", "P"], ["skill", "技能", "N"], ["quest", "任務", "Y"], ["map", "星盤", "M"], ["social", "聊天", "G"], ["rank", "排行", "R"], ["rift", "秘境", ""]];
+// 企劃 26 §3：右上只留 7 顆最常用＋「⋯更多」（卡片、任務、手冊、聊天、排行、設定）
+const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["tree", "天賦", "P"], ["smith", "鐵匠", "B"], ["rift", "秘境", ""], ["map", "星盤", "M"], ["more", "更多", ""]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "tree" ? '<b class="qglyph">天</b>' : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "tree" ? '<b class="qglyph">天</b>' : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : k === "smith" ? '<b class="qglyph">鍛</b>' : k === "more" ? '<b class="qglyph">⋯</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

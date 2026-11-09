@@ -162,7 +162,7 @@ function curBtns(it, camp) {
     + (!it.u && !it.mir ? b("cMirror", "mirror", "太虛鏡複製", save.bag.length < BAG_MAX) : "");
 }
 function bindCur(it, again) {
-  const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用工藝台"); return; } f(); }; };
+  const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用鐵匠鋪"); return; } f(); }; };
   const done = (k, msg, s = "good") => { useCur(k); nameItem(it); writeSave(); sfx(s); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(msg); };
   on("cGold", () => { if (!curN("gold")) return; it.q++; it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.12 * 10) / 10 : Math.round(it.base * 1.12); rollAffixes(it, Math.max(RARITY[it.q].aff[0], Object.keys(it.aff).length + 1)); done("gold", `點金成功：${RARITY[it.q].n}裝`, "arrive"); });
   on("cChaos", () => { if (!curN("chaos")) return; const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); done("chaos", "混元重骰：詞綴全部換了"); });
@@ -186,8 +186,12 @@ function bindCur(it, again) {
 // ───────── 工藝分頁：兌換台／鍛造／煉丹／追蹤 ─────────
 function econHtml(camp) {
   const tabs = [["forge", "鍛造"], ["pill", "煉丹"], ["exch", "兌換"]];
+  return `<div class="econ">${curRow()}<div class="btabs">${tabs.map(([k, n]) => `<button class="btab${econTab === k ? " on" : ""}" data-et="${k}">${n}</button>`).join("")}</div>${econBody(econTab, camp)}</div>`;
+}
+const curRow = () => `<div class="curs">${CUR_KEYS.map((k) => `<span class="curc" style="--cc:${CUR[k].c}" title="${CUR[k].d}">${ico("mat", k, "curico") || CUR[k].g}<b>${curN(k)}</b></span>`).join("")}</div>`;
+function econBody(econTab, camp) {
   let body = "";
-  const row = (r, btn) => { const ok = matHas(r.need), tr = (save.w.track || []).includes(r.id); return `<div class="rcp${ok ? " ok" : ""}"><div><b>${r.n}</b><small>${matTxt(r.need)}</small></div><button data-trk="${r.id}" class="trk${tr ? " on" : ""}" title="追蹤（最多 2 個）">📌</button>${btn(ok)}</div>`; };
+  const row = (r, btn) => { const ok = matHas(r.need), tr = (save.w.track || []).includes(r.id); return `<div class="rcp${ok ? " ok" : ""}">${r.kind === "pill" && r.b ? ico("mat", r.b, "rcpico") : ""}<div><b>${r.n}</b><small>${matTxt(r.need)}</small></div><button data-trk="${r.id}" class="trk${tr ? " on" : ""}" title="追蹤（最多 2 個）"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M10.5 1 15 5.5l-1.4 1.4-1-.5-2.6 2.6.3 3.1L9 13.4 6.1 10.5 2 14.6 1.4 14l4.1-4.1L2.6 7l1.3-1.3 3.1.3L9.6 3.4l-.5-1z"/></svg></button>${btn(ok)}</div>`; };
   if (econTab === "forge") {
     const affs = Object.keys(AFFIX).filter((k) => AFFIX[k].t === "p" || AFFIX[k].t === "s");
     body = `<div class="fsel"><select id="fSlot">${SLOT_KEYS.filter(slotOpen).map((k) => `<option value="${k}"${forgeSlot === k ? " selected" : ""}>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</option>`).join("")}</select><select id="fAff">${affs.map((k) => `<option value="${k}"${forgeAff === k ? " selected" : ""}>保底：${AFFIX[k].n}</option>`).join("")}</select></div>`
@@ -206,8 +210,7 @@ function econHtml(camp) {
       ${RECIPES.filter((r) => r.kind === "key").map((r) => row(r, (ok) => `<button data-rcp="${r.id}" ${camp && ok ? "" : "disabled"}>做鑰匙</button>`)).join("")}
       <p class="dim">往上換很虧，撿到高階通貨還是賺。素材不能換通貨。</p>`;
   }
-  const curs = CUR_KEYS.map((k) => `<span class="curc" style="--cc:${CUR[k].c}" title="${CUR[k].d}">${CUR[k].g}<b>${curN(k)}</b></span>`).join("");
-  return `<div class="econ"><div class="curs">${curs}</div><div class="btabs">${tabs.map(([k, n]) => `<button class="btab${econTab === k ? " on" : ""}" data-et="${k}">${n}</button>`).join("")}</div>${body}</div>`;
+  return body;
 }
 function bindEcon(again) {
   ov.querySelectorAll("[data-et]").forEach((b) => b.addEventListener("click", () => { sfx("click"); econTab = b.dataset.et; again(); }));
@@ -265,7 +268,7 @@ drawWorldHud = function () {
     const parts = Object.keys(r.need).filter((k) => k !== "stone").map((k) => `${MATS[k].n} ${Math.min(matN(k), r.need[k])}/${r.need[k]}`).join("、");
     ctx.fillStyle = ok ? "rgba(60,50,10,0.78)" : "rgba(10,8,18,0.7)"; ctx.fillRect(x0, y, qw, 28);
     ctx.fillStyle = ok ? "#ffe066" : "#c8a8ff"; ctx.fillRect(x0, y, 3, 28);
-    ctx.textAlign = "left"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = ok ? "#ffe066" : "#e8d8ff"; ctx.fillText(`📌 ${r.n}${ok ? "　可以做了！" : ""}`, x0 + 7, y + 11);
+    ctx.textAlign = "left"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = ok ? "#ffe066" : "#e8d8ff"; ctx.fillText(`追蹤 ${r.n}${ok ? "　可以做了！" : ""}`, x0 + 7, y + 11);
     ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc"; ctx.fillText(parts.length > 34 ? parts.slice(0, 34) + "…" : parts, x0 + 7, y + 23);
     y += 31;
   }

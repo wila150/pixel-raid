@@ -70,7 +70,7 @@ function doJob() {
     flashT = 0.35; flashColor = "255,235,170"; shake = 10; sfx("win");
     burst(W0.x, W0.y, "#ffe066", 60, 160, 1); W0.rings.push({ x: W0.x, y: W0.y, t: 0, max: 0.8, r: 140, c: "255,230,150" });
     floatText(W0.x, W0.y - 40, `${J.n}！`, "#ffe066", true);
-    if (ns) notice(`解鎖護身法術「${SAVES[ns].n}」（角色→修行）`, "#9fe8ff");
+    if (ns) notice(`解鎖護身法術「${SAVES[ns].n}」（技能→轉職）`, "#9fe8ff");
   }
   if (w.job >= 2 && typeof netAnnounce === "function") netAnnounce(`完成${J.n}！`);
   return true;
@@ -274,8 +274,8 @@ function wbarDraw(force) {
   if (!force && key === wbarKey) return; wbarKey = key;
   wbar.innerHTML = [0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="ws${i === save.w.wi ? " on" : ""}${it ? "" : " empty"}" data-ws="${i}" style="--c:${it ? RARITY[it.q].c : "#555"}">${it ? itemIcon(it) : ""}<small>${i + 1}</small></button>`; }).join("")
     + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.n}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`
-    + `<button class="qit pot${ap ? " auto" : ""}" data-it="pot" title="丹藥（長按切換自動）"><b>丹</b><small>×${pot}</small>${ap ? "<i>自</i>" : ""}</button>`
-    + `<button class="qit rc${rc ? " on" : ""}" data-it="rc" title="回城符：原地不動 3 秒回青雲城"><b>回</b><small>${rc ? "…" : "城"}</small></button>`;
+    + `<button class="qit pot${ap ? " auto" : ""}" data-it="pot" title="丹藥（長按切換自動）">${ico("mat", "pot", "qico") || "<b>丹</b>"}<small>×${pot}</small>${ap ? "<i>自</i>" : ""}</button>`
+    + `<button class="qit rc${rc ? " on" : ""}" data-it="rc" title="回城符：原地不動 3 秒回青雲城">${ico("mat", "recall", "qico") || "<b>回</b>"}<small>${rc ? "…" : "城"}</small></button>`;
 }
 wbar.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b || state !== "world") return; if (b.dataset.it) { if (wbarLong) { wbarLong = false; return; } quickItem(b.dataset.it); } else if (b.dataset.save) heroSave(); else switchW(+b.dataset.ws); wbarDraw(true); });
 // 企劃 15 第 9 節：快捷道具欄（丹藥：點＝喝、長按＝切換自動；回城符）

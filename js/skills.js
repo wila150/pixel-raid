@@ -29,23 +29,20 @@ function renderSkills(msg = "") {
   const w = save.w;
   if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
   skMig();
-  skTab = "tri"; // v7.2：大節點、巔峰點搬到天賦樹
+  if (skTab !== "job") skTab = "tri"; // v7.2：大節點、巔峰點搬到天賦樹；v7.6：轉職、護身法術從角色頁搬來
   if (typeof B !== "undefined") B = worldStats();
-  const nw = typeof triNew === "function" && triNew().length;
-  const tabs = `<div class="btabs"><button class="btab on" data-st="tri">技能鏈${nw ? " ●" : ""}</button></div>`;
-  let body = "";
-  if (skTab === "tri") body = renderTri(msg);
-  else if (skTab === "para") body = renderPara(msg);
-  else body = `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="skauto"><b>每級自動成長</b><small>Lv.${w.lv}：${autoTxt(Math.max(0, w.lv - 1))}</small></div><div class="ksall"></div><p class="sub">大節點每次轉職開一組二選一，選了有好有壞；在城裡或營地結界可以免費換。</p>`;
+  const nw = typeof triNew === "function" && triNew().length, J = JOBS[jobLv()], jd = !!J && w.lv >= J.lv;
+  const tabs = `<div class="btabs">${[["tri", "技能鏈", nw], ["job", "轉職", jd]].map(([k, n, d]) => `<button class="btab${skTab === k ? " on" : ""}" data-st="${k}">${n}${d ? " ●" : ""}</button>`).join("")}</div>`;
+  const body = skTab === "tri" ? renderTri(msg) : `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="skjob">${chCult()}</div>`;
   ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${body}</div></div>`;
   ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st; renderSkills(); }));
-  if (skTab === "tri") bindTri(); else if (skTab === "para") bindPara();
+  if (skTab === "tri") bindTri(); else bindCult((m) => renderSkills(m));
 }
 // 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有新技能／巔峰點 → 技能
 setInterval(() => {
   const w = save.w; if (!w || !w.created) return;
   const J = JOBS[jobLv()], q = (k) => document.querySelector(`#quick .qbtn[data-q="${k}"]`);
   const a = q("ap"), s = q("skill");
-  if (a) a.classList.toggle("dot", !!J && w.lv >= J.lv);
-  if (s) s.classList.toggle("dot", (typeof triNew === "function" && triNew().length > 0));
+  if (a) a.classList.remove("dot");
+  if (s) s.classList.toggle("dot", (!!J && w.lv >= J.lv) || (typeof triNew === "function" && triNew().length > 0));
 }, 1000);

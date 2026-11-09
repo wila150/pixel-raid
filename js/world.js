@@ -452,7 +452,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
     m.summoned = true; floatText(m.x, m.y - 18, "召喚妖群！", "#ff6b6b", true);
     for (let i = 0; i < 3; i++) { spawnWMob(m.camp); const n = W0.mobs[W0.mobs.length - 1]; n.elite = false; n.mod = null; n.hp = n.max = n.max / 4; n.x = m.x + rand(-15, 15); n.y = m.y + rand(-15, 15); n.st = "chase"; n.noRespawn = true; burst(n.x, n.y, "#b07dff", 10, 60); }
   }
-  if (m.hp > 0) { const ge = gemLv("exec"); if (ge && m.hp < m.max * (m.boss ? 0.05 + (ge - 1) * 0.005 : 0.1 + (ge - 1) * 0.01)) { m.hp = 0; floatText(m.x, m.y - 22, "斬殺", "#ff5a5a", true); } } // 斬殺
+  if (m.hp > 0) { const ge = gemLv("exec"); if (ge && m.hp < m.max * (m.boss ? 0.03 + (ge - 1) * 0.005 : 0.08 + (ge - 1) * 0.01) * (m.tj ? 0.5 : 1)) { m.hp = 0; floatText(m.x, m.y - 22, "斬殺", "#ff5a5a", true); } } // 斬殺
   { const gk = gemLv("bell"); if (gk && CUR_SL && typeof slotTags === "function" && slotTags(CUR_SL).includes("m")) { W0.bellN = Math.min(10 + gk, (W0.bellT > 0 ? W0.bellN || 0 : 0) + 1); W0.bellT = 5; } } // 金鐘
   if (m.hp <= 0) killMob(m);
 }
@@ -1241,7 +1241,7 @@ function updateWorld(dt) {
   const z = zoneAt(p.x, p.y);
   if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); bankLoot("回到青雲城"); } }
   W0.bannerT = Math.max(0, W0.bannerT - dt);
-  for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮飛劍符文：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
+  for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮傳送陣：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
   const cp = campAt(p.x, p.y), cid = cp ? cp.id : null;
   if (cid !== (W0.camp || null)) { W0.camp = cid; if (cid) { floatText(p.x, p.y - 44, `進入安全營地・${cp.n}`, "#ffe9a0", true); bankLoot("安全營地"); } else if (W0.zone !== "town") floatText(p.x, p.y - 44, "踏出結界，小心妖獸", "#ff9a7a"); }
 
@@ -1907,7 +1907,7 @@ hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =
 // 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
-  const k = e.key.toLowerCase(), map = { i: "bag", b: "bag", o: "ap", c: "ap", n: "skill", y: "quest", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "smith", l: "cards", o: "ap", c: "ap", n: "skill", y: "quest", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
   if (k === "tab") e.preventDefault();
   if (state !== "world" || e.repeat) return;
   if (map[k]) openHud(map[k]);
@@ -1925,5 +1925,8 @@ function openHud(h) {
   else if (h === "tree") renderTree();
   else if (h === "rank") renderRank();
   else if (h === "menu") openMenu();
+  else if (h === "smith") renderSmith();
+  else if (h === "cards") renderCards();
+  else if (h === "more") renderMore();
   else openStarMap();
 }

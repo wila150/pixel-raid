@@ -304,3 +304,12 @@
   - 用在：行囊道具／素材格＋說明大圖（寶石左上小字等級）、魔物卡片列、技能鏈的招式卡／寶石格／選寶石清單、天賦樹（重要天賦 `N.th`，奪魔借 mp；核心 `N.ks`；起點 `s0–5`；`rr>=7` 才畫）、手機 Q／E／閃身按鈕（`.pico`；起源／傳說 E／被改寫的 Q 沒圖）、電腦版右下招式框上面、地上掉的寶石／卡片／素材／通貨。
   - 沒有圖的：新核心 4 個（血魔法、劍心通明、血祭、天人合一）、碎屑、精髓、超技能、丹藥，照舊用字；工藝台上面的通貨小標籤還是字。
   - 測試（Edge headless 截圖）：全部寶石／素材／通貨／卡片／79 招都有對應圖、行囊、技能鏈（橫直）、天賦樹、手機按鈕、地上掉落，沒有 JS 錯誤。
+- **v7.6 鐵匠鋪、卡片頁、快捷列 7＋更多（總表第 18 項，企劃 26，11/10）**：
+  - 快捷列 `QUICK`（inv.js）＝行囊、角色、技能、天賦、鐵匠 `smith`、秘境、星盤、`more`。「更多」(`renderMore`，cards.js `MORE`)＝卡片、任務、手冊、聊天、排行、設定；`ovBar` 在不屬於 QUICK 的頁面亮「更多」。手冊按鈕 `bookBtn` 不再放上快捷列，只留著記紅點；`moreDot` 看新卡片（`w.cardSeen` vs `book().c`）／手冊紅點。快捷鍵 B＝鐵匠鋪、L＝卡片（V 是護身法術，所以不是企劃寫的 V），I 只剩行囊。`openHud` 多 smith／cards／more。
+  - 鐵匠鋪 `js/smith.js`（codex.js 後）：`smTab` en｜aff｜forge、`smSel`（物品參照，行囊連結會帶過來）、`smPrev`（動手前 capture 記下來，右欄「改之前→現在」）。精煉邏輯從行囊搬來（`#smEn`）；改詞綴用 `curBtns/bindCur` ＋精髓；鍛造頁＝econ.js `curRow()`＋`econBody(tab, camp)`（從 econHtml 拆出來，forge／pill／exch 一張清單）＋碎屑兌換／超技能。行囊第一次打開劍靈說明搬家（`w.smithHint`）。
+  - 卡片頁 `js/cards.js`：卡槽（`cdSlotsHtml`）、收集冊 29 張（全部／武器卡／道袍卡；拿過沒持有半灰、沒拿過黑剪影＋`cdWhere` 掉落處）、右欄一顆「插到…上」（用 inv.js `insertCard`）。
+  - 行囊瘦身：右欄預設 `bagHint()`；物品說明拿掉精煉／通貨／精髓，改兩個 `.golink`（`data-go`）；武器組 `wsetHtml` 移到武器說明裡；左欄拿掉卡片列、`apHtml`、`gemHtml`；直向分頁只剩裝備｜背包。舊的 `craftHtml`／`cardChips` 程式還在但沒用到。
+  - 角色頁分頁＝數值｜外觀（`chTab` cult 自動變 attr）；數值頁＝五防＋攻擊／攻速／移速／爆擊，其他收進「詳細數值」（`chDef`）。轉職＋護身法術＝技能頁「轉職」分頁（`skTab` job，`chCult()`＋char.js `bindCult(again)`），紅點也移到技能。`.ov.k-char .ch*` 的轉職相關 CSS 改成 `.ov .ch*`。
+  - 輔助寶石一種一顆（企劃 21 §10-1）：tri.js `gemElse(k, sl, wt)`（a/q/e 看這把武器＋共用身法；在身法列找時看每把武器），`gemWhy` 回「已經串在 Q（萬劍）」；選寶石清單這種情況按鈕不灰（`.gem.mv`），點了舊位置退回背包、這格串上。舊存檔 `gemDupMig()`（`w.gemOne`，enterWorld 時）照 a→q→e、再身法，重複的退回背包＋劍靈說明。斬殺：一般 8–12%、王 3–5%、天劫王 ×0.5，`GEM_MP.exec` 1.3，`GEM_COST.exec`。
+  - 圖示（企劃 34）：tree 圖集加 xuemo/jianxin/xueji/tianren；mat 圖集加 `shard ess sup_meteor sup_swordrain sup_thunder pot fireres iceres psnres thres atkup dropup expup recall`（`propIco` 認 pot/shard/ess:/sup:；快捷欄丹藥／回城符 `.qico`；煉丹列 `.rcpico`；通貨列 `.curico`）。`ICO_VER` 7.6。切圖 scratchpad `cut3.js`（tree_c 要用小間距 3）。畫面上不再出現「符文」（卡片欄、星盤說明改字）；追蹤鈕 📌 換成 SVG 圖釘，canvas 追蹤字改「追蹤」。
+  - 測試（Playwright 844×390、390×844）：功能 28 項＋2 項是測試腳本本身的問題（身法標籤本來就串不了斬殺、L 鍵在 ovJust 那一刻送出），沒有 JS 錯誤；10 個畫面橫直截圖企劃驗收過。

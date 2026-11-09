@@ -28,7 +28,7 @@ const STAT_HELP = {
   mpRegen: ["真氣回復", "每秒回多少真氣。", "靠等級、智慧、技能「吐納」提高。"],
 };
 const TAB_HELP = {
-  attr: ["屬性", "屬性從天賦樹來：每升 1 級 1 點天賦點、每次轉職 +2。點任何一行，這裡會說明那個數值。", "武器看顏色吃主屬性：大刀拳＝力量、劍弓＝敏捷、法杖扇＝智力。"],
+  attr: ["數值", "屬性從天賦樹來：每升 1 級 1 點天賦點、每次轉職 +2。點任何一行，這裡會說明那個數值。", "武器看顏色吃主屬性：大刀拳＝力量、劍弓＝敏捷、法杖扇＝智力。"],
   cult: ["修行", "轉職不換職業，是讓角色變強：多輔助插槽、加段數、解鎖護身法術。", "護身法術就是 V（手機下方最右邊那顆）的保命技，在安全營地可以換。"],
   look: ["外觀", "暱稱是別的玩家看到的名字；時裝只改外觀，不影響數值。", ""],
 };
@@ -45,10 +45,12 @@ function chAttr() {
   const w = save.w, s = chStats();
   const res5 = `<div class="res5">${s.res.map(([k, n, v, c]) => `<button class="r5${chHelp === k ? " sel" : ""}${c ? " " + c : ""}" data-help="${k}"><span>${k === "phys" ? "物理" : n}</span><b>${v}</b></button>`).join("")}</div>${resPen() > 0 ? `<div class="r5pen">此地元素抗性 −${Math.round(resPen() * 100)}%（上面已經算進去）</div>` : ""}`;
   const a = typeof treeAttr === "function" ? treeAttr() : w.ap, main = (typeof TR_WMAIN !== "undefined" && TR_WMAIN[curWeapon()]) || "str", fr = typeof treeFree === "function" ? treeFree() : 0;
-  return res5 + `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}${k === main ? " ★" : ""}</button><b>${a[k]}</b></div>`).join("")}
-    <div class="chapfoot"><span>天賦點 <b class="${fr > 0 ? "hot" : ""}">${fr}</b></span><button id="toTree">打開天賦樹（P）</button></div></div>
-    <div class="chhead">主要</div><div class="chgrid">${s.main.map(chRow).join("")}</div>
-    <button class="chhead fold" id="chDef">防禦 ${chDef ? "▾" : "▸"}</button>${chDef ? `<div class="chgrid">${s.def.map(chRow).join("")}</div>` : ""}`;
+  // 企劃 26 §8：五個防禦＋攻擊、攻速、移速、爆擊；其他收進「詳細數值」
+  const top = ["atk", "aspd", "spd", "crit"], m = s.main.filter((r) => top.includes(r[0])).sort((x, y) => top.indexOf(x[0]) - top.indexOf(y[0]));
+  return res5 + `<div class="chhead">攻擊</div><div class="chgrid">${m.map(chRow).join("")}</div>
+    <button class="chhead fold" id="chDef">詳細數值 ${chDef ? "▾" : "▸"}</button>${chDef ? `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}${k === main ? " ★" : ""}</button><b>${a[k]}</b></div>`).join("")}
+    <div class="chapfoot"><span>天賦點 <b class="${fr > 0 ? "hot" : ""}">${fr}</b></span><button id="toTree">天賦樹（P）</button></div></div>
+    <div class="chgrid">${s.main.filter((r) => !top.includes(r[0])).concat(s.def).map(chRow).join("")}</div>` : ""}`;
 }
 function chCult() {
   const w = save.w, j = jobLv(), J = JOBS[j], camp = atCamp(), cur = svKey();
@@ -84,8 +86,9 @@ function renderChar(msg = "") {
   if (ovKind !== "char" && !ovOpen("char")) return;
   if (msg) ovMsg = msg;
   B = worldStats();
-  const tabs = [["attr", "屬性", false], ["cult", "修行", (() => { const J = JOBS[jobLv()]; return J && save.w.lv >= J.lv; })()], ["look", "外觀", false]];
-  const body = chTab === "attr" ? chAttr() : chTab === "cult" ? chCult() : fashionHtml();
+  if (chTab === "cult") chTab = "attr"; // v7.6：轉職、護身法術搬到技能頁
+  const tabs = [["attr", "數值", false], ["look", "外觀", false]];
+  const body = chTab === "attr" ? chAttr() : fashionHtml();
   ov.innerHTML = `<div class="col l chbox">${chLeft()}</div>
     <div class="col c chbox"><div class="btabs">${tabs.map(([k, n, dot]) => `<button class="btab${chTab === k ? " on" : ""}" data-ct="${k}">${n}${dot ? " ●" : ""}</button>`).join("")}</div>${body}</div>
     <div class="col r chbox">${chRight()}</div>
@@ -99,17 +102,21 @@ function bindChar() {
   ov.querySelectorAll("[data-help]").forEach((b) => b.addEventListener("click", () => { sfx("click"); chHelp = chHelp === b.dataset.help ? null : b.dataset.help; again(); }));
   const tt = document.getElementById("toTree"); if (tt) tt.onclick = () => { sfx("click"); ovGo("tree"); };
   const df = document.getElementById("chDef"); if (df) df.onclick = () => { sfx("click"); chDef = !chDef; again(); };
-  const dj = document.getElementById("doJob"); if (dj) dj.onclick = () => { if (doJob()) again(`完成${JOBS[jobLv() - 1].n}！`); };
-  ov.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
-    const k = b.dataset.sv; if (!svHas(k)) return;
-    if (!atCamp()) { sfx("bad"); again("回到安全營地才能換護身法術"); return; }
-    w.sv = k; writeSave(); sfx("arrive"); if (typeof wbarDraw === "function") wbarDraw(true); again(`護身法術：${SAVES[k].n}`);
-  }));
+  bindCult(again);
   const cl = document.getElementById("chList"); if (cl) cl.onclick = () => { sfx("click"); chList = !chList; again(); };
   ov.querySelectorAll("[data-char]").forEach((b) => b.addEventListener("click", () => { const m = switchChar(+b.dataset.char); if (m) again(m); }));
   const nc = document.getElementById("newChar"); if (nc) nc.onclick = () => { const m = newChar(); if (m) again(m); };
   if (chTab === "look") bindFashion();
 }
 // 舊的 renderAP（world.js）換成新的角色覆蓋層；openHud("ap")、改暱稱、換時裝都會呼叫 renderAP
+// 轉職＋護身法術（v7.6 起在技能頁「轉職」分頁）
+function bindCult(again) {
+  const w = save.w, dj = document.getElementById("doJob"); if (dj) dj.onclick = () => { if (doJob()) again(`完成${JOBS[jobLv() - 1].n}！`); };
+  ov.querySelectorAll("[data-sv]").forEach((b) => b.addEventListener("click", () => {
+    const k = b.dataset.sv; if (!svHas(k)) return;
+    if (!atCamp()) { sfx("bad"); again("回到安全營地才能換護身法術"); return; }
+    w.sv = k; writeSave(); sfx("arrive"); if (typeof wbarDraw === "function") wbarDraw(true); again(`護身法術：${SAVES[k].n}`);
+  }));
+}
 renderAP = function (msg) { renderChar(typeof msg === "string" ? msg : ""); };
 OV_KEYS.char = ["escape", "c", "o"];

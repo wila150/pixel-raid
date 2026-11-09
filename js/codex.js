@@ -143,7 +143,7 @@ const bookBtn = document.createElement("button");
 bookBtn.className = "qbtn"; bookBtn.dataset.q = "book"; bookBtn.setAttribute("aria-label", "手冊"); bookBtn.title = "冒險手冊（K）";
 bookBtn.innerHTML = '<b class="qglyph">冊</b><small>手冊</small>';
 bookBtn.addEventListener("click", () => { if (state !== "world" && !ovKind) return; ovGo("book"); });
-quickEl.insertBefore(bookBtn, quickEl.querySelector('[data-q="rank"]'));
+// v7.6 企劃 26：手冊收進「更多」，這顆按鈕不放上快捷列，只留著記紅點
 const bookDot = (on) => { bookBtn.classList.toggle("dot", !!on); };
 const _ovGoBk = ovGo;
 ovGo = function (q) {
