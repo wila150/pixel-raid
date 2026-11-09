@@ -799,3 +799,6 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .rpick .gem small { display: block; font-size: 10.5px; line-height: 1.35; opacity: 0.9; text-align: left; }
 .gmrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 .gmerge2 { font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid #8a7a50; background: rgba(60, 50, 20, 0.5); color: #ffe9a0; }
+/* v7.0 E 鍵上的天罰能量 % */
+#pad .btn .enp { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); font-style: normal; font-size: 10px; font-weight: bold; color: #c8b8ff; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; white-space: nowrap; }
+#pad .btn .enp.full { color: #ffd84a; }

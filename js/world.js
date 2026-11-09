@@ -226,7 +226,7 @@ function moveBody(o, dx, dy, r) {
 // ───────── 角色 ─────────
 const AP = {
   str: { n: "STR 力量", d: "物理武器（劍、重劍、拳、弓）傷害 +3%、護甲 +3" },
-  agi: { n: "AGI 敏捷", d: "攻速 +1.5%、閃避 +0.4%、法術壓制 +0.3%、移動 +0.5%" },
+  agi: { n: "AGI 敏捷", d: "攻速 +1.5%（上限 200%）、閃避 +0.4%、法術壓制 +0.3%、移動 +0.5%（前 80 點）" },
   wis: { n: "INT 智慧", d: "法術武器（法杖、扇）傷害 +3%、能量護盾 +6、真氣 +4" },
   vit: { n: "VIT 體質", d: "生命 +12、護甲 +1" },
 };
@@ -234,13 +234,14 @@ const blankW = () => ({ lv: 1, exp: 0, x: 1200, y: 1530, wp: ["town"], ap: { str
 const expNext = (lv) => Math.round(36 * Math.pow(lv, 1.7));
 let W0 = null; // 大世界執行中的資料
 let inWorld = false;
+const AGI_SPD_PTS = 80, SPD_CAP = 1.75, ASPD_CAP = 2; // 企劃 24：常駐移速最多 +75%、攻速最多 ×2
 function worldStats() {
   const w = save.w, a = w.ap, wt = curWeapon(), spell = !!SPELL_WT[wt];
   const b = bonus();
   b.maxHp = Math.round(b.maxHp + (w.lv - 1) * 12 + a.vit * 12);
   b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a.str * (spell ? 0.01 : 0.03)) * (1 + a.wis * (spell ? 0.03 : 0.01));
   b.aspd = (b.aspd || 1) * (1 + a.agi * 0.015);
-  b.spdMul *= 1 + a.agi * 0.005;
+  b.spdMul *= 1 + Math.min(a.agi, AGI_SPD_PTS) * 0.005; // 企劃 24：只算前 80 點；總上限在 cap.js
   b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);
   b.supp = Math.min(0.6, (b.supp || 0) + a.agi * 0.003);
   for (const e of ELES) b["res" + e] = b["res" + e] || 0; // 抗性上限、地區扣抗性在 effRes 算（看當下位置）
@@ -337,7 +338,7 @@ function enterWorld() {
   pad.classList.remove("hidden");
   setPadLabels(true);
   if (heroNote) { notice("英雄系統改版（選英雄拿掉了）", "#9fe8ff"); heroNote.split("；").forEach((t) => notice(t.replace("英雄改版：", ""), "#cfe8ff")); }
-  if (W0gift) { W0gift = false; notice("得到 2 顆技能寶石！打開背包鑲到武器上", "#ffb347"); }
+  if (W0gift) { W0gift = false; notice("得到 2 顆輔助寶石！技能 → 技能鏈，點招式下面的格子串上去", "#ffb347"); }
   last = performance.now();
 }
 let W0gift = false;
@@ -653,7 +654,7 @@ function updateWorld(dt) {
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); p.mp -= WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (k === "attack") W0.justAtk = true; if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); p.mp -= WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -1706,18 +1707,18 @@ const QUESTS = [
   { t: "出城往北，斬妖 8 隻", k: "kill", z: "grass", n: 8, item: 1, wt: "staff" },
   { t: "找到靈草原傳送陣", k: "wp", id: "grass", n: 1, item: 1, wt: "bow" },
   { t: "升到 Lv.5（右上角配點）", k: "lv", n: 5, item: 1 },
-  { t: "斬殺一隻精英妖獸", k: "elite", n: 1, item: 1 },
-  { t: "幽暗森林斬妖 15 隻", k: "kill", z: "forest", n: 15 },
+  { t: "救出被妖獸圍住的採藥童子（清光他身邊那一營）", k: "rescue", z: "grass", n: 1, item: 1 }, // 企劃 23 A：事件任務（原地改寫，不能插在中間）
+  { t: "幽暗森林：找到三把染黑的斷劍", k: "find", z: "forest", n: 3 },
   { t: "找到幽暗森林傳送陣", k: "wp", id: "forest", n: 1 },
   { t: "升到 Lv.11", k: "lv", n: 11, item: 1 },
-  { t: "亂石荒原斬妖 20 隻", k: "kill", z: "waste", n: 20 },
+  { t: "亂石荒原：獵殺有名字的精英「石中魂・孤」", k: "named", z: "waste", n: 1 },
   { t: "找到亂石荒原傳送陣", k: "wp", id: "waste", n: 1 },
   { t: "升到 Lv.16", k: "lv", n: 16, item: 1 },
   { t: "焚天火山斬妖 20 隻", k: "kill", z: "volcano", n: 20 },
   { t: "找到焚天火山傳送陣", k: "wp", id: "volcano", n: 1 },
   { t: "火山北邊祭壇：打倒焚天石魔", k: "boss", n: 1, item: 2 },
   { t: "往東過雪山山口，找到寒霜雪域傳送陣", k: "wp", id: "snow", n: 1, item: 1 },
-  { t: "寒霜雪域斬妖 25 隻（小心凍傷）", k: "kill", z: "snow", n: 25 },
+  { t: "寒霜雪域：修復三個被劈開的陣眼", k: "hold", z: "snow", n: 3 },
   { t: "升到 Lv.26", k: "lv", n: 26, item: 2 },
   { t: "寒霜雪域斬殺精英 3 隻", k: "elite", z: "snow", n: 3, item: 2 },
   { t: "雪域往東過山口，找到幽冥沼澤傳送陣", k: "wp", id: "swamp", n: 1, item: 2 },

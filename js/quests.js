@@ -9,7 +9,7 @@ const qReward = (q) => {
   return r.join("、");
 };
 const qWhere = (q, ch) => { const z = ZONES[ch]; return q.k === "boss" ? "焚天火山北邊祭壇" : `${z.n}（妖獸 Lv.${z.lv[0]}–${z.lv[1]}）`; };
-const qHow = (q) => ({ kill: "在該地區斬殺妖獸，精英也算", wp: "走到傳送陣附近就會點亮", lv: "斬妖、做任務升級；升級拿能力點、開新技能", elite: "精英怪名字是藍色、比較大隻", boss: "火山祭壇召喚世界王打倒它" }[q.k] || "");
+const qHow = (q) => ({ kill: "在該地區斬殺妖獸，精英也算", wp: "走到傳送陣附近就會點亮", lv: "斬妖、做任務升級；升級拿能力點、開新技能", elite: "精英怪名字是藍色、比較大隻", boss: "火山祭壇召喚世界王打倒它", rescue: "童子在小地圖黃框那一營，把那一營的妖獸全部殺光", find: "斷劍插在地上會發光，小地圖黃框是下一把，走過去就撿起來", named: "牠是金色名字的精英，血很厚、又快又硬；打倒必掉一件玄品裝備", hold: "站在發光的陣眼上 10 秒（被打不會中斷，離開就重算），妖獸會衝過來" }[q.k] || "");
 function renderQuests() {
   if (ovKind !== "quest" && !ovOpen("quest")) return; // 企劃 15：改用覆蓋層
   const w = save.w, cur = w.q || 0, done = cur >= QUESTS.length;

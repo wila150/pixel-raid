@@ -136,7 +136,7 @@ function drawOrbs() {
   if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = full ? "#ffe9a0" : "#d8d0ff";
     ctx.fillText(full ? "E 天罰" : `${Math.floor(ef * 100)}%`, ex, ey + 4);
-    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
+    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", WSKILL.roll.n || "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
     let x = ex - R - 16 - sk.length * 50;
     const cg = comboGlow();
     for (const [k, n, id] of sk) {
