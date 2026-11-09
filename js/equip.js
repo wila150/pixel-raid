@@ -171,7 +171,7 @@ const GEMS = {
 // 企劃 21 §8-6：每顆都有代價；真氣倍率串幾顆就相乘（省元 −15%／級）
 const GEM_MP = { power: 1.1, pierce: 1.1, blood: 1.1, frost: 1.1, enlarge: 1.1, haste: 1.1, burst: 1.1, det: 1.1, seek: 1.1, trail: 1.1, rshield: 1.1, icepath: 1.1, exec: 1.1, ice: 1.1, fire: 1.1, volt: 1.1, venom: 1.1,
   split: 1.3, volley: 1.3, chain: 1.3, focus: 1.3, efocus: 1.3, bell: 1.3, spread: 1.3, bounce: 1.3, multi: 1.3, after: 1.3, lmp: 1.5, rapid: 1.5, boomer: 1.5, totem: 2, trigc: 2, trigh: 2, thrift: 1 };
-const GEM_COST = { split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%", chain: "跳到的那隻只有 70% 傷害", lmp: "多出來的每道只有 70%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
+const GEM_COST = { split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%；同一次打到同一隻王，第 2 道起只算 50%", chain: "跳到的那隻只有 70% 傷害", lmp: "多出來的每道只有 70%；同一次打到同一隻王，第 2 道起只算 50%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
   focus: "範圍 −30%", efocus: "不會冰凍、燃燒、中毒，也不會觸發融化、蒸汽、毒爆", totem: "傷害 −50%", trigc: "自動放的傷害 −20%；冷卻 1 秒", trigh: "自動放的傷害 −20%；冷卻 1 秒", bounce: "每跳一次傷害 −20%", after: "第二下傷害較低",
   spread: "要跟火元素串在同一招", bell: "只有近戰招打中才疊", thrift: "沒有" };
 const gemMp = (k) => GEM_MP[k] || 1.1;

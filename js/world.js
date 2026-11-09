@@ -698,6 +698,7 @@ function updateWorld(dt) {
       if (gemLv("boomer") && o.back === undefined) { o.back = o.life * 0.8; o.life *= 1.8; o.rbm = 1; }
     }
     if (W0.sureCast) o.sure = true;
+    if (!o.pdone && !o.child && (gemLv("lmp") || gemLv("volley"))) o.grp = { hit: new Set() }; // 多重投射／齊射：同一次出手打到同一隻王，第 2 道起 50%（企劃 21 §9-1）
     if (ownShots() >= 60) { const last = W0.pshots.slice().reverse().find((s) => !s.ghost && s.life > 0); if (last) { last.dmg += o.dmg; return; } } // 同時最多 60 道：超過就合併傷害
     W0.pshots.push(Object.assign({ x: p.x, y: p.y - 3, vx: Math.cos(a) * o.v, vy: Math.sin(a) * o.v, a, hit: new Set() }, o));
     if (!o.child) multiShots(a, o, shoot);
@@ -995,7 +996,8 @@ function updateWorld(dt) {
     for (const m of W0.mobs) if (s.life > 0 && !m.dead && !s.hit.has(m) && Math.hypot(m.x - s.x, m.y - s.y) < WMOBS[m.type].r + (s.kind === "big" ? 7 : 4)) {
       s.hit.add(m);
       if (s.boom) { s.life = 0; W0.sureNow = !!s.sure; for (const n of W0.mobs) if (!n.dead && Math.hypot(n.x - s.x, n.y - s.y) < s.boom.r + WMOBS[n.type].r) hitMob(n, wDmg(s.boom.dmg), s.boom.kb, s, true); W0.sureNow = false; fxBoom(s.x, s.y, s.boom.r, "140,210,255"); break; } // 爆裂法球
-      W0.critAdd = s.critAdd || 0; W0.sureNow = !!s.sure; hitMob(m, wDmg(s.dmg), s.kb, p, true); W0.critAdd = 0; W0.sureNow = false;
+      let gm = 1; if (s.grp && m.boss) { if (s.grp.hit.has(m)) gm = 0.5; else s.grp.hit.add(m); }
+      W0.critAdd = s.critAdd || 0; W0.sureNow = !!s.sure; hitMob(m, wDmg(s.dmg) * gm, s.kb, p, true); W0.critAdd = 0; W0.sureNow = false;
       if (s.slow) m.slowT = Math.max(m.slowT || 0, s.slow);
       if (s.heal) s.hits = (s.hits || 0) + 1;
       if ((B.uq.split || s.spl) && !s.child && !s.split) { // 傳說／分裂寶石：分成小的往旁邊飛（分出來的不再分裂、不吃多重投射）
