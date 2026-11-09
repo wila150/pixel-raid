@@ -1,11 +1,11 @@
 // 萬劍仙途 — 世界難度「天劫等級」（企劃 40 §2-B、§6，總表第 28 項，v8.3）
-// 凡塵（現在的難度）→ 一劫 … 六劫：每劫怪血 ×1.8、傷害 ×1.4、掉寶數量 +25%、傳說機率 +40%、經驗 +20%
+// 凡塵（現在的難度）→ 一劫 … 六劫：每劫怪血 ×2.5、傷害 ×1.25、掉寶數量 +25%、傳說機率 +40%、經驗 +20%
 // 只影響仙界野外的怪和四隻區域王；秘境（看鑰匙）、天劫版王（自己的難度）不變。
 // 存 save.w.tj（現在選的）、save.w.tjOpen（最高能選，第一次＝1）。在營地結界裡（祭壇頁）換。
 // 解鎖：在最高那一劫打倒一隻「等級不低於你 15 級以上」的區域王（或劍尊）→ 開下一劫（避免高等回去打石魔一路開到六劫）
 "use strict";
 const TJ_N = ["凡塵", "一劫", "二劫", "三劫", "四劫", "五劫", "六劫"];
-const TJ_MAX = 6, TJ_HP = 1.8, TJ_DMG = 1.4, TJ_QTY = 0.25, TJ_LEG = 0.4, TJ_EXP = 0.2;
+const TJ_MAX = 6, TJ_HP = 2.5, TJ_DMG = 1.25, TJ_QTY = 0.25, TJ_LEG = 0.4, TJ_EXP = 0.2;
 const tjCur = () => (save.w && save.w.tj) || 0;
 const tjOpenN = () => Math.max(1, (save.w && save.w.tjOpen) || 1);
 const tjSkip = (m) => !m || m.rift || m.R || m.tj || (typeof RIFT !== "undefined" && RIFT);
@@ -64,7 +64,7 @@ function tjHtml() {
   const cur = tjCur(), op = tjOpenN(), camp = typeof atCamp === "function" && atCamp();
   const btns = TJ_N.map((nm, i) => `<button class="tjb${i === cur ? " on" : ""}" data-tjl="${i}" ${i > op || i === cur || !camp ? "disabled" : ""}>${i > op ? "🔒" : ""}${nm}</button>`).join("");
   return `<h3>天劫等級 <small>現在：${TJ_N[cur]}</small></h3>
-    <p class="dim">想要挑戰就往上開：每一劫怪物血量 ×1.8、傷害 ×1.4，掉寶數量 +25%、傳說機率 +40%、經驗 +20%。只影響仙界野外和區域王（秘境、天劫挑戰不變）。在最高那一劫打倒一隻等級不低於你 15 級以上的區域王，就開下一劫。${camp ? "" : `<b style="color:#ff9a7a">要在營地結界裡才能換。</b>`}</p>
+    <p class="dim">想要挑戰就往上開：每一劫怪物血量 ×2.5、傷害 ×1.25，掉寶數量 +25%、傳說機率 +40%、經驗 +20%。只影響仙界野外和區域王（秘境、天劫挑戰不變）。在最高那一劫打倒一隻等級不低於你 15 級以上的區域王，就開下一劫。${camp ? "" : `<b style="color:#ff9a7a">要在營地結界裡才能換。</b>`}</p>
     <div class="tjrow">${btns}</div><p class="dim tjeff">${TJ_N[cur]}：${tjEff(cur)}</p>`;
 }
 const _altarHtmlTjl = altarHtml;
