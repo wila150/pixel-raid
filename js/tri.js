@@ -297,8 +297,9 @@ function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy(), ws = WSKILLS[wt];
   if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
   const card = (l, k, n, d, need) => {
-    const cur = (triOf(wt, l) || "") === k, open = !k || triOpen(wt, l, k);
-    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}" data-tl="${l}" data-tk="${k}" ${open && !cur ? "" : "disabled"}><b>${l === "e" && !k && (jobLv() >= 4 || curUq()) ? "" : skIco(wt, l, k, "tico")}${n}</b><small>${open ? d : `🔒 Lv.${need} 開放`}</small></button>`;
+    const cur = (triOf(wt, l) || "") === k, open = !k || triOpen(wt, l, k), key = skgKey(wt, l, k), buy = k && !open && !skgHas(key);
+    const lockTxt = buy ? `${lv >= need ? "" : `Lv.${need} `}可在營地技能商人購買・${(need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${need} 開放`;
+    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${l}" data-tk="${k}" ${buy ? `data-shop="${l === "r" ? "r" : wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${l === "e" && !k && (jobLv() >= 4 || curUq()) ? "" : skIco(wt, l, k, "tico")}${n}</b><small>${open ? d : lockTxt}</small>${open ? skgBar(key) : ""}</button>`;
   };
   const row = (l) => {
     const L = triList(wt, l);
@@ -307,7 +308,7 @@ function renderTri(msg = "") {
     const idx = (L || []).map((o, i) => [o, TRI_LV[l][i]]).sort((a, b) => a[1] - b[1]);
     let first = [card(l, "", base, bd, 1)];
     if (l === "e") { // 企劃 35：原本的 E 永遠一格；起源（四轉）、傳說專屬各自另一格
-      const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small></button>`;
+      const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small>${k === "base" && lv >= E_LV ? skgBar(skgKey(wt, "e", "base")) : ""}</button>`;
       first = [ec("base", ws.ult[0], "原本的 E 招", skIco(wt, "e", "", "tico"))];
       if (curUq()) first.push(ec("uq", WUQ[curUq()][0], "傳說武器的專屬 E 招", ""));
       if (jobLv() >= 4) first.push(ec("origin", "起源覺醒", "四轉：全螢幕時停的起源大招（不能串輔助）", ""));
@@ -317,11 +318,12 @@ function renderTri(msg = "") {
     const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${mm !== 1 ? `・真氣 ×${mm}` : ""}`;
     return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
   };
-  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能照等級開，點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>`;
+  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>`;
 }
 function bindTri() {
   const again = (m) => { writeSave(); setPadLabels(true); renderSkills(m); };
   ov.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.shop) { sfx("click"); shopWt = b.dataset.shop; skTab = "shop"; renderSkills(); return; }
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
     if (why) { sfx("bad"); renderSkills(why); return; }
     const sp = l === "e" && E_SPEC.includes(k);
@@ -380,6 +382,6 @@ setInterval(() => {
     for (const l of ["a", "q", "e", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (TRI_LV[l][i] > W0.triLv && TRI_LV[l][i] <= lv) got.push(o.n); }); }
     if (E_LV > W0.triLv && E_LV <= lv) { got.push(WSKILLS[wt].ult[0]); applyWeapon(); setPadLabels(true); }
     W0.triLv = lv;
-    if (got.length) (typeof notice === "function" ? notice(`解鎖新技能「${got.join("、")}」（技能 → 技能鏈 換上）`, "#ffe066") : floatText(W0.x, W0.y - 40, `解鎖新技能「${got.join("、")}」`, "#ffe066", true));
+    if (got.length) (typeof notice === "function" ? notice(`可以買新技能「${got.join("、")}」了（營地 → 技能 → 技能商人）`, "#ffe066") : floatText(W0.x, W0.y - 40, `可以買新技能「${got.join("、")}」`, "#ffe066", true));
   }
 }, 1000);

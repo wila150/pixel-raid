@@ -339,3 +339,9 @@
 - **v8.0.3（企劃 35 §5-1）**：萬劍歸心 26→57、劍雨 18→27、雷鏈 45→72、暴風雪 14→19.6、焚天火牆 `mul: 1.3`（walls 支援 `f.mul`）、刀陣 32→44.8、金剛掌 55→66、花舞 6→7.2。冰封 0 的原因：企劃 bot 的木樁 `m.frz = 1e9`，冰封把它蓋成 1.5 秒→解凍走回營地回滿血；改 `Math.max`。用企劃的 `eRun`（scratchpad `#frz`）量：冰封 77/72。
 - **v8.0.4（使用者：「E 招不符合技能說明」）**：`applyWeapon` 選起源（含四轉預設）時 `WSKILL.ult.n`＝「起源覺醒」（傳說武器「起源・X」），之前按鈕顯示原本 E 的名字但放出起源。霸體說明拿掉「不會被擊退」；冰封說明補傷害＋王只凍 0.5 秒。scratchpad `#elabel`：三轉／四轉 × 6 武器 × 每個 E 選項，按鈕名字都對。
 
+- **v8.1 技能寶石（總表第 24 項，企劃 37，11/10）**：新檔 `js/skgem.js`（sellall.js 後）。`save.skg`（帳號共用）＝`{ "劍:a:dance": {lv, xp}, "r:ghost": ..., "sword:a:base": ... }`，key 用 `skgKey(wt,l,k)`（`k` 空＝base）。原本的普攻／Q／E／閃身（`:base`）免費；`triOpen` 被換掉＝`skgHas`＋（等級到或 `triOwn`）。
+  - 舊存檔 `skgMig()`（每個角色 `w.skgV`，enterWorld 後）：已達等級＋`triOwn` 的全部送；`save.skgHint` 劍靈說明一次。
+  - 技能商人＝技能頁分頁 `skTab="shop"`（`renderSkShop`／`bindSkShop`，`shopWt` 武器分頁＋身法），價格 `need×SKG_PRICE(40)`，要 `atCamp()`。技能鏈沒買的卡 `.tricard.buy` 點了跳商人。升級提示改「可以買新技能」。
+  - 等級：`gainExp` 包一層（閉關 `medGiving` 不給）→ `skgGain`：普攻／Q／E／身法現在那四顆各 +10%；`skgNeedXp(L)=0.4×expNext(max(1,5L−15))`；上限 `skgCap()`＝min(20, Lv÷5＋4)，有效等級 `skgLv` 取小（共用寶石給小號用會被壓）。起源／傳說 E／被改寫的 Q 不是寶石（`skgOfSlot` 回 null）。
+  - 效果：world.js `wDmg` 乘 `skgDmg(CUR_SL)`＝1＋**2%**×(lv−1)（企劃寫 3%，§3 驗算 Lv.100 平均 10 級 → 打王快 21% 超過 15%，照企劃的退路改 2%）；`jobStats` 包裝把 `B.skCd[attack|spin|ult|roll]` 乘 1−3%×floor(lv/5)。卡片／商人列顯示 `skgBar`（等級＋進度條＋上限說明）。
+  - 測試 scratchpad `#skg` 26 項全過（搬家、新角色、野外買不到、營地買、卡片跳商人、分經驗、上限、傷害、冷卻、起源、triOwn）、舊 `#e35ui`／`#elabel` 全過；截圖橫直。**打王時間要企劃 bot 驗**（技能寶石＝上限一半）。

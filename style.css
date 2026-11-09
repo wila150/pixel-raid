@@ -980,3 +980,21 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 #eName { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 46px); transform: translateX(-50%); z-index: 30; pointer-events: none; font-size: 13px; letter-spacing: 2px; color: #ffe9a0; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); opacity: 0; white-space: nowrap; }
 #eName.on { animation: eNameA 1.3s ease-out forwards; }
 @keyframes eNameA { 0% { opacity: 0; transform: translate(-50%, 4px); } 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; } }
+/* v8.1 技能寶石（企劃 37） */
+.skgbar { display: flex; align-items: center; gap: 4px; font-size: 10px; margin-top: 2px; flex-wrap: wrap; }
+.skgbar em { font-style: normal; color: #9fe8ff; white-space: nowrap; }
+.skgbar i { flex: 1; min-width: 30px; height: 5px; border-radius: 3px; background: linear-gradient(90deg, #6fd3ff calc(var(--f) * 100%), rgba(255,255,255,0.12) 0); }
+.skgbar .skglow { color: #ff9a7a; flex-basis: 100%; }
+.tricard.buy { opacity: 0.7; cursor: pointer; border-style: dashed; }
+.tricard.buy small { color: #ffe066; }
+.sktabs { margin: 6px 0; flex-wrap: wrap; }
+.skglist { display: flex; flex-direction: column; gap: 6px; }
+.skgrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(20, 24, 22, 0.6); }
+.skgrow.own { border-color: rgba(111, 211, 255, 0.45); }
+.skgl { display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
+.skgl b { color: #ffe9a0; font-size: 14px; }
+.skgl small { display: block; font-size: 11px; opacity: 0.85; line-height: 1.35; }
+.skgr button { white-space: nowrap; }
+.skgown { color: #9fe8ff; font-size: 12px; white-space: nowrap; }
+.skgl .tico { width: 34px; height: 34px; border-radius: 6px; flex: none; }
+.skgr button:not(:disabled) { border-color: #ffd84a; color: #ffe9a0; background: rgba(90, 70, 20, 0.6); }

@@ -29,14 +29,14 @@ function renderSkills(msg = "") {
   const w = save.w;
   if (ovKind !== "skill" && !ovOpen("skill")) return; // 企劃 15：改用覆蓋層
   skMig();
-  if (skTab !== "job") skTab = "tri"; // v7.2：大節點、巔峰點搬到天賦樹；v7.6：轉職、護身法術從角色頁搬來
+  if (skTab !== "job" && skTab !== "shop") skTab = "tri"; // v7.2：大節點、巔峰點搬到天賦樹；v7.6：轉職、護身法術從角色頁搬來
   if (typeof B !== "undefined") B = worldStats();
   const nw = typeof triNew === "function" && triNew().length, J = JOBS[jobLv()], jd = !!J && w.lv >= J.lv;
-  const tabs = `<div class="btabs">${[["tri", "技能鏈", nw], ["job", "轉職", jd]].map(([k, n, d]) => `<button class="btab${skTab === k ? " on" : ""}" data-st="${k}">${n}${d ? " ●" : ""}</button>`).join("")}</div>`;
-  const body = skTab === "tri" ? renderTri(msg) : `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="skjob">${chCult()}</div>`;
+  const tabs = `<div class="btabs">${[["tri", "技能鏈", nw], ["shop", "技能商人", 0], ["job", "轉職", jd]].map(([k, n, d]) => `<button class="btab${skTab === k ? " on" : ""}" data-st="${k}">${n}${d ? " ●" : ""}</button>`).join("")}</div>`;
+  const body = skTab === "tri" ? renderTri(msg) : skTab === "shop" ? renderSkShop(msg) : `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="skjob">${chCult()}</div>`;
   ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">${tabs}${body}</div></div>`;
   ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = b.dataset.st; renderSkills(); }));
-  if (skTab === "tri") bindTri(); else bindCult((m) => renderSkills(m));
+  if (skTab === "tri") bindTri(); else if (skTab === "shop") bindSkShop(); else bindCult((m) => renderSkills(m));
 }
 // 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有新技能／巔峰點 → 技能
 setInterval(() => {
