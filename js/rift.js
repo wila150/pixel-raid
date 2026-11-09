@@ -7,7 +7,7 @@
 const RIFT_IX0 = 120, RIFT_IY0 = 46, RIFT_IW = 95, RIFT_IH = 64; // x 1920–3440、y 736–1760（v6.1 再加寬 1.25 倍，企劃 16 第 10-2 節；避開沼澤傳送陣 3560）
 const RIFT_LIVES = 3;
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
-const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : ["swamp", "thunder", "sky", "volcano", "snow"][tier % 5]);
+const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : tier <= 15 ? (tier % 2 ? "swamp" : "thunder") : "sky"); // 11–15 沼澤／雷谷、16 以上仙域（企劃 16 §3-2）
 const riftUnlocked = () => !!save.w && ((save.w.wp || []).includes("swamp") || save.w.lv >= 30);
 const riftT2W = (tx, ty) => ({ x: (RIFT_IX0 + tx) * TS + 8, y: (RIFT_IY0 + ty) * TS + 8 });
 

@@ -21,10 +21,18 @@ const MAP_MODS = {
   spellw: { t: "s", n: "法術護體（法術傷害 −40%）", q: 16, bad: (wt) => !!SPELL_WT[wt] },
   reflect: { t: "s", n: "反震（你造成傷害的 5% 彈回）", q: 14 },
   lordhp: { t: "s", n: "秘境之主血量 +60%", q: 12 },
+  // v6.6 補企劃 16 §3-5、§9（效果在 riftmod.js）；g 同一組只會骰到一條
+  curse: { t: "s", n: "詛咒怪（死掉留下毒池）", q: 12 },
+  thund: { t: "s", n: "雷擊（怪死掉 0.6 秒後落雷）", q: 12 },
+  brkfast: { t: "s", n: "破體加速（小怪也會疊破體，4 秒才清）", q: 12 },
+  ...Object.fromEntries(["F", "W", "T", "P"].flatMap((e) => [
+    ["eleup_" + e, { t: "s", g: "eleup", e, n: `元素加持（怪物全部變${ELE_N[e]}屬性）`, q: 8 }],
+    ["eleimm_" + e, { t: "s", g: "eleimm", e, n: `${ELE_N[e]}元素免疫（${ELE_N[e]}元素武器傷害 −70%）`, q: 14, bad: () => typeof wEle === "function" && wEle() === e }],
+  ])),
 };
 const KEY_MAX = 20, RIFT_MAX = 10;
 const KEY_RARITY = [{ n: "凡", c: "#d8d2e0", mods: [0, 0] }, { n: "靈", c: "#6fb8ff", mods: [1, 2] }, { n: "玄", c: "#ffd84a", mods: [3, 4] }];
-const riftLv = (tier) => (tier <= 10 ? 25 + 5 * tier : 75 + 4 * (tier - 10)); // 1–10 層：Lv.30 → 75；11 層以上每層 +4 級（企劃 16 第 9 節，劍尊後）
+const riftLv = (tier) => (tier <= 10 ? 25 + 5 * tier : tier <= 20 ? 75 + 5 * (tier - 10) : 125 + 3 * (tier - 20)); // 1–10 層 Lv.30→75；11–20 層每層 +5（→125）；21 層以上每層 +3（企劃 16 §3-2）
 const riftCap = () => (save.w && typeof rbKilled === "function" && rbKilled("sky") ? 9999 : RIFT_MAX); // 打倒無相劍尊才沒有上限
 const keyTierFor = (lv) => (lv < 28 ? 0 : clamp(Math.round((lv - 25) / 5), 1, RIFT_MAX));
 function makeKey(tier, q = null) {
@@ -35,7 +43,9 @@ function makeKey(tier, q = null) {
   return k;
 }
 function rollKeyMods(k, n) { // 一半前綴一半後綴（單數時後綴多一條）
-  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x), suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
+  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
+  const grp = {}; suf = suf.filter((m) => { const g = MAP_MODS[m].g; if (!g) return true; (grp[g] = grp[g] || []).push(m); return false; }); // 同一組（四種元素）只留一條，機率跟一般詞綴一樣
+  for (const g in grp) suf.push(grp[g][Math.floor(Math.random() * grp[g].length)]);
   const ns = Math.ceil(n / 2), np = n - ns, pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
   k.mods = [];
   for (let i = 0; i < ns; i++) k.mods.push(pick(suf));

@@ -20,7 +20,7 @@ function drawEleTag(x, y, e) { // 怪名後面的元素小圖示
 // ───────── 武器元素：剋制環 火→冰→雷→毒→火（被剋 +30%、同屬性 −30%）─────────
 const ELE_BEATS = { F: "W", W: "T", T: "P", P: "F" };
 const wEle = () => itemEle(save.eq.sword);
-const mobEle = (m) => (WMOBS[m.type] && WMOBS[m.type].ele) || null;
+const mobEle = (m) => m.ele || (WMOBS[m.type] && WMOBS[m.type].ele) || null; // m.ele：秘境「元素加持」
 function chainZap(m, amt, n) { // 雷：跳到旁邊 n 隻（不會再連鎖）
   if (chainLock) return;
   const near = W0.mobs.filter((o) => o !== m && !o.dead && dist(o, m) < 70).sort((a, b) => dist(a, m) - dist(b, m)).slice(0, n);
