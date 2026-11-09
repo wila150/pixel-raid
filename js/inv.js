@@ -687,6 +687,11 @@ function openMenu() {
   const w = save.w, ap = w.autoPot !== false, aa = !!w.autoAtk;
   ov.innerHTML = `<div class="col l"></div><div class="col c menu"><h2>設定</h2>
     <div class="setrow"><span>音效</span><button class="tab${!muted ? " on" : ""}" data-mu="0">開</button><button class="tab${muted ? " on" : ""}" data-mu="1">關</button></div>
+    <div class="setrow"><span>背景音樂（每個地區不同）</span><button class="tab${A11.bgm ? " on" : ""}" data-bg="1">開</button><button class="tab${!A11.bgm ? " on" : ""}" data-bg="0">關</button></div>
+    <h3>手機與閱讀</h3>
+    <div class="setrow"><span>低階手機模式（解析度降低、特效減半、不畫花草、隊友特效關掉）</span><button class="tab${A11.low ? " on" : ""}" data-lw="1">開</button><button class="tab${!A11.low ? " on" : ""}" data-lw="0">關</button></div>
+    <div class="setrow"><span>字體大小</span>${[["s", "小"], ["m", "中"], ["l", "大"]].map(([v, n]) => `<button class="tab${A11.font === v ? " on" : ""}" data-fz="${v}">${n}</button>`).join("")}</div>
+    <div class="setrow"><span>色弱預警（危險範圍加閃爍白色虛線）</span><button class="tab${A11.cb ? " on" : ""}" data-cb="1">開</button><button class="tab${!A11.cb ? " on" : ""}" data-cb="0">關</button></div>
     <h3>防疲勞</h3>
     <div class="setrow"><span>血量低於 30% 自動吃丹藥</span><button class="tab${ap ? " on" : ""}" data-ap="1">開</button><button class="tab${!ap ? " on" : ""}" data-ap="0">關</button></div>
     <div class="setrow"><span>半自動朝最近的敵人割草</span><button class="tab${aa ? " on" : ""}" data-aa="1">開</button><button class="tab${!aa ? " on" : ""}" data-aa="0">關</button></div>
@@ -698,6 +703,10 @@ function openMenu() {
     <p class="dim">${liveWorld() ? "連線中，遊戲不會暫停" : ""}　點空白處回到戰鬥</p></div><div class="col r"></div>`;
   const tog = (attr, fn) => ov.querySelectorAll(`[data-${attr}]`).forEach((b) => b.addEventListener("click", () => { sfx("click"); fn(b.dataset[attr]); writeSave(); openMenu(); }));
   tog("mu", (v) => { setMuted(v === "1"); });
+  tog("bg", (v) => a11Set("bgm", v === "1"));
+  tog("lw", (v) => a11Set("low", v === "1"));
+  tog("fz", (v) => a11Set("font", v));
+  tog("cb", (v) => a11Set("cb", v === "1"));
   tog("ap", (v) => { w.autoPot = v === "1"; });
   tog("aa", (v) => { w.autoAtk = v === "1"; });
   tog("fl", (v) => { w.filt = +v; });

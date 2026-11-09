@@ -229,3 +229,9 @@
   - 天劫：`CUR.tjseal` 天劫印（r:0，push 進 `CUR_KEYS` 才會顯示在行囊）。祭壇視窗多「天劫挑戰」→ `startTianjie(k)`：`m.tj`＝王詞綴陣列（`TJ_MODS` rage/iron/call/pool/zap）、Lv.130、`tjTick`；有天劫王時玩家受傷 ×1.3。`wbKilled` 包裝：暫時把 `RBOSS[k].lv` 設 130 再呼叫原本的（掉落等級、靈石），再加詞綴數件＋傳說＋25% 印，`save.w.tjK`。
   - 測試：scratchpad t.js（Playwright，要 `LD_LIBRARY_PATH` 指到 apt-get download 解出來的 libnspr4/libnss3/libasound2），全部通過、沒有 JS 錯誤。**包裝函式名字撞到 mount.js 的 `_updateWorldM`**，新檔請用更長的字尾。
 
+- **v6.5 各區音樂、低階手機模式、無障礙（總表第 11 項，企劃 12 §2-5，11/09）**：新檔 `js/access.js`（mind.js 後、main.js 前），包住 `updateBgm`、`updateFx`、`drawDeco`、`drawTelegraph`、`drawHazards`、`drawWBZones`、`drawWMob`。設定都是**這台裝置**的，存 localStorage：`pr_bgm`、`pr_low`、`pr_font`（s/m/l）、`pr_cb`，物件 `A11`、改設定用 `a11Set(k,v)`。
+  - 音樂 `MOODS`（每區 root／音階／速度／音色／密度／回音／鼓），`bgmPick()`：仙界看 `zoneAt`（秘境自動用主題）、在打王場地 `wbArena()` 內換 `boss`（有鼓）；4 小節循環、旋律用固定 hash 所以會重複成曲。設定裡音樂跟音效分開關。
+  - 低階模式：core.js `resize` 解析度最多 1 倍、新粒子只留一半＋最多 60 顆、不畫地面花草、net.js `allyA()` 回 0。仙界裡連續 2 次 6 秒平均 <40 幀 → 左上橫條問要不要開（按「不用」`pr_lowAsk=no` 不再問）。
+  - 字體：canvas 的 `ctx.font` 被包住，px 數字 ×0.88／1／1.2（全部畫布字都跟著變）；DOM 用 CSS `body.fz-l/.fz-s` 的 `zoom`（`.ov .col`、`.screen .panel`、`#updCard`）。
+  - 色弱預警：上面 4 種預警外面再畫一圈閃爍的白色虛線（`cbBegin`）。
+  - 測試（Playwright，字型借 Windows 的微軟正黑體裝到 ~/.fonts）：各區選曲、10 種曲子都排得出音、低階 DPR 1／粒子 ≤60／隊友特效 0、字體 12px、設定頁橫直向截圖、色弱虛線截圖，沒有 JS 錯誤。真機掉幀偵測還沒實測。

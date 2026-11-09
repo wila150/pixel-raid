@@ -17,7 +17,7 @@ function resize() {
   const cs = getComputedStyle(safeProbe);
   SAFE.l = parseFloat(cs.paddingLeft) || 0; SAFE.r = parseFloat(cs.paddingRight) || 0;
   SAFE.t = parseFloat(cs.paddingTop) || 0; SAFE.b = parseFloat(cs.paddingBottom) || 0;
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = Math.min(window.devicePixelRatio || 1, localStorage.getItem("pr_low") === "1" ? 1 : 2); // 低階模式最多 1 倍解析度
   W = window.innerWidth;
   H = window.innerHeight;
   cvs.width = Math.round(W * DPR);

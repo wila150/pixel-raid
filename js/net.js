@@ -125,7 +125,7 @@ function netCast(k, a, x, y, o) {
 }
 const othersVisible = (o) => W0 && Math.abs(o.x - W0.x) < 400 && Math.abs(o.y - W0.y) < 300;
 // 隊友特效：full 全部、dim 淡化、off 關閉
-const allyA = () => { const v = (save.w && save.w.allyFx) || "dim"; return v === "off" ? 0 : v === "dim" ? 0.3 : 1; };
+const allyA = () => { if (typeof A11 !== "undefined" && A11.low) return 0; const v = (save.w && save.w.allyFx) || "dim"; return v === "off" ? 0 : v === "dim" ? 0.3 : 1; };
 function ghostCast(o, wt, c) {
   if (!W0 || !allyA()) return;
   const sx = o.x, sy = o.y - 3, P = (a, v) => ({ x: sx, y: sy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a, hit: new Set(), ghost: true });

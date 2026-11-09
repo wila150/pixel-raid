@@ -755,3 +755,6 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 .kscard.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 12px color-mix(in srgb, var(--c) 40%, transparent); }
 .kscard i { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: 11px; color: var(--c); }
 .kscard:disabled { opacity: 0.45; cursor: default; }
+/* v6.5 字體大小（access.js）：覆蓋層、舊畫面跟著放大縮小 */
+body.fz-l .ov .col, body.fz-l .screen .panel, body.fz-l #updCard { zoom: 1.15; }
+body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
