@@ -80,3 +80,8 @@
 - 檔名多了一個 `.png`（`xxx.png.png`），不影響，builder 照實際檔名讀。`:Zone.Identifier` 檔是 Windows 下載標記，忽略。
 - 格子間距不是完全平均，**切圖請用「找黑底上的每一塊非黑色區域」自動切**，再照由左到右、由上到下排序對應代碼；黑底轉透明；寶石、素材、天賦縮到 64px，卡片保持 3:4。
 - 風格：寶石／素材／卡片比較細緻，天賦樹和技能是比較方塊的像素風。分類不同可以接受，同一類裡要統一。
+
+### 更新（11/10 第二批）：檔名改好、技能 7 張都齊了
+- 檔名都改成單一 `.png` 了：gem_red／gem_green／gem_blue、mat_a／mat_b、tree_a／tree_b、card_a／card_b。
+- 技能：sk_sword、sk_staff、sk_bow、**sk_dao（＝大刀）**、sk_fist、sk_fan、**sk_evasion（＝身法 7 格）**，順序都照 33 ✅，7 張框和像素風一致。
+- `sk_major.png` 跟 `tree_a.png` 是同一個檔案（多複製的），忽略。
