@@ -9,7 +9,7 @@ function segDist(px, py, ax, ay, bx, by) { // 點到線段的距離
 }
 function seenHint(k, t) { // 第一次碰到新機制：一句提示（save.w.seen）
   const w = save.w; if (!w || !W0) return; if (!w.seen) w.seen = {};
-  if (w.seen[k]) return; w.seen[k] = 1; floatText(W0.x, W0.y - 44, t, "#ffe9a8", true);
+  if (w.seen[k]) return; w.seen[k] = 1; notice(t);
 }
 function wLater(t, f) { if (!W0.lat) W0.lat = []; W0.lat.push({ t, f }); } // 取代 setTimeout：暫停、切 App 不會偷跑
 function drawEleTag(x, y, e) { // 怪名後面的元素小圖示

@@ -280,9 +280,15 @@ function drawFx() {
     const pop = 1 + Math.max(0, 0.12 - f.age) * (f.big ? 8 : 5);
     ctx.font = `${f.num && f.big ? 900 : "bold"} ${Math.round((f.num && f.big ? 14 : f.big ? 12 : f.num ? 8 : 9) * pop)}px "Noto Sans TC", sans-serif`;
     const fy = typeof fltMinY === "number" && fltMinY !== null && f.y < fltMinY ? fltMinY : f.y; // 有王血條時不畫進血條那一帶
-    if (f.num && f.big) { ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.strokeStyle = f.color === "#ff4a3a" ? "#3a0808" : "#5a2a00"; ctx.strokeText(f.text, f.x, fy); }
-    ctx.fillStyle = "#1b1424"; ctx.fillText(f.text, f.x + 1, fy + 1);
-    ctx.fillStyle = f.num && f.big && f.color === "#ffd84a" && Math.floor(f.age * 16) % 2 ? "#fff6c0" : f.color; ctx.fillText(f.text, f.x, fy); // 暴擊黃字閃爍
+    let fx = f.x;
+    if (!f.num) { // 長的字（王的招式名稱等）不要超出畫面：縮小字、再把位置夾在畫面裡
+      const tr = ctx.getTransform(), vl = -tr.e / tr.a, vr = (ctx.canvas.width - tr.e) / tr.a, maxW = (vr - vl) * 0.9, tw = ctx.measureText(f.text).width;
+      if (tw > maxW) { const px = Math.max(6, Math.floor(parseFloat(ctx.font.match(/(\d+(?:\.\d+)?)px/)[1]) * maxW / tw)); const fk = typeof FONT_K !== "undefined" && typeof A11 !== "undefined" ? FONT_K[A11.font] || 1 : 1; ctx.font = ctx.font.replace(/\d+(?:\.\d+)?px/, (px / fk).toFixed(1) + "px"); } // 字體設定的包裝會再乘一次
+      const hw = Math.min(ctx.measureText(f.text).width, maxW) / 2; fx = clamp(fx, vl + hw + 4, vr - hw - 4);
+    }
+    if (f.num && f.big) { ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.strokeStyle = f.color === "#ff4a3a" ? "#3a0808" : "#5a2a00"; ctx.strokeText(f.text, fx, fy); }
+    ctx.fillStyle = "#1b1424"; ctx.fillText(f.text, fx + 1, fy + 1);
+    ctx.fillStyle = f.num && f.big && f.color === "#ffd84a" && Math.floor(f.age * 16) % 2 ? "#fff6c0" : f.color; ctx.fillText(f.text, fx, fy); // 暴擊黃字閃爍
   }
   ctx.globalAlpha = 1;
 }

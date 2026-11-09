@@ -197,7 +197,7 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
   const row = chainRaw(sl, wt);
   if (row.some((x, i) => i !== skipI && x && x.split(":")[0] === k)) return "這招已經串了同一種";
   { const o = gemElse(k, sl, wt); if (o) return `已經串在 ${o.label}`; } // 企劃 21 §10-1：每種輔助寶石整個角色只能一顆
-  { const gp = GEM_GRP[k]; if (gp) { const o = row.find((x, i) => i !== skipI && x && x.split(":")[0] !== k && GEM_GRP[x.split(":")[0]] === gp); if (o) return `跟${GEMS[o.split(":")[0]].n}同一組：${gp}`; } }
+  { const gp = GEM_GRP[k]; if (gp) { const o = row.find((x, i) => i !== skipI && x && x.split(":")[0] !== k && GEM_GRP[x.split(":")[0]] === gp); if (o) return `跟${gemFullN(o.split(":")[0])}同一組：${gp}`; } }
   const e = ELE_GEM[k]; if (e && row.some((x, i) => i !== skipI && x && ELE_GEM[x.split(":")[0]] && ELE_GEM[x.split(":")[0]] !== e)) return "一招只能一種元素";
   if (k === "spread" && !row.some((x) => x && x.startsWith("fire:"))) return "要先串火元素";
   return "";
@@ -281,8 +281,8 @@ function chainCells(l) {
   let pick = "";
   if (triPick && triPick.l === l) {
     const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
-    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i), mv = why && why.startsWith("已經串在") && !gemCantMsg(g); return `<button class="gem${mv ? " mv" : ""}" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why && !mv ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemIco(g, "gico")}${gemTag(g)}${GEMS[k].n} ${lv} 級 ×${save.gems[g]}</b><small>${gemDesc(g)}</small>${why ? `<em class="greq">${why}${mv ? "・點了搬過來" : ""}</em>` : ""}</button>`; };
-    const merge = gs.filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).map((g) => `<button class="gmerge2" data-gm="${g}">${GEMS[g.split(":")[0]].n} ${g.split(":")[1]} 級 ×3 → ${+g.split(":")[1] + 1} 級</button>`).join("");
+    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i), mv = why && why.startsWith("已經串在") && !gemCantMsg(g); return `<button class="gem${mv ? " mv" : ""}" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why && !mv ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemIco(g, "gico")}${gemTag(g)}${gemFullN(k)} ${lv} 級 ×${save.gems[g]}</b><small><span class="gtype">${GEM_TYPE}・${gemCol(g)[0]}・Lv.${gemReq(g)}</span><br>${gemDesc(g)}</small>${why ? `<em class="greq">${why}${mv ? "・點了搬過來" : ""}</em>` : ""}</button>`; };
+    const merge = gs.filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).map((g) => `<button class="gmerge2" data-gm="${g}">${gemFullN(g.split(":")[0])} ${g.split(":")[1]} 級 ×3 → ${+g.split(":")[1] + 1} 級</button>`).join("");
     pick = `<div class="rpick"><div class="trihead"><b>選一顆輔助寶石串上去</b><small>紅＝力量、綠＝敏捷、藍＝智力；灰色的寫了為什麼不能串</small></div>${gs.length ? `<div class="gbag">${gs.map(btn).join("")}</div>` : `<p class="sub">背包裡沒有輔助寶石（精英、王、秘境會掉）</p>`}${merge ? `<div class="gmrow"><small>3 顆合成高一級：</small>${merge}</div>` : ""}</div>`;
   }
   return `<div class="rchain">${cells}</div>${pick}`;

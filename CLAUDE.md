@@ -318,3 +318,11 @@
   - 互斥（tri.js）：`GEM_GRP`（數量 lmp/volley/split、範圍 enlarge/focus、放法 totem/trigc/trigh/rapid、元素 ice/fire/volt/venom/efocus），`gemWhy` 同列同組回「跟X同一組：Y」；`isSpellWt`（法杖、扇）：連發 `multi` 只能串法術、連打 `rapid` 不能串法術；`slotSkill==="origin"` 的 E 不能串任何輔助。舊存檔 `gemGrpMig()`（`w.gemGrp`，enterWorld 之後跑）每列一顆一顆放回、衝突的退背包＋劍靈說明。
   - 新檔 `js/altar.js`（mind.js 後）：`renderAltar`（#ov k-altar，「⋯更多」多一格「祭壇」）：4 隻王列表，離祭壇 160 內直接「天劫挑戰」（`startTianjie`），否則「御劍前往」（`flyTo` 祭壇南 70）。`CUR.tide` 怪潮祭品（r:0，秘境 ≥5 層秘境之主 30%／≥10 層 50%）；`startTide`：野外、不在秘境、沒王、不在營地結界；`W0.tide` 30 秒每 1.4 秒生 2＋t/10 隻（`spawnWMob` 最近同區營地，`m.tide`、`noRespawn`），25 秒出潮王（精英、血 ×3／一般 ×12、`m.named`）；離中心 420 或死掉就散；清完掉混元 1＋每 6 隻 1 通貨＋每 15 隻 1 件（`rollItem(1, 營地等級)`）＋3 素材＋30% 寶石。地上橘色虛線圈＋倒數。
   - 測試 scratchpad `#f19` 全過（拔卡／換卡／錢不夠／野外擋、互斥四組、連發連打、起源、搬家、祭壇、天劫、怪潮 50 隻＋掉落），舊 `#func` 沒有新的失敗（「更多」變 7 格）。**怪潮的數量和掉落還沒用 bot 調**，交給企劃。
+- **v7.8 聊天常駐小框＋右側按鈕列（總表第 23 項，企劃 36）＋怪潮調整（27 驗收）＋輔助寶石全名（21 §12），11/10**：
+  - 新檔 `js/hud3.js`（altar.js 後）：`#chatMini`（`cmMsgs`、`cmPush(ch,n,m)`、`cmSys`；頻道 `CM_CH` w 世界藍／c 分流綠／s 系統金）。換掉 social.js 的 `chatFeed`（分流訊息 `d.ch` 不是 `myCh()` 就不收）、`sendChat`（`chatCh==="c"` 時多帶 `ch`，RTDB 規則不擋多的欄位）、`renderChatLog`（標頻道、過濾別條分流）；包 `openSocial`（輸入框左邊 `.chsel` 切頻道，`pr_chatCh`）、`showAnn`／`grantLoot`（q3）／`wbKilled`（首殺）→ 系統訊息。舊 `#chatfeed` 藏起來。
+  - `#railR`：`RAIL` 卡片／任務／手冊／排行／祭壇／設定（`openMenu`），`QUICK` 拿掉 more（`renderMore` 程式還在、沒入口）。
+  - `hud3Tick()` 每 0.25 秒：只在 `body.inworld`、沒開介面時顯示；聊天框寬 40%（直向 70%），底部＝`#wbar` 上緣（直向再避開 `#pad .btn`）；右側列在 `miniRect` 下 15px，橫向 2 欄 36px（撞到按鈕先縮到 34／32 再往左挪）、直向 1 欄 40px，右邊留 24px 給把手。`pr_chatMini`／`pr_rail`（"1"＝收起）。場上有王（`bossOn`）：聊天一行、右側收起＋把手藏起來（不改設定）。8 秒沒新訊息 `.faded`。`railLeftX()` 給 story.js 劍靈泡泡避開右側列。
+  - 怪潮（altar.js）：怪等級 +3（血照比例）、一般怪 7.6% 再變精英（總共約 15%）、每次 3／4／6 隻、潮王血 ×4.5（一般）、通貨 n/12 且 `tideCur` 不出造化／太虛鏡／天劫雷印。
+  - 21 §12（使用者改主意後的版本）：名字照舊（`gemName`＝輔助寶石「分裂」N 級，`gemFullN` 只回短名）；類型標籤 `GEM_TYPE`「輔助寶石」寫在說明小字：背包「輔助寶石・綠・Lv.30」、技能鏈寶石清單 `.gtype`。企劃 37 技能寶石之後寫「技能寶石」。
+  - 驗收小修：毒池第一次提示（wboss.js）、elem.js 的 `seenHint` 改 `notice`（劍靈說）；render.js 飄字不是數字的，超出畫面 90% 寬就縮字（除掉 access.js 字體倍率）並把位置夾在畫面內（王的招式大字）。直向手機 `hud3Tick` 把 `#wbar` 的 bottom 設到 `#pad .btn` 最高那顆上面 8px（原本疊在血球和劍氣斬上）。
+  - 測試 scratchpad `#f23`（22 項：7 顆快捷、右側 6 顆開頁、收合記住、頻道過濾、系統訊息、變淡、打王自動收／恢復、傳說、開介面藏起來、全名）、`#f19` 全過；截圖橫直（野外展開／收起、打王）＋電腦。

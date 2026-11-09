@@ -180,6 +180,8 @@ const gemDesc = (g) => { const [k, l] = g.split(":"); return `好處：${GEMS[k]
 const GEM_KEYS = Object.keys(GEMS);
 const GEM_MAX = 5;
 const SOCKETS = [3, 3, 3, 3]; // 舊的；現在孔數看轉職 sockN()（build.js）
+const gemFullN = (k) => GEMS[k].n; // 企劃 21 §12：使用者改主意，名字照舊；類型改在說明小字寫「輔助寶石」
+const GEM_TYPE = "輔助寶石"; // 之後的技能寶石（企劃 37）寫「技能寶石」
 const gemName = (g) => { const [k, l] = g.split(":"); return `輔助寶石「${GEMS[k].n}」${l} 級`; };
 // 企劃 21 §8-3：寶石（符文）需要等級＋顏色（紅力量／綠敏捷／藍智力，只用來分類）
 const GEM_REQ0 = { power: 1, haste: 1, thrift: 1, frost: 1, blood: 1, multi: 10, pierce: 10, enlarge: 10, rshield: 10, lmp: 20, chain: 20, burst: 20, boomer: 20, icepath: 20, bell: 20, exec: 30, spread: 30, efocus: 30, ice: 30, fire: 30, volt: 30, venom: 30, det: 30, split: 30, bounce: 30, seek: 30, after: 30, trail: 30, focus: 30, volley: 30, rapid: 30, totem: 50, trigc: 70, trigh: 70 };

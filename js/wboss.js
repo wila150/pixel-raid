@@ -230,7 +230,7 @@ function updatePools(dt) {
   if (worst > 0) {
     p.poolT = 0.25;
     const w = save.w; if (!w.seen) w.seen = {};
-    if (!w.seen.pool) { w.seen.pool = 1; floatText(p.x, p.y - 40, "毒池！站在裡面會一直扣血、變慢，快走出去", "#9aff6a", true); }
+    if (!w.seen.pool) { w.seen.pool = 1; notice("毒池！站在裡面會一直扣血、變慢，快走出去", "#9aff6a"); }
     p.poolTick = (p.poolTick || 0) - dt;
     if (p.poolTick <= 0) {
       p.poolTick = 0.5;

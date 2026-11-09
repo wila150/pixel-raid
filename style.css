@@ -933,3 +933,24 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov .alb.gold { border: 1px solid #ffd84a; color: #ffe066; background: rgba(80, 60, 20, 0.7); }
 .ov .alb:disabled { opacity: 0.45; }
 .ov .alb.big2 { display: block; width: 100%; max-width: 360px; margin: 6px auto; }
+/* v7.8 聊天常駐小框＋右側按鈕列（企劃 36） */
+#chatMini { position: fixed; z-index: 6; box-sizing: border-box; padding: 3px 8px 3px 26px; border-radius: 8px; background: rgba(8, 8, 14, 0.55); border: 1px solid rgba(230, 210, 170, 0.18); font-size: 12px; line-height: 18px; color: #e8e0d0; overflow: hidden; pointer-events: auto; cursor: pointer; transition: opacity 0.6s; text-shadow: 0 1px 2px #000; }
+#chatMini.hidden { display: none; }
+#chatMini.faded { opacity: 0.3; }
+#chatMini .cmT { position: absolute; left: 2px; top: 2px; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: rgba(255, 255, 255, 0.08); color: #cfc4dc; font-size: 12px; line-height: 22px; }
+#chatMini.one .cmT { transform: rotate(-90deg); }
+#chatMini .cmL div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chatMini .cmL i { font-style: normal; font-size: 10px; margin-right: 4px; padding: 0 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); }
+#chatMini .cmL b { color: #ffe9a0; font-weight: 600; } #chatMini .cmL .sys { color: #ffd84a; } #chatMini .dim { color: var(--dim); }
+#railR { position: fixed; right: 0; z-index: 6; pointer-events: none; }
+#railR.hidden { display: none; }
+#railR .rlB { position: fixed; display: grid; gap: 4px; pointer-events: auto; transition: transform 0.25s, opacity 0.25s; }
+#railR.shut .rlB { transform: translateX(120px); opacity: 0; pointer-events: none; }
+#railR .rlb { position: relative; width: 100%; aspect-ratio: 1; padding: 0; border-radius: 50%; border: 1px solid rgba(230, 210, 170, 0.45); background: rgba(20, 18, 26, 0.78); color: #ffe9a0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+#railR .rlb b { font-size: 15px; } #railR .rlb small { font-size: 8px; color: #cfc4dc; margin-top: 1px; }
+#railR .rlb.dot::after, #railR .rlH.dot::after { content: ""; position: absolute; right: 1px; top: 1px; width: 8px; height: 8px; border-radius: 50%; background: #ff4a4a; }
+#railR .rlH { position: absolute; right: 0; width: 18px; height: 44px; padding: 0; border: 1px solid rgba(230, 210, 170, 0.35); border-right: 0; border-radius: 8px 0 0 8px; background: rgba(20, 18, 26, 0.7); color: #cfc4dc; font-size: 10px; pointer-events: auto; }
+#railR:not(.shut) .rlH { right: 0; }
+#chatlog .chtag { font-style: normal; font-size: 10px; margin-right: 4px; }
+.chatin .chsel { min-width: 52px; margin-right: 6px; border-radius: 6px; background: rgba(30, 26, 22, 0.9); border: 1px solid rgba(230, 210, 170, 0.4); font-weight: 700; }
+.ov .gem .gtype { color: #cfc4dc; font-size: 10px; }

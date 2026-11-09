@@ -24,13 +24,17 @@ function tideSpawn(T, boss) {
   for (let i = 0; i < 8 && !ok; i++) { const a = Math.random() * Math.PI * 2, x = T.x + Math.cos(a) * rand(90, 140), y = T.y + Math.sin(a) * rand(70, 110); if (!blockedCircle(x, y, 7) && !safeAt(x, y)) { m.x = x; m.y = y; ok = true; } }
   if (!ok) { m.x = T.x + rand(-20, 20); m.y = T.y + rand(-20, 20); }
   m.st = "chase"; m.noRespawn = true; m.tide = 1; m.wx = m.x; m.wy = m.y;
+  { const l0 = m.lv; m.lv += 3; const k = (1 + 0.35 * (m.lv - 1)) / (1 + 0.35 * (l0 - 1)); m.hp *= k; m.max *= k; } // 企劃 27 驗收：等級 +3
+  if (!boss && !m.elite && Math.random() < 0.076) { m.elite = true; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; m.hp *= 4; m.max *= 4; } // 精英約 15%
   if (boss) {
-    const mul = (m.elite ? 1 : 4) * 3; m.elite = true; m.mod = m.mod || ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)];
+    const mul = (m.elite ? 1 : 4) * 4.5; m.elite = true; m.mod = m.mod || ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)];
     m.hp = m.max = m.max * mul; m.named = "潮王・" + WMOBS[m.type].n; m.tideBoss = 1;
     burst(m.x, m.y, "#ff9a4a", 30, 120); shake = 10;
   } else burst(m.x, m.y, "#ff9a4a", 8, 50);
   T.mobs.push(m);
 }
+const TIDE_NOCUR = ["divine", "mirror", "vaal"]; // 怪潮不掉造化、太虛鏡、天劫雷印
+function tideCur() { for (let i = 0; i < 30; i++) { const k = randCur(); if (!TIDE_NOCUR.includes(k)) return k; } return "chaos"; }
 function startTide() {
   const why = tideWhy(); if (why) return why;
   const z = zoneAt(W0.x, W0.y), camp = tideCamp(z); if (!camp) return "這附近沒有妖獸";
@@ -47,13 +51,13 @@ function tideTick(dt) {
     for (const m of T.mobs) if (!m.dead) m.noRespawn = true;
     floatText(W0.x, W0.y - 30, "離開祭品太遠，怪潮散了", "#ff9a7a", true); W0.tide = null; return;
   }
-  if (T.t < TIDE_T - 5 && (T.spT -= dt) <= 0) { T.spT = 1.4; const n = 2 + Math.floor(T.t / 10); for (let i = 0; i < n; i++) tideSpawn(T, false); }
+  if (T.t < TIDE_T - 5 && (T.spT -= dt) <= 0) { T.spT = 1.4; const n = T.t < 10 ? 3 : T.t < 20 ? 4 : 6; for (let i = 0; i < n; i++) tideSpawn(T, false); }
   if (!T.boss && T.t >= TIDE_T - 5) { T.boss = true; tideSpawn(T, true); floatText(T.x, T.y - 40, "潮王出現了！", "#ff7a3a", true); sfx("crit"); }
   if (T.t >= TIDE_T && T.mobs.every((m) => m.dead)) {
     const n = T.mobs.length, lv = T.camp.lv; W0.tide = null; sfx("win");
     floatText(T.x, T.y - 34, `怪潮平息：斬殺 ${n} 隻`, "#ffe066", true);
     const at = { x: W0.x, y: W0.y };
-    wDrop({ kind: "cur", c: "chaos" }, at); for (let i = 0; i < Math.floor(n / 6); i++) wDrop({ kind: "cur", c: randCur() }, at);
+    wDrop({ kind: "cur", c: "chaos" }, at); for (let i = 0; i < Math.floor(n / 12); i++) wDrop({ kind: "cur", c: tideCur() }, at);
     for (let i = 0; i < 1 + Math.floor(n / 15); i++) wDropItem(rollItem(1, lv), at);
     if (MAT_Z[T.z]) for (let i = 0; i < 3; i++) wDrop({ kind: "mat", k: MAT_Z[T.z][Math.random() < 0.2 ? 1 : 0] || MAT_Z[T.z][0] }, at);
     if (Math.random() < 0.3) wDrop({ kind: "gem", g: randGem() }, at);
