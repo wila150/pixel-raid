@@ -55,7 +55,7 @@ renderSkills = function (msg) {
 };
 
 // ───────── 2. 精英詞綴 8 種：深區（沼澤、雷谷、仙域，秘境 Lv.50 以上）從 8 種抽，30% 雙詞綴 ─────────
-const ELITE_NEW = ["毒池", "雷擊", "護主", "瞬影", "不死"];
+const ELITE_NEW = ["毒池", "雷擊", "護主", "瞬影", "不死", "急襲"];
 const ELITE_ALL = ELITE_MODS.concat(ELITE_NEW);
 const eHas = (m, k) => m.mod === k || m.mod2 === k;
 const deepMob = (m) => (typeof RIFT !== "undefined" && RIFT ? m.lv >= 50 : ["swamp", "thunder", "sky"].includes(m.camp && m.camp.z));
@@ -72,6 +72,10 @@ function eliteTick(m, dt) {
   if (eHas(m, "毒池")) { // 走過的地方留毒
     m.poolT = (m.poolT || 0) - dt;
     if (m.poolT <= 0 && Math.hypot(m.x - (m.px0 || 0), m.y - (m.py0 || 0)) > 10) { m.poolT = 1.1; m.px0 = m.x; m.py0 = m.y; addPool(m.x, m.y, 15, 4, Math.max(1, mobDmg(m, d) * 0.22), 0.5); seenHint("epool", "毒池精英：走過的地方會留毒，別跟在牠後面"); }
+  }
+  if (eHas(m, "急襲") && !m.mv && !(m.wind > 0) && !m.fuse) { // 企劃 28：每 5 秒照紅色長條衝過來一次（可以閃）
+    m.rushT = (m.rushT == null ? 2 + Math.random() * 3 : m.rushT) - dt;
+    if (m.rushT <= 0 && dp > 50 && dp < 180) { m.rushT = 5; mvStart(m, "rush", angTo(m, W0), Math.min(dp + 30, 170), 0.5); }
   }
   if (eHas(m, "瞬影")) { // 每 5 秒閃到你身邊，閃完 0.6 秒不出手
     m.blinkT = (m.blinkT == null ? 2 + Math.random() * 3 : m.blinkT) - dt;

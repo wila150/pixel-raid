@@ -4,7 +4,7 @@
 // 稱號：條件達成就解鎖，戴上後顯示在名字上面，別的玩家看得到（presence 的 ti 欄位）。
 // 閉關：在青雲城或營地結界裡按「閉關」，或直接下線；回來依時間給經驗，最多算 8 小時 ≈ 你平常玩 30 分鐘的量。
 "use strict";
-const BOOK_MOBS = ["imp", "wolf", "treant", "golem", "bomber", "crow", "lava", "frostwolf", "icewisp", "yeti", "toad", "bonewolf", "bogtree", "thawk", "tgolem", "twisp", "crane", "skyfox", "guardian", "jianling", "hunter"];
+const BOOK_MOBS = ["imp", "wolf", "treant", "golem", "bomber", "crow", "lava", "frostwolf", "icewisp", "yeti", "toad", "bonewolf", "bogtree", "thawk", "tgolem", "twisp", "crane", "skyfox", "guardian", "jianling", "shield", "witch", "healer", "rusher", "hunter"];
 const BOOK_BOSS_CARD = { volcano: "wboss", swamp: "rbswamp", thunder: "rbthunder", sky: "rbsky" };
 const BOOK_STAR_MAX = (BOOK_MOBS.length + RB_KEYS.length) * 3;
 const BOOK_U = Object.keys(UNIQUES);

@@ -7,13 +7,13 @@ const TOWN = { x: 1200, y: 1520, r: 120 };
 const ZONES = {
   town: { n: "青雲城", lv: [0, 0], g: ["#4a4458", "#433e52"] },
   grass: { n: "靈草原", lv: [1, 6], g: ["#2f4a2c", "#2b4429"], mobs: ["imp", "imp", "wolf"] },
-  forest: { n: "幽暗森林", lv: [6, 12], g: ["#1d3326", "#1a2e22"], mobs: ["wolf", "treant", "treant", "imp"] },
-  waste: { n: "亂石荒原", lv: [11, 17], g: ["#4a4034", "#443a2f"], mobs: ["golem", "bomber", "wolf"] },
-  volcano: { n: "焚天火山", lv: [16, 24], g: ["#3a2424", "#342020"], mobs: ["crow", "lava", "bomber"] },
-  snow: { n: "寒霜雪域", lv: [22, 30], g: ["#c4d0de", "#b8c6d6"], mobs: ["frostwolf", "frostwolf", "icewisp", "yeti"] },
-  swamp: { n: "幽冥沼澤", lv: [30, 50], g: ["#2a3328", "#263024"], mobs: ["toad", "toad", "bonewolf", "bogtree"] },
-  thunder: { n: "雷霆峽谷", lv: [48, 75], g: ["#363448", "#312f42"], mobs: ["thawk", "thawk", "tgolem", "twisp"] },
-  sky: { n: "天外仙域", lv: [72, 120], g: ["#5a5a80", "#55557a"], mobs: ["crane", "skyfox", "skyfox", "guardian", "jianling"] },
+  forest: { n: "幽暗森林", lv: [6, 12], g: ["#1d3326", "#1a2e22"], mobs: ["wolf", "treant", "treant", "imp", "witch"] },
+  waste: { n: "亂石荒原", lv: [11, 17], g: ["#4a4034", "#443a2f"], mobs: ["golem", "bomber", "wolf", "shield"] },
+  volcano: { n: "焚天火山", lv: [16, 24], g: ["#3a2424", "#342020"], mobs: ["crow", "lava", "bomber", "rusher"] },
+  snow: { n: "寒霜雪域", lv: [22, 30], g: ["#c4d0de", "#b8c6d6"], mobs: ["frostwolf", "frostwolf", "icewisp", "yeti", "healer"] },
+  swamp: { n: "幽冥沼澤", lv: [30, 50], g: ["#2a3328", "#263024"], mobs: ["toad", "toad", "bonewolf", "bogtree", "witch"] },
+  thunder: { n: "雷霆峽谷", lv: [48, 75], g: ["#363448", "#312f42"], mobs: ["thawk", "thawk", "tgolem", "twisp", "shield", "rusher"] },
+  sky: { n: "天外仙域", lv: [72, 120], g: ["#5a5a80", "#55557a"], mobs: ["crane", "skyfox", "skyfox", "guardian", "jianling", "healer"] },
 };
 const EN_FULL = 100; // 天罰能量
 const SNOW_X = 2400, SNOW_PASS = { x: 2400, y: 640 }; // 雪域在東邊，只有一個山口能過去
@@ -131,26 +131,31 @@ function recolor(src, dh, sat, lum) {
 }
 const WMOBS = {
   imp: { n: "小妖", img: () => MOB, hp: 30, spd: 34, dmg: 6, r: 6, exp: 4, ai: "melee", sz: "S", race: "B" },
-  wolf: { n: "狼妖", img: () => WOLF, hp: 42, spd: 64, dmg: 7, r: 6, exp: 6, ai: "melee", sz: "M", race: "B" },
-  treant: { n: "樹妖", img: () => TREANT, hp: 40, spd: 24, dmg: 7, r: 7, exp: 7, ai: "ranged", range: 95, shot: 85, sz: "M", race: "P" },
-  golem: { n: "石甲妖", img: () => GOLEM, hp: 140, spd: 22, dmg: 16, r: 8, exp: 14, ai: "melee", armor: 0.3, heavy: true, sz: "L", race: "R" },
+  wolf: { n: "狼妖", img: () => WOLF, hp: 42, spd: 64, dmg: 7, r: 6, exp: 6, ai: "melee", mv: "pounce", sz: "M", race: "B" },
+  treant: { n: "樹妖", img: () => TREANT, hp: 40, spd: 24, dmg: 7, r: 7, exp: 7, ai: "ranged", range: 150, shot: 90, sh: "spread", sz: "M", race: "P" },
+  golem: { n: "石甲妖", img: () => GOLEM, hp: 140, spd: 22, dmg: 16, r: 8, exp: 14, ai: "melee", mv: "charge", armor: 0.3, heavy: true, sz: "L", race: "R" },
   bomber: { n: "爆石靈", img: () => BOMBER, hp: 32, spd: 58, dmg: 26, r: 6, exp: 10, ai: "bomber", sz: "S", race: "R" },
-  crow: { n: "火鴉", img: () => CROW, hp: 55, spd: 72, dmg: 9, r: 6, exp: 14, ai: "ranged", range: 115, shot: 120, sz: "S", race: "B", ele: "F" },
+  crow: { n: "火鴉", img: () => CROW, hp: 55, spd: 72, dmg: 9, r: 6, exp: 14, ai: "ranged", range: 170, shot: 125, sh: "lead", sz: "S", race: "B", ele: "F" },
   lava: { n: "熔岩獸", img: () => LAVA, hp: 230, spd: 30, dmg: 22, r: 9, exp: 26, ai: "melee", armor: 0.3, heavy: true, sz: "L", race: "R", ele: "F" },
-  frostwolf: { n: "霜狼", img: () => FROSTWOLF, hp: 64, spd: 78, dmg: 10, r: 6, exp: 18, ai: "melee", chill: true, sz: "M", race: "B", ele: "W" },
-  icewisp: { n: "冰靈", img: () => ICEWISP, hp: 58, spd: 40, dmg: 10, r: 6, exp: 18, ai: "ranged", range: 125, shot: 105, chill: true, sz: "S", ele: "W" },
-  yeti: { n: "雪巨猿", img: () => YETI, hp: 300, spd: 30, dmg: 26, r: 9, exp: 34, ai: "melee", armor: 0.25, heavy: true, chill: true, sz: "L", race: "B", ele: "W" },
+  frostwolf: { n: "霜狼", img: () => FROSTWOLF, hp: 64, spd: 78, dmg: 10, r: 6, exp: 18, ai: "melee", mv: "pounce", chill: true, sz: "M", race: "B", ele: "W" },
+  icewisp: { n: "冰靈", img: () => ICEWISP, hp: 58, spd: 40, dmg: 10, r: 6, exp: 18, ai: "ranged", range: 180, shot: 75, sh: "split", chill: true, sz: "S", ele: "W" },
+  yeti: { n: "雪巨猿", img: () => YETI, hp: 300, spd: 30, dmg: 26, r: 9, exp: 34, ai: "melee", mv: "charge", armor: 0.25, heavy: true, chill: true, sz: "L", race: "B", ele: "W" },
   // 東邊三區：用舊怪的骨架換顏色（recolor），數值和經驗比較高
   toad: { n: "毒沼蟾", img: () => RC.toad || (RC.toad = recolor(MOB, 150, 1.1, 0.8)), hp: 46, spd: 40, dmg: 11, r: 6, exp: 30, ai: "melee", sz: "S", race: "B", ele: "P" },
-  bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", sz: "M", race: "B", ele: "P" },
-  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 110, shot: 95, lob: true, sz: "M", race: "P", ele: "P" },
+  bonewolf: { n: "屍骨狼", img: () => RC.bonewolf || (RC.bonewolf = recolor(WOLF, 0, 0.15, 1.35)), hp: 70, spd: 80, dmg: 12, r: 6, exp: 32, ai: "melee", mv: "pounce", sz: "M", race: "B", ele: "P" },
+  bogtree: { n: "腐沼樹妖", img: () => RC.bogtree || (RC.bogtree = recolor(TREANT, 60, 0.7, 0.75)), hp: 64, spd: 24, dmg: 11, r: 7, exp: 32, ai: "ranged", range: 170, shot: 95, lob: true, sz: "M", race: "P", ele: "P" },
   thawk: { n: "雷鷹", img: () => RC.thawk || (RC.thawk = recolor(CROW, 200, 1.2, 1.1)), hp: 70, spd: 84, dmg: 12, r: 6, exp: 36, ai: "dive", range: 130, sz: "S", race: "B", ele: "T" },
-  tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", armor: 0.35, heavy: true, sz: "L", race: "R", ele: "T" },
-  twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 140, shot: 130, sz: "S", ele: "T" },
-  crane: { n: "仙鶴妖", img: () => RC.crane || (RC.crane = recolor(CROW, 0, 0.1, 1.9)), hp: 80, spd: 90, dmg: 13, r: 6, exp: 44, ai: "ranged", range: 135, shot: 140, sz: "S", race: "B" },
-  skyfox: { n: "天狐", img: () => RC.skyfox || (RC.skyfox = recolor(WOLF, 30, 1.3, 1.6)), hp: 84, spd: 90, dmg: 14, r: 6, exp: 44, ai: "melee", sz: "M", race: "B" },
+  tgolem: { n: "雷甲巨像", img: () => RC.tgolem || (RC.tgolem = recolor(GOLEM, 210, 1.3, 1.0)), hp: 320, spd: 26, dmg: 28, r: 9, exp: 60, ai: "melee", mv: "charge", armor: 0.35, heavy: true, sz: "L", race: "R", ele: "T" },
+  twisp: { n: "雷靈", img: () => RC.twisp || (RC.twisp = recolor(ICEWISP, 260, 1.4, 1.2)), hp: 62, spd: 46, dmg: 12, r: 6, exp: 36, ai: "ranged", range: 200, shot: 190, sh: "burst", sz: "S", ele: "T" },
+  crane: { n: "仙鶴妖", img: () => RC.crane || (RC.crane = recolor(CROW, 0, 0.1, 1.9)), hp: 80, spd: 90, dmg: 13, r: 6, exp: 44, ai: "ranged", range: 200, shot: 140, sh: "orbit", sz: "S", race: "B" },
+  skyfox: { n: "天狐", img: () => RC.skyfox || (RC.skyfox = recolor(WOLF, 30, 1.3, 1.6)), hp: 84, spd: 90, dmg: 14, r: 6, exp: 44, ai: "melee", mv: "blink", sz: "M", race: "B" },
   guardian: { n: "天兵石像", img: () => RC.guardian || (RC.guardian = recolor(GOLEM, 40, 1.4, 1.5)), hp: 380, spd: 28, dmg: 32, r: 9, exp: 80, ai: "melee", armor: 0.4, heavy: true, sz: "L", race: "R" },
-  jianling: { n: "劍靈", img: () => RC.jianling || (RC.jianling = recolor(ICEWISP, 0, 0.2, 1.8)), hp: 74, spd: 52, dmg: 14, r: 6, exp: 44, ai: "ranged", range: 150, shot: 150, sz: "S" },
+  jianling: { n: "劍靈", img: () => RC.jianling || (RC.jianling = recolor(ICEWISP, 0, 0.2, 1.8)), hp: 74, spd: 52, dmg: 14, r: 6, exp: 44, ai: "ranged", range: 220, shot: 200, sh: "line", sz: "S" },
+  // 企劃 28：四種新角色（換色，不用新畫）
+  shield: { n: "鐵盾妖", img: () => RC.shield || (RC.shield = recolor(GOLEM, 25, 0.45, 0.85)), hp: 95, spd: 32, dmg: 11, r: 7, exp: 16, ai: "melee", shield: true, armor: 0.15, sz: "M", race: "R" }, // 擋正面的投射物
+  witch: { n: "妖巫", img: () => RC.witch || (RC.witch = recolor(TREANT, 250, 1.3, 0.85)), hp: 42, spd: 30, dmg: 7, r: 6, exp: 18, ai: "witch", range: 160, sz: "S", race: "P" }, // 每 6 秒叫 3 隻小妖
+  healer: { n: "靈醫", img: () => RC.healer || (RC.healer = recolor(ICEWISP, 100, 1.2, 1.25)), hp: 52, spd: 40, dmg: 7, r: 6, exp: 22, ai: "healer", range: 170, shot: 95, sz: "S" }, // 每 4 秒幫附近怪回 10% 血
+  rusher: { n: "疾行妖", img: () => RC.rusher || (RC.rusher = recolor(BOMBER, 330, 1.5, 1.15)), hp: 22, spd: 108, dmg: 20, r: 5, exp: 12, ai: "bomber", fast: true, sz: "S", race: "R", ele: "F" }, // 很快、衝過來自爆
   hunter: { n: "獵寶妖", img: () => WOLF, hp: 70, spd: 70, dmg: 12, r: 7, exp: 30, ai: "melee", sz: "M", race: "B" }, // 身上寶物多時會來追殺
 };
 const SZ_N = { S: "小", M: "中", L: "大" };
@@ -376,7 +381,7 @@ function makeCamps() {
   }
 }
 function spawnWMob(camp) {
-  const types = ZONES[camp.z].mobs, type = types[Math.floor(Math.random() * types.length)], d = WMOBS[type];
+  const types = ZONES[camp.z].mobs, type = campPick(camp, types), d = WMOBS[type];
   const lv = Math.max(1, camp.lv + Math.floor(Math.random() * 3) - 1), elite = Math.random() < 0.08;
   const hp = d.hp * 1.2 * (1 + 0.35 * (lv - 1)) * (elite ? 4 : 1);
   const mod = elite ? ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)] : null;
@@ -463,6 +468,7 @@ function killMob(m) {
   // 經驗：打比自己弱很多的怪，經驗變少
   let exp = d.exp * (1 + 0.3 * (m.lv - 1)) * (m.elite ? 3 : 1);
   if (m.lv < w.lv - 5) exp *= 0.3;
+  if (m.sum) exp *= 0.2;
   exp = Math.max(1, Math.round(exp));
   gainExp(exp);
   questEvent(m.elite ? "elite" : "kill", m.camp.z);
@@ -471,6 +477,7 @@ function killMob(m) {
   if (sh) { save.shards = (save.shards || 0) + sh; if (sh > 1) floatText(m.x, m.y - 28, `天罰碎屑 +${sh}`, "#ffcf6b"); }
   if (B.uq.vamp) W0.hp = Math.min(W0.maxHp, W0.hp + W0.maxHp * 0.01 * brkMul());
   if (m.boss) { wbKilled(m); return; }
+  if (m.sum) return; // 妖巫叫出來的小妖：不掉寶
   if (m.type === "toad") addPool(m.x, m.y, 20, 4, mobDmg(m, d) * 0.3, 0.4); // 毒沼蟾：死掉炸出毒池
   // 掉寶
   const il = Math.max(0, Math.floor(m.lv / 3) + Math.floor(Math.random() * 2) - 1);
@@ -998,6 +1005,7 @@ function updateWorld(dt) {
     for (const m of W0.mobs) if (s.life > 0 && !m.dead && !s.hit.has(m) && Math.hypot(m.x - s.x, m.y - s.y) < WMOBS[m.type].r + (s.kind === "big" ? 7 : 4)) {
       s.hit.add(m);
       if (s.boom) { s.life = 0; W0.sureNow = !!s.sure; for (const n of W0.mobs) if (!n.dead && Math.hypot(n.x - s.x, n.y - s.y) < s.boom.r + WMOBS[n.type].r) hitMob(n, wDmg(s.boom.dmg), s.boom.kb, s, true); W0.sureNow = false; fxBoom(s.x, s.y, s.boom.r, "140,210,255"); break; } // 爆裂法球
+      if (shieldBlock(m, s)) break; // 鐵盾妖：正面擋掉
       let gm = 1; if (s.grp && m.boss) { if (s.grp.hit.has(m)) gm = 0.5; else s.grp.hit.add(m); }
       W0.critAdd = s.critAdd || 0; W0.sureNow = !!s.sure; hitMob(m, wDmg(s.dmg) * gm, s.kb, p, true); W0.critAdd = 0; W0.sureNow = false;
       if (s.slow) m.slowT = Math.max(m.slowT || 0, s.slow);
@@ -1079,6 +1087,7 @@ function updateWorld(dt) {
   });
 
   // 怪物：只更新玩家附近的
+  trackPlayerVel(dt);
   let aggro = false;
   const inTown = safeAt(p.x, p.y);
   for (const m of W0.mobs) {
@@ -1087,10 +1096,11 @@ function updateWorld(dt) {
     if (m.dead || Math.abs(m.x - p.x) > 420 || Math.abs(m.y - p.y) > 420) continue;
     if (WMOBS[m.type].ai === "pillar") { m.flash = Math.max(0, m.flash - dt); dotTick(m, dt); continue; } // 劍尊的劍柱：不會動
     const d = WMOBS[m.type], dp = dist(m, p); let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1) * (m.spdMul || 1);
-    m.flash = Math.max(0, m.flash - dt); m.atkT -= dt;
+    m.flash = Math.max(0, m.flash - dt); m.atkT -= dt; mobAiTick(m, dt);
     if (dotTick(m, dt)) continue; // 燃燒、中毒；冰凍不能動
     if (m.slowT > 0) { m.slowT -= dt; spd *= 0.45; }
     if (m.armBrk > 0) m.armBrk -= dt;
+    if (m.mv && m.mv.ph === "go") m.kb = 0; // 撲擊／衝撞途中不吃擊退
     if (m.kb > 0) { moveBody(m, Math.cos(m.ka) * m.kb * dt * 3, Math.sin(m.ka) * m.kb * dt * 3, d.r); m.kb = Math.max(0, m.kb - dt * 400); continue; }
     const homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
     if (m.st === "idle") {
@@ -1100,7 +1110,7 @@ function updateWorld(dt) {
       const a = Math.atan2(m.wy - m.y, m.wx - m.x);
       if (Math.hypot(m.wx - m.x, m.wy - m.y) > 4) moveBody(m, Math.cos(a) * spd * 0.35 * dt, Math.sin(a) * spd * 0.35 * dt, d.r);
     } else if (m.st === "home") { // 追太遠就回營地、回滿血
-      m.wind = 0; if (m.atkT > 5) m.atkT = 0;
+      m.wind = 0; m.mv = null; m.q = null; if (m.atkT > 5) m.atkT = 0;
       const a = Math.atan2(m.camp.y - m.y, m.camp.x - m.x);
       moveBody(m, Math.cos(a) * spd * 1.2 * dt, Math.sin(a) * spd * 1.2 * dt, d.r);
       m.hp = Math.min(m.max, m.hp + m.max * 0.3 * dt);
@@ -1110,6 +1120,9 @@ function updateWorld(dt) {
       if (m.hunter && inTown) { m.dead = true; floatText(m.x, m.y - 12, "獵寶妖跑掉了", "#cfc4dc"); continue; }
       if (!m.hunter && (homeD > 280 || inTown)) { m.st = "home"; continue; }
       const a = angTo(m, p);
+      if (m.mv) { mvTick(m, d, p, dt); continue; } // 企劃 28：撲擊／衝撞／瞬步／急襲
+      if (d.shield) m.fa = turnTo(m.fa == null ? a : m.fa, a, 2.2 * dt);
+      if (d.ai === "ranged" || d.ai === "healer" || d.ai === "witch") { if (m.lv >= 6 || d.ai !== "ranged") { rangedAI(m, d, p, dp, a, dt); continue; } }
       if (d.ai === "dive") { // 雷鷹：飛到中距離 → 紅線 0.5 秒 → 衝過去 → 停下喘氣 0.8 秒（受傷 +30%）
         const v = m.dv;
         if (m.tired > 0) m.tired -= dt;
@@ -1144,7 +1157,8 @@ function updateWorld(dt) {
           }
         } else {
           moveBody(m, Math.cos(a) * spd * dt, Math.sin(a) * spd * dt, d.r);
-          if (dp < 18) { m.fuse = 0.7; floatText(m.x, m.y - 12, "！", "#ff5a4a", true); }
+          if (d.fast && dp < 24) { m.fuse = 0.5; wbZone({ k: "circle", x: m.x, y: m.y, r: 30, max: 0.5, c: "255,90,40" }); seenHint("rusher", "疾行妖：衝到身邊會自爆，看到紅圈趕快離開"); }
+          else if (dp < 18) { m.fuse = 0.7; floatText(m.x, m.y - 12, "！", "#ff5a4a", true); }
         }
       } else {
         // 近戰：先蓄力（地上出現紅色範圍）再出手，可以閃身躲開
@@ -1165,6 +1179,7 @@ function updateWorld(dt) {
             m.atkT = (d.heavy ? 1.3 : 0.85) * (m.mod === "狂暴" ? 0.65 : 1);
           }
         } else {
+          if (m.lv >= 6 && meleeMove(m, d, p, dp, a)) continue;
           if (dp > d.r + 4) moveBody(m, Math.cos(a) * spd * dt, Math.sin(a) * spd * dt, d.r);
           if (dp < d.r + (d.heavy ? 20 : 15) && m.atkT <= 0) { m.wind = m.windMax = (d.heavy ? 0.6 : m.elite ? 0.3 : 0.36) * (m.mod === "狂暴" ? 0.75 : 1); m.wa = a; }
         }
@@ -1189,6 +1204,7 @@ function updateWorld(dt) {
     if (W0.originT > 0) continue;
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
     if (solid(s.x, s.y) || safeAt(s.x, s.y)) s.life = 0;
+    if (s.life <= 0 && s.split) { splitShot(s); continue; }
     if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg, null, typeof s.ele === "string" ? s.ele : s.ele ? "ele" : "spell"); chillHit = false; }
   }
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
@@ -1523,6 +1539,7 @@ function drawWMob(m) {
   ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc);
   if (m.flash > 0) { ctx.globalCompositeOperation = "lighter"; ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); }
   ctx.restore();
+  drawMobExtra(m, d);
   if (m.hunter) { ctx.strokeStyle = `rgba(255,70,50,${0.6 + 0.4 * Math.sin(time * 10)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * 2, d.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
   else if (m.elite) { ctx.strokeStyle = "rgba(111,184,255,0.7)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * 1.6, d.r * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); }
   if (m.hp < m.max || m.elite) {
