@@ -1327,7 +1327,7 @@ function drawWMob(m) {
   const gap = m.lv - save.w.lv;
   ctx.fillStyle = m.elite ? "#6fb8ff" : gap >= 4 ? "#ff6b6b" : gap <= -5 ? "#a99bb8" : "#f3eada";
   ctx.fillStyle = m.hunter ? "#ff6b6b" : ctx.fillStyle;
-  const lab = `${m.elite && !m.hunter ? (m.mod || "") + "精英 " : ""}${d.n}${d.sz ? `（${SZ_N[d.sz]}）` : ""} Lv.${m.lv}`, fc = ctx.fillStyle;
+  const lab = `${m.elite && !m.hunter ? (m.mod2 ? m.mod + "、" + m.mod2 : m.mod || "") + "精英 " : ""}${d.n}${d.sz ? `（${SZ_N[d.sz]}）` : ""} Lv.${m.lv}`, fc = ctx.fillStyle;
   ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
   ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
   if (d.ele) drawEleTag(m.x + ctx.measureText(lab).width / 2 + 4, m.y - d.r * sc - 10.5, d.ele);

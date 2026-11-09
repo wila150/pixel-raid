@@ -743,3 +743,15 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 @keyframes medb { 50% { transform: scale(1.18); opacity: 0.7; } }
 .bkcard, .bkti, .bkmed:not(.on) { text-align: left; }
 @media (max-width: 440px) { body.ovopen #quick .qbtn { width: 30px; height: 32px; } body.ovopen #quick { gap: 3px; } }
+
+/* v6.4 心法大節點 */
+.ksbox { margin: 0 0 8px; padding: 8px; border-radius: 8px; background: rgba(40, 24, 40, 0.55); border: 1px solid rgba(255, 200, 120, 0.25); }
+.kshead { color: #ffd9a0; font-weight: 700; margin-bottom: 6px; }
+.kshead small { margin-left: 8px; color: #cfc4dc; font-weight: 400; font-size: 12px; }
+.ksrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kscard { position: relative; text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(20, 16, 26, 0.7); color: #eee; cursor: pointer; }
+.kscard b { display: block; color: var(--c); font-size: 15px; }
+.kscard small { display: block; color: #cfc4dc; font-size: 12px; line-height: 1.4; margin-top: 2px; }
+.kscard.on { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 0 12px color-mix(in srgb, var(--c) 40%, transparent); }
+.kscard i { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: 11px; color: var(--c); }
+.kscard:disabled { opacity: 0.45; cursor: default; }

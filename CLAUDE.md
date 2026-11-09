@@ -223,3 +223,9 @@
   - 直向 ≤440px 開介面時快捷鈕縮成 30px（9 顆＋✕ 放得下）。
   - 測試（Playwright 844×390、390×844）：斬殺數→星、對該妖物傷害、傳說／卡片收錄、攻擊 ×1.003、生命加成、稱號解鎖／沒解鎖戴不上、閉關 8 小時上限、10 分鐘以下不給、閉關開始／結束、修煉速度量測、截圖，沒有 JS 錯誤。
   - ④全服目標：使用者 11/09 說先不做（不要再提，除非使用者主動問）。
+- **v6.4 心法大節點、精英詞綴 8 種、區域王天劫版（總表第 10 項，企劃 20，11/09）**：新檔 `js/mind.js`（codex.js 後），包住 `jobStats`、`renderSkills`、`guardLinks`、`hitMob`、`killMob`、`hurtW`、`wbKilled`、`openSpot`、`drawCamps`、`updateWorld`、`writeSave`。
+  - 大節點 `KEYSTONE[轉]`（二選一，`save.w.ks`，`ksOn(k)` 要轉職到那一轉才生效）：狂心／劍意、孤注／磐石、無心／會心、天道／殺意（`W0.ksK/ksT`）。技能頁一～四轉分頁上面 `.ksbox`；換要在 `safeAt`。狂心擋丹藥：`updateWorld` 那一幀把 `w.potions` 暫時設 0（`MIND_POT`），`writeSave` 包裝會寫回真的數量。
+  - 精英：`ELITE_NEW` 毒池／雷擊／護主／瞬影／不死；`eliteRoll` 在怪物第一次被 updateWorld 看到時（`m.emk`）把深區精英（沼澤／雷谷／仙域、秘境 Lv.50+，`deepMob`）重抽 8 種、30% `m.mod2`（只會是新的那 5 種）。舊 3 種效果還是看 `m.mod`；新的用 `eHas(m,k)`（maps.js 已經有 `hasMod`，別撞名）。怪名、目標框顯示 `mod、mod2`。
+  - 天劫：`CUR.tjseal` 天劫印（r:0，push 進 `CUR_KEYS` 才會顯示在行囊）。祭壇視窗多「天劫挑戰」→ `startTianjie(k)`：`m.tj`＝王詞綴陣列（`TJ_MODS` rage/iron/call/pool/zap）、Lv.130、`tjTick`；有天劫王時玩家受傷 ×1.3。`wbKilled` 包裝：暫時把 `RBOSS[k].lv` 設 130 再呼叫原本的（掉落等級、靈石），再加詞綴數件＋傳說＋25% 印，`save.w.tjK`。
+  - 測試：scratchpad t.js（Playwright，要 `LD_LIBRARY_PATH` 指到 apt-get download 解出來的 libnspr4/libnss3/libasound2），全部通過、沒有 JS 錯誤。**包裝函式名字撞到 mount.js 的 `_updateWorldM`**，新檔請用更長的字尾。
+
