@@ -369,3 +369,11 @@
   - **§7 驗收修正**：蟾王 `dmgMul` 1.3→0.78（×0.6，毒池也走 wbDmg，天劫版跟著）；劍弓敏捷每點 1.7%→**1.2%**（tree.js、char.js 說明一起改）。重跑：蟾王 bot 贏 3/6（原 1/6）平均 57 秒、鵬王 6/6 平均 47 秒；`#cpchk` 0.95–1.32（刀、拳 Lv.100 1.3）。
   - 一起修：E 黑洞 `W0.voids` 沒給 `max` → 畫的時候 createRadialGradient 收到 NaN，每幀 render 丟錯卡住畫面；push 加 `max: 2`，畫的地方改 `(v.max || v.t)`。scratchpad `#hole` 舊版重現、新版沒錯。
 - **v8.4.1（企劃 40 §8 重驗：新公式一般怪 3–4 下，三劫雷谷 3 分只殺 23、仙域 12，六劫殺不動）**：`TJ_HP` 2.5→**1.4**、`TJ_DMG` 1.25→**1.15**（六劫＝血 ×7.5、傷 ×2.3）；祭壇說明、公告一起改。
+- **v8.5 傷害公式第二版（總表第 30 項，企劃 41 §2-3、2-4、2-7、§6、§6-1；22 §11；40 §9），11/10**：新檔 `js/dmg2.js`（tjlv.js 後）。
+  - 基礎：world.js `wDmg` 乘 `hitBase(k)`＝k×`baseOf(CUR_SL)`（單位：8 點底材＝1）。攻擊武器＝`B.wBase`（武器 `it.base`×強化×reqMul）；法杖扇＝`GEM_BASE(L)`＝`REF_W(Lv)`×(0.6＋0.4×寶石等級／上限)（純看寶石等級時上限一半的 bot 打王 2–4 倍秒數，改這樣）；法術武器底材→`B.spellInc`（增加）。其他裝備「攻擊 +N」＝`B.flatAtk`，附加 `ADD_K` 0.15 × `skEff(sl)`（`SK_EFF` 傷害效用，多段割草 30–60%）。equip.js `applyBuild` 拆這三個，`SPELL_W`。cp.js 也乘 `baseOf("a", b)`。
+  - 怪血：所有怪第一次被 updateWorld 看到 ×`DMG_REF(lv)`＝`REF_W(lv)/8×0.87`（`m.hv2`），`mobHpMul`／`RBOSS.hp` 數字沒動（王血條顯示的是乘過的）。
+  - hitMob 順序：`DOT_HIT`（火牆、旋風、黑洞每跳）不擲暴擊、tree2 只吃 `td`、基礎 ×`DOT_K` 1.5；`HIT_CRIT`＋`dotBase`／`dotSeed`：燃燒中毒基準扣暴擊和擊中類標籤；最後 `hitFinal(m,dmg)`：感電／曝曬（`m.shockT`／`m.expT`，各 +20% 加法）→ 元素的話 ×(1−`mobResEff`)（`MOB_RES` 雪域 .2／沼澤 .25／雷谷 .3／仙域 .4；秘境 ≥6 層 .2、≥11 層 .4；天劫王、秘境之主 .4；混沌減半；`B.pen` 穿透最低到 0，目前沒來源）→ 剋制 `eleKe`（剋 1.3、被剋灰字 0.7、同元素 0.7、物理 1）。elem.js 拿掉舊的剋制；元素集中設曝曬；雷打中 20%＋5%×volt 感電。build.js `dotTick` 每跳乘 `dotMul(m, F|P)`。
+  - 怪打人：`armorRed` 常數 5→10；`DEEP_DMG.forest` 1.3（企劃寫森林荒原 ×2、火山 ×1.8，#hurt2 量到會變 24–33%，只加森林）。
+  - 抗性詞綴：equip.js `RES_TIER`／`resRange`／`isTierRes`（物品等級 0–9／10–19／20–29／30+），`rollAffVal`、`affTier` 認；舊裝備 `resV2Migrate`（`save.resV2`、`it.resV2`，照原本範圍的位置換算）。最大抗性 `B.resCapE`：`fentian` 焚天石心（新王傳說，石魔 10%，`anySlot` 部位隨機，rbUnique 改）火、`tstep` 雷、`toadrobe` 混沌各 +3%。
+  - 驗收（scratchpad `my.js`：`#scan=lv;seeds;1|2`、`#boss`（seed 5，寶石上限一半）、`#hurt2`、`#d2`、`#cpchk`、`#play`）：打王平均 石魔 52／蟾王 53／鵬王 49／劍尊 47 秒（扇 47–72 最慢）；一般怪 3.1–4.7 下；一般怪一下 草原 5.8%、森林 6.8%、荒原火山 15–16%（跟舊版一樣）；#cpchk 0.88–1.32；#d2 機制全過、沒有 JS 錯誤。
+- **下一項：總表第 31、32 項＝企劃 42**（天賦樹擴充、天賦玉、昇華）。

@@ -59,7 +59,7 @@ function trResCapX(e) { return W0 && W0.trRes && W0.trRes[e] > time ? 0.8 : 0; }
 const _hitMobT2 = hitMob;
 hitMob = function (m, dmg, kb, from, quiet) {
   if (!m || m.dead || m.air || !save.w || !W0) return _hitMobT2.apply(this, arguments);
-  let f = trTagMul(CUR_SL);
+  let f = DOT_HIT ? 1 + (treeSum().td || 0) / 100 : trTagMul(CUR_SL); // 企劃 41 §2-4：持續傷害只吃「持續」標籤
   if ((m.elite || m.boss) && trN("atk")) f *= 1.1;
   arguments[1] = dmg * f;
   const ca0 = W0.critAdd, cd0 = B.critDmg, hp0 = m.hp;

@@ -110,7 +110,8 @@ function dotTick(m, dt) {
   m.dotT = (m.dotT || 0.5) - dt;
   if (m.dotT <= 0) {
     m.dotT = 0.5;
-    const tot = (m.burnT > 0 ? m.burnD : 0) + (m.psnT > 0 ? m.psnD * m.psn * 1.5 : 0);
+    const dm = (e) => (typeof dotMul === "function" ? dotMul(m, e) : 1); // 企劃 41 §2-4：持續傷害吃怪物抗性、感電／曝曬、剋制，不吃暴擊
+    const tot = (m.burnT > 0 ? m.burnD * dm("F") : 0) + (m.psnT > 0 ? m.psnD * m.psn * 1.5 * dm("P") : 0);
     if (tot >= 1) {
       const v = Math.round(tot); m.hp -= v;
       floatText(m.x + rand(-4, 4), m.y - 6, `${v}`, m.psnT > 0 ? "#8dff6a" : "#ff9a3a");

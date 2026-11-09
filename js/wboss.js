@@ -358,8 +358,9 @@ function drawWBossBar() { // 畫面上方的王血條
 }
 // 王專屬傳說（不會在一般掉落、碎屑兌換出現）
 function rbUnique(u, il) {
-  const it = rollItem(1, il), U = UNIQUES[u], bv = BASE_VAL[SLOTS[U.slot].base];
-  it.slot = U.slot; it.u = u; it.q = 3; if (U.slot === "sword") it.wt = U.wt; else delete it.wt;
+  const U = UNIQUES[u], sl = U.anySlot ? ["crown", "robe", "boots", "charm", "ring", "ear"][Math.floor(Math.random() * 6)] : U.slot;
+  const it = rollItem(1, il), bv = BASE_VAL[SLOTS[sl].base];
+  it.slot = sl; it.u = u; it.q = 3; if (U.slot === "sword") it.wt = U.wt; else delete it.wt;
   it.base = Math.round((bv[0] + bv[1] * il) * 2); rollAffixes(it, 1 + Math.floor(Math.random() * 4));
   nameItem(it); delete it.risk; return it;
 }
@@ -377,6 +378,7 @@ function wbKilled(m) { // 打倒區域王
   if (k === "volcano") {
     if (Math.random() < 0.25) addSup(Object.keys(SUPERS)[Math.floor(Math.random() * 3)]);
     if (Math.random() < 0.15) wDrop({ kind: "card", c: "wboss" }, m);
+    if (Math.random() < 0.1) { item(rbUnique("fentian", il)); floatText(m.x, m.y - 56, "傳說！焚天石心", "#ff8a3d", true); } // 企劃 22 §11：火焰抗性上限 +3%
     for (let i = 0; i < 3; i++) wDrop({ kind: "ess", k: randEss() }, m);
     for (let i = 0; i < 4; i++) item(rollItem(1, il));
     for (let i = 0; i < 2; i++) wDrop({ kind: "gem", g: randGem(Math.random() < 0.3 ? 2 : 1) }, m);

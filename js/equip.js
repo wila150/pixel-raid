@@ -119,10 +119,11 @@ const UNIQUES = {
   devour: { slot: "robe", n: "萬妖噬魂袍", d: "斬妖試煉每斬 30 隻妖，傷害 +3%；渡劫時吸血 +2%" },
   cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半，斬妖試煉移動 +25%" },
   heart: { slot: "charm", n: "劍心玉佩", d: "渡劫時飛劍數量 ×1.3" },
-  toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit", "psnConv"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；法杖、扇和元素轉化的傷害全部變成可疊 5 層的毒；站在毒池裡不扣血，反而回真氣" },
+  toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit", "psnConv"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；法杖、扇和元素轉化的傷害全部變成可疊 5 層的毒；站在毒池裡不扣血，反而回真氣；混沌抗性上限 +3%" },
   hourglass: { slot: "ring", n: "時之沙漏", mods: ["lbDouble"], d: "每次切換武器（1／2／3），下一招段數翻倍" },
   bloodjade: { slot: "ear", n: "血玉佩", mods: ["vamp"], d: "吸血 +3%，每斬一隻妖回 1% 生命" },
-  tstep: { slot: "boots", n: "踏雷靴", mods: ["tstep"], rb: true, d: "王專屬（九雷鵬王）：閃身結束時在落點劈下落雷（攻擊 ×3）；閃身冷卻 −20%" },
+  tstep: { slot: "boots", n: "踏雷靴", mods: ["tstep"], rb: true, d: "王專屬（九雷鵬王）：閃身結束時在落點劈下落雷（攻擊 ×3）；閃身冷卻 −20%；閃電抗性上限 +3%" },
+  fentian: { slot: "charm", n: "焚天石心", rb: true, anySlot: true, d: "王專屬（焚天石魔，部位隨機）：火焰抗性上限 +3%" },
   wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
 };
 const BAG_MAX = 40;
@@ -292,7 +293,12 @@ function shardItem(slot, q) {
 }
 const affMul = (k, il) => 1 + (AFFIX[k].sc !== undefined ? AFFIX[k].sc : 0.35) * il;
 const isResAff = (k) => k.startsWith("res");
-const rollAffVal = (k, il) => { const a = AFFIX[k], v = (a.lo + Math.random() * (a.hi - a.lo)) * affMul(k, il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
+// 企劃 22 §11：抗性詞綴固定分級（不再隨物品等級一直乘）。[單抗, 全抗, 混沌] 各 [lo, hi]
+const RES_TIER = [[[5, 12], [3, 6], [3, 8]], [[12, 22], [6, 9], [8, 14]], [[20, 32], [9, 12], [13, 20]], [[30, 45], [12, 16], [18, 28]]];
+const resTierIdx = (il) => Math.max(0, Math.min(3, Math.floor((il || 0) / 10)));
+const resRange = (k, il) => { const t = RES_TIER[resTierIdx(il)]; return k === "resA" ? t[1] : k === "resP" ? t[2] : t[0]; };
+const isTierRes = (k) => ["resF", "resW", "resT", "resA", "resP"].includes(k);
+const rollAffVal = (k, il) => { const a = AFFIX[k]; if (isTierRes(k)) { const [lo, hi] = resRange(k, il); return Math.round(lo + Math.random() * (hi - lo)); } const v = (a.lo + Math.random() * (a.hi - a.lo)) * affMul(k, il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
 function rollAffixes(it, n, force = null) {
   const cap = AFF_CAP[it.q] || 1, cnt = { p: 0, s: 0 };
   let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)));
@@ -308,7 +314,7 @@ function rollAffixes(it, n, force = null) {
     pool = pool.filter((x) => x !== k); cnt[AFFIX[k].t]++; it.aff[k] = rollAffVal(k, it.il);
   }
 }
-const affTier = (k, v, il) => { const a = AFFIX[k]; if (!a.hi) return ""; const f = (v / affMul(k, il) - a.lo) / (a.hi - a.lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; };
+const affTier = (k, v, il) => { const a = AFFIX[k]; if (isTierRes(k)) { const [lo, hi] = resRange(k, il), f = (v - lo) / Math.max(1, hi - lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; } if (!a.hi) return ""; const f = (v / affMul(k, il) - a.lo) / (a.hi - a.lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; };
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
 function rollItem(boost = 0, ilv = null, wt = null) {
   const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
@@ -353,6 +359,7 @@ function totalCP() {
 }
 // 把身上裝備＋流派加到這一場的數值上（save.js 的 bonus() 最後呼叫）
 // 企劃 41：攻擊 ＝ 基礎 ×（1＋所有「增加」加總）× 所有「更多」相乘。各來源只改 b.inc／b.more，cap.js 最後算一次 b.atk
+const SPELL_W = { staff: 1, fan: 1 }; // 法術武器（world.js 的 SPELL_WT 同一張）
 const atkFin = (b) => { b.atk = (b.atk0 || 1) * (1 + (b.inc || 0)) * (b.more || 1); return b; };
 function applyBuild(b, daily) {
   const st = {}, uq = {};
@@ -366,11 +373,15 @@ function applyBuild(b, daily) {
   const g = (k) => st[k] || 0, sc = ""; // 不再選流派：玩法由武器決定，數值由裝備詞綴決定
   b.school = sc; b.uq = uq;
   b.maxHp = Math.round((b.maxHp + g("hp")) * (sc === "ti" ? 1.2 : sc === "fa" ? 0.8 : 1));
-  b.atk0 = b.atk; b.inc = (b.inc || 0) + (g("atk") + g("atkP")) / 100; b.more = b.more || 1; atkFin(b); // 企劃 41：裝備攻擊％、攻擊前綴都是「增加」
+  // 企劃 41 第二版 §2-3：武器底材＝基礎傷害（攻擊招）；法杖、扇的底材改成「增加法術傷害％」；其他「攻擊 +N」詞綴＝附加傷害（乘招式的傷害效用）
+  const wit = save.eq.sword, wb = !daily && wit ? wit.base * (1 + 0.1 * (wit.en || 0)) * (typeof reqMul === "function" ? reqMul(wit) : 1) : 0, spellW = !!(wit && SPELL_W[wtOf(wit)]);
+  b.wBase = spellW ? 0 : wb; b.spellInc = spellW ? wb / 100 : 0; b.flatAtk = Math.max(0, g("atk") - wb);
+  b.atk0 = b.atk; b.inc = (b.inc || 0) + (g("atkP") + (spellW ? wb : 0)) / 100; b.more = b.more || 1; atkFin(b); // 企劃 41：裝備攻擊％是「增加」
   b.armor = g("def"); b.dmgTaken = 1; // 護甲在 worldStats／hurtW 算（物理減傷）
   b.es = g("es"); for (const e of ["F", "W", "T"]) b["res" + e] = (g("res" + e) + g("resA") + g("res") / 2) / 100; b.resP = g("resP") / 100; // 全元素抗性不含混沌（PoE） b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
   b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), eF: g("eleF"), eW: g("eleW"), eT: g("eleT"), eP: g("eleP") }; // 屬性卡片用 e 開頭（P 已經是植物系）
   b.drop = g("drop") / 100;
+  b.resCapE = { F: uq.fentian ? 0.03 : 0, W: 0, T: uq.tstep ? 0.03 : 0, P: uq.toadrobe ? 0.03 : 0 }; // 企劃 22 §11：最大抗性只在這 3 件傳說
   b.spdMul = 1 + g("spd") / 100;
   b.crit = 0.15 + g("crit") / 100 + (sc === "qi" ? 0.1 : 0);
   b.critDmg = 2 + g("critD") / 100 + (sc === "fa" ? 0.5 : 0);

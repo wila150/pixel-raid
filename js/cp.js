@@ -11,7 +11,7 @@ function cpParts(b) {
   const wt = curWeapon(), j = jobLv(), L = 1 + (j >= 3 ? 1 : 0) + (j >= 4 ? 1 : 0);
   const crit = clamp(b.crit || 0, 0, 1), cd = b.critDmg || 2;
   const pw = gemLv("power", "a"), fc = gemLv("focus", "a");
-  const dps = (b.atk || 1) * (CP_K[wt] || 28) * (b.aspd || 1) * (1 + crit * (cd - 1)) * (1 + 0.3 * (L - 1)) * (1 + 0.1 * pw) * (fc ? 1.25 + 0.05 * fc : 1) * skgDmg("a");
+  const dps = (b.atk || 1) * (CP_K[wt] || 28) * (b.aspd || 1) * (1 + crit * (cd - 1)) * (1 + 0.3 * (L - 1)) * (1 + 0.1 * pw) * (fc ? 1.25 + 0.05 * fc : 1) * skgDmg("a") * (typeof baseOf === "function" ? baseOf("a", b) : 1); // 企劃 41 第二版：基礎傷害（武器底材／技能寶石）
   const res = ELES.reduce((s, e) => s + clamp(b["res" + e] || 0, -0.6, 0.75), 0) / ELES.length;
   const ehp = ((b.maxHp || 0) + (b.maxEs || 0)) * (1 + physRed(b)) * (1 + res);
   return { dps, atk: dps / 10, def: ehp / 20, ehp };

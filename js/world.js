@@ -411,7 +411,7 @@ const ELITE_MODS = ["狂暴", "鐵壁", "召喚"];
 function lvGap(m) { if (!m || !save.w || m.tj || (typeof RIFT !== "undefined" && RIFT)) return 0; return Math.max(0, Math.min(20, (m.lv || 1) - save.w.lv - 5)); }
 const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
-const DEEP_DMG = { snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）
+const DEEP_DMG = { forest: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林 ×1.3（企劃 40 §9 寫森林荒原 ×2、火山 ×1.8，但護甲常數改 10 之後量到荒原火山一般怪本來就 9–16%，再乘會到 24–33%，只加森林）
 const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1; return DEEP_DMG[zoneAt(m.x, m.y)] || 1; };
 const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1); // dmgMul：秘境詞綴
 function packAggro(m) { // 打一隻，整個營地一起衝過來
@@ -421,15 +421,17 @@ function packAggro(m) { // 打一隻，整個營地一起衝過來
 const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
 const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
 const eAspd = () => (W0 && W0.swDom && dist(W0, W0.swDom) < W0.swDom.r ? 1.2 : 1) * (W0 && W0.dragT > 0 ? 1.4 : 1); // 企劃 35：劍域、化龍
-const wDmg = (base) => { const fc = gemLv("focus"); return base * B.atk * (W0.titanT > 0 ? 1.2 : 1) * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus()) * (CUR_DM || 1) * (fc ? 1.25 + 0.05 * fc : 1) * (typeof skgDmg === "function" ? skgDmg(CUR_SL) : 1); };
+const wDmg = (base) => { const fc = gemLv("focus"); return (typeof hitBase === "function" ? hitBase(base) : base) * B.atk * (W0.titanT > 0 ? 1.2 : 1) * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus()) * (CUR_DM || 1) * (fc ? 1.25 + 0.05 * fc : 1) * (typeof skgDmg === "function" ? skgDmg(CUR_SL) : 1); };
 const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1); }; // 擴大／集中
 const AM = () => areaMul(CUR_SL);
 const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
+let HIT_CRIT = false, DOT_HIT = false; const dotBase = (d) => d / (HIT_CRIT ? B.critDmg || 2 : 1); // DOT_HIT：這一下是持續傷害（火牆、旋風、黑洞每跳）
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
-  const crit = W0.sureCast || W0.sureNow || Math.random() < Math.min(CRIT_CAP, B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0));
+  const crit = !DOT_HIT && (W0.sureCast || W0.sureNow || Math.random() < Math.min(CRIT_CAP, B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0)));
+  HIT_CRIT = crit; // 企劃 41 §2-4：持續傷害不吃暴擊；燃燒、中毒的基準扣掉暴擊（elem.js）
   if (crit) { dmg *= B.critDmg; W0.lastCrit = time; if (CUR_SL && CUR_SL !== "e") W0.critEv = 1; } // 觸發：暴擊
   dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs["e" + d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
   if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
@@ -442,7 +444,9 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.armBrk > 0) dmg *= 1.15; // 大刀破甲
   if (W0.swDom && dist(m, W0.swDom) < W0.swDom.r + d.r) dmg *= 1.2; // 企劃 35 劍域
   dmg *= (m.takeMul || 1) * (m.gd ? 0.5 : 1) * (m.tired > 0 ? 1.3 : 1); // 王的破綻／劍柱護體、天兵金線、雷鷹喘氣
-  if (B.uq.psnHit && Math.random() < 0.2) { m.psn = Math.min(5, (m.psn || 0) + 3); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dmg * 0.12); } // 萬毒蟾衣
+  const dmgPre = dmg; // 扣抗性前（毒的基準）
+  if (typeof hitFinal === "function") dmg = hitFinal(m, dmg); // 企劃 41 §6 第 6–7 步：感電／曝曬、怪物抗性（穿透到 0）、元素剋制（最後）
+  if (B.uq.psnHit && Math.random() < 0.2) { m.psn = Math.min(5, (m.psn || 0) + 3); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotBase(dmgPre) * 0.12); } // 萬毒蟾衣
   const L = curLines(); // 段數：一下打好幾行，總傷害 ×(1+0.3×(段數−1))
   dmg = Math.max(1, Math.round(dmg * rand(0.9, 1.1) * (L > 1 ? (1 + 0.3 * (L - 1)) / L : 1)));
   m.hp -= dmg * L; m.flash = 0.08;
@@ -557,11 +561,11 @@ function resPen() { // 這裡扣多少元素抗性
   return ZONE_RES_PEN[zoneAt(W0.x, W0.y)] || 0;
 }
 const pillRes = (e) => (typeof buffOn === "function" && buffOn(ELE_PILL[e]) ? 0.3 : 0);
-const resCap = (e) => Math.max(pillRes(e) ? 0.8 : RES_CAP, typeof trResCapX === "function" ? trResCapX(e) : 0) + ((B && B.resCapAdd) || 0); // 天賦樹：避劫、天人合一
+const resCap = (e) => Math.max(pillRes(e) ? 0.8 : RES_CAP, typeof trResCapX === "function" ? trResCapX(e) : 0) + ((B && B.resCapAdd) || 0) + ((B && B.resCapE && B.resCapE[e]) || 0); // 天賦樹：避劫、天人合一；傳說：最大抗性 +3%
 const rawRes = (e, b = B) => ((b && b["res" + e]) || 0) + pillRes(e) + (typeof trResBuf === "function" ? trResBuf(e) : 0); // 裝備＋丹藥，還沒扣地區
 const effRes = (e, b = B) => Math.max(RES_MIN, Math.min(resCap(e), rawRes(e, b) - resPen()));
 const BUFFS_N = (e) => (typeof BUFFS !== "undefined" && BUFFS[ELE_PILL[e]] ? BUFFS[ELE_PILL[e]].n : "丹藥");
-const armorRed = (armor, dmg) => Math.min(0.75 - ((B && B.physCapSub) || 0), armor / (armor + 5 * dmg));
+const armorRed = (armor, dmg) => Math.min(0.75 - ((B && B.physCapSub) || 0), armor / (armor + 10 * dmg)); // 企劃 40 §9：常數 5→10（PoE2）
 const refHit = () => 10 * (1 + 0.22 * ((save.w ? save.w.lv : 1) - 1)); // 同等級一般怪一下（顯示物理減免用）
 const physRed = (b = B) => armorRed((b && b.armor) || 0, refHit());
 // 這一下是什麼元素：招式直接帶（F/W/T/P）＞打人的怪＞打王場地裡的王；都沒有＝物理
@@ -1119,7 +1123,7 @@ function updateWorld(dt) {
   for (const f of W0.walls) { // 火牆：每 0.4 秒燒一次、走過去變慢
     f.t -= dt; f.tick -= dt;
     CUR_SL = f.sl || null; CUR_DM = f.dm || 1;
-    if (!f.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, f) < (f.hr || 10) + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, f.ice ? 1 : 0.4); if (f.tick <= 0 && !f.ice) hitMob(m, wDmg(11 * (f.mul || 1)), 0, f, true); }
+    if (!f.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, f) < (f.hr || 10) + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, f.ice ? 1 : 0.4); if (f.tick <= 0 && !f.ice) { DOT_HIT = true; hitMob(m, wDmg(11 * (f.mul || 1)), 0, f, true); DOT_HIT = false; } }
     CUR_SL = null; CUR_DM = 1;
     if (f.tick <= 0) f.tick = 0.4;
     if (f.ice) { if (Math.random() < 0.08) particles.push({ x: f.x + rand(-5, 5), y: f.y + rand(-2, 2), vx: 0, vy: -8, life: 0.4, max: 0.4, color: "#dff6ff", size: 1.5 }); continue; }
@@ -1140,7 +1144,7 @@ function updateWorld(dt) {
     else moveBody(t, t.vx * dt, t.vy * dt, 3);
     if (t.orbit !== undefined && !t.ghost) for (const s of W0.eshots) if (Math.hypot(s.x - p.x, s.y - p.y) < 36) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } // 吹散敵方子彈
     if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40)) { const a = angTo(m, t), f = t.pull || 40; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg(t.dmg || 13), 0, t, true); if (t.boom && wEle() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
+    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg(t.dmg || 13), 0, t, true); DOT_HIT = false; if (t.boom && wEle() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
     if (t.t <= 0 && t.boom) { fxBoom(t.x, t.y, 34, "190,220,255"); bolts.push({ x: t.x, y: t.y, life: 0.25 }); shake = Math.max(shake, 4); sfx("crit"); if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 34 + WMOBS[m.type].r) hitMob(m, wDmg(t.boom), 80, t, true); }
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }
@@ -1150,7 +1154,7 @@ function updateWorld(dt) {
     v.t -= dt; v.tick -= dt; CUR_SL = v.sl || null; CUR_DM = v.dm || 1;
     if (!v.ghost) {
       for (const m of W0.mobs) if (!m.dead && !m.boss && dist(m, v) < 95 && dist(m, v) > 4) { const a = angTo(m, v); moveBody(m, Math.cos(a) * 90 * dt, Math.sin(a) * 90 * dt, WMOBS[m.type].r); }
-      if (v.tick <= 0) { v.tick = 0.25; for (const m of W0.mobs) if (!m.dead && dist(m, v) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(7 * (v.mul || 1)), 0, v, true); }
+      if (v.tick <= 0) { v.tick = 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, v) < 40 + WMOBS[m.type].r) hitMob(m, wDmg(7 * (v.mul || 1)), 0, v, true); DOT_HIT = false; }
       if (v.t <= 0) { for (const m of W0.mobs) if (!m.dead && dist(m, v) < 55 + WMOBS[m.type].r) hitMob(m, wDmg(30 * (v.mul || 1)), 120, v, true); shake = Math.max(shake, 7); sfx("crit"); }
     }
     if (v.t <= 0) { fxBoom(v.x, v.y, 55, "190,140,255"); W0.rings.push({ x: v.x, y: v.y, t: 0, max: 0.4, r: 60, c: "190,150,255", ghost: v.ghost }); }
