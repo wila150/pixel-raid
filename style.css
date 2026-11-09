@@ -699,3 +699,5 @@ body.inworld #pad .btn .cd { transform: none !important; border-radius: 50%; bac
 .ov .rkey small i.rtj { color: #ff5a5a; font-weight: 700; }
 @media (orientation: portrait) { .ov .atlas { flex-direction: column; } .ov .amap { width: 100%; flex: none; } }
 .ov .atlasw .amap { background: radial-gradient(circle, rgba(70, 40, 120, 0.85), rgba(10, 6, 20, 0.92)); } .ov .atlasw .ainfo { background: rgba(14, 10, 22, 0.85); border-radius: 10px; padding: 8px 10px; }
+.ov .skgate { height: 5px; margin-top: 4px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; } .ov .skgate i { display: block; height: 100%; background: #ffcf6b; }
+.ov .skjob .skgate { display: inline-block; width: 120px; vertical-align: middle; margin: 0 0 0 10px; }

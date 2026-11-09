@@ -20,6 +20,16 @@ const SKT = {
   dan: { t: 4, g: "丹", c: "#ff8a7a", n: "丹道", d: (l) => `丹藥上限 +${Math.floor(l / 2)}、攻速 +${l}%`, f: (b, l) => { b.potMax += Math.floor(l / 2); b.aspd = (b.aspd || 1) * (1 + l * 0.01); } },
 };
 const SK_MAX = 10;
+// 企劃 18：學第 N 階前，前面幾階合計要先花到門檻（只擋整階跳過）
+const SK_NEED = [0, 5, 15, 30, 50];
+const spBelow = (t) => Object.keys(SKT).reduce((a, k) => a + (SKT[k].t < t ? skLv(k) : 0), 0);
+const skGateOk = (t) => spBelow(t) >= SK_NEED[t];
+function skMig() { // 舊存檔：違反門檻的送一次免費重置（已點的不扣）
+  const w = save.w; if (!w || w.skChk) return;
+  w.skChk = 1;
+  if (Object.keys(SKT).some((k) => skLv(k) > 0 && !skGateOk(SKT[k].t))) { w.skFree = 1; if (typeof notice === "function") notice("心法規則改了：要先學前面的，才能學後面的。送你一次免費重新分配（技能 → 重置）", "#ffe066"); }
+  writeSave();
+}
 let skTab = 0;
 const skLv = (k) => (save.w && save.w.sk && save.w.sk[k]) || 0;
 const spTotal = () => Math.max(0, save.w.lv - 1) + jobLv() * 3;
@@ -49,7 +59,8 @@ function renderSkills(msg = "") {
     ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
     bindPara(); return;
   }
-  const [tn, need] = SKILL_TABS[skTab], locked = j < need;
+  skMig();
+  const [tn, need] = SKILL_TABS[skTab], jobLock = j < need, gateLock = !jobLock && !skGateOk(need), locked = jobLock || gateLock;
   const list = Object.keys(SKT).filter((k) => SKT[k].t === need).map((k) => {
     const s = SKT[k], l = skLv(k), full = l >= SK_MAX;
     return `<div class="skrow${l ? " has" : ""}" style="--c:${s.c}"><span class="skico">${s.g}</span>
@@ -59,19 +70,20 @@ function renderSkills(msg = "") {
   }).join("");
   ov.innerHTML = `<div class="col cw"><div class="panel wide equip skwin">
     ${tabs}
-    <div class="skjob">${need ? (typeof JOBS !== "undefined" && JOBS[need - 1] ? JOBS[need - 1].n : tn) : "基礎心法"}${locked ? `<small>完成${tn}（Lv.${JOBS[need - 1].lv}）才能學</small>` : ""}</div>
+    <div class="skjob">${need ? (typeof JOBS !== "undefined" && JOBS[need - 1] ? JOBS[need - 1].n : tn) : "基礎心法"}${jobLock ? `<small>完成${tn}（Lv.${JOBS[need - 1].lv}）才能學</small>` : gateLock ? `<small>前面的心法還要再點 ${SK_NEED[need] - spBelow(need)} 點才能學（目前 ${spBelow(need)}／${SK_NEED[need]}）</small><div class="skgate"><i style="width:${Math.round(100 * spBelow(need) / SK_NEED[need])}%"></i></div>` : ""}</div>
     ${msg ? `<div class="emsg">${msg}</div>` : ""}
     <div class="sklist${locked ? " locked" : ""}">${list}</div>
-    <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${30 * w.lv} 靈石`}</button></div>
+    <div class="apfoot"><span>技能點數</span><b>${free}</b><button id="skReset" class="sbtn" ${spUsed() ? "" : "disabled"}>重置技能 ${w.skFree ? "（這次免費）" : typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${30 * w.lv} 靈石`}</button></div>
     <p class="sub">每升 1 級得 1 點，每次轉職再 +3。招式本身跟著武器走，這裡學的是心法（全部武器都吃）。</p></div></div>`;
   ov.querySelectorAll("[data-st]").forEach((b) => b.addEventListener("click", () => { sfx("click"); skTab = isNaN(+b.dataset.st) ? b.dataset.st : +b.dataset.st; renderSkills(); }));
   ov.querySelectorAll("[data-sk]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.sk; if (spFree() <= 0 || skLv(k) >= SK_MAX) return;
+    if (!skGateOk(SKT[k].t)) { sfx("bad"); renderSkills(`前面的心法還要再點 ${SK_NEED[SKT[k].t] - spBelow(SKT[k].t)} 點`); return; }
     w.sk[k] = skLv(k) + 1; writeSave(); sfx("good"); renderSkills(`${SKT[k].n} 升到 ${w.sk[k]} 級`);
   }));
   document.getElementById("skReset").onclick = () => {
     const c = 30 * w.lv;
-    if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); renderSkills(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } w.sk = {}; writeSave(); renderSkills("技能點數全部退回");
+    if (w.skFree) delete w.skFree; else if (typeof useCur === "function" && useCur("regret")) {} else { if (save.stone < c) { sfx("bad"); renderSkills(`靈石不夠（要 ${c}）`); return; } save.stone -= c; } w.sk = {}; writeSave(); renderSkills("技能點數全部退回");
   };
 }
 // 右上快捷鈕紅點：有能力點／可以轉職 → 角色；有技能點 → 技能
