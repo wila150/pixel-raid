@@ -18,7 +18,11 @@ const STAT_HELP = {
   armor: ["護甲", "減少被近戰、物理攻擊打到的傷害，越多越硬。", "靠力量、體質、道袍和頭冠的護甲詞綴提高。"],
   dodge: ["閃避", "有這個機率完全不受傷（最多 50%）。", "靠敏捷、閃避詞綴、技能「靈巧身法」提高。"],
   supp: ["法術壓制", "被子彈、法術打中時，有這個機率傷害減半。", "靠敏捷、後綴詞綴、技能「護體罡氣」提高。"],
-  res: ["元素抗性", "火、冰、雷、毒的傷害減少這麼多（最多 75%）。", "靠抗性詞綴、冰靈卡、技能「五行抗性」提高。"],
+  phys: ["物理減免", "被沒有元素的攻擊（咬、砸、箭、劍氣）打到時少扣這麼多（最多 75%）。這裡顯示的是被同等級一般怪打一下的減免，越重的攻擊擋越少。", "靠護甲：力量、體質、道袍和頭冠的護甲詞綴、石甲妖卡。"],
+  resF: ["火焰抗性", "火鴉、熔岩獸、焚天石魔、熔岩地面的傷害少扣這麼多（最多 75%）。", "靠火抗、全元素抗性詞綴（戒指、耳飾最常出）、避火丹 +30%。"],
+  resW: ["冰冷抗性", "霜狼、冰靈、雪巨猿的傷害少扣這麼多（最多 75%）。寒霜雪域會扣 20%。", "靠冰抗、全元素抗性詞綴、冰靈卡 +25%、避寒丹 +30%。"],
+  resT: ["閃電抗性", "雷鷹、雷甲巨像、雷靈、九雷鵬王、落雷的傷害少扣這麼多（最多 75%）。雷霆峽谷會扣 40%。", "靠雷抗、全元素抗性詞綴、避雷丹 +30%。"],
+  resP: ["混沌抗性", "毒池、毒沼蟾、屍骨狼、腐沼樹妖、腐骨蟾王的傷害少扣這麼多（最多 75%）。幽冥沼澤會扣 20%。", "比較難拿：混沌抗性詞綴（很少見）、腐骨蟾王卡 +20%、避毒丹 +30%。全元素抗性不含混沌。"],
   es: ["能量護盾", "一層先扣的護盾，幾秒沒被打會自己回滿。", "靠智慧、護盾詞綴、天兵石像卡提高。"],
   leech: ["吸血", "打出傷害的這麼多 % 變成自己的生命。", "靠嗜血寶石、吸血詞綴、血玉佩、技能「嗜血」提高。"],
   mpRegen: ["真氣回復", "每秒回多少真氣。", "靠等級、智慧、技能「吐納」提高。"],
@@ -32,13 +36,15 @@ function chStats() {
   const pc = (v) => Math.round(v * 100) + "%";
   return {
     main: [["atk", "攻擊", "×" + B.atk.toFixed(2)], ["crit", "爆擊率", pc(B.crit || 0)], ["critDmg", "爆擊傷害", pc(B.critDmg || 2)], ["aspd", "攻擊速度", pc(B.aspd || 1)], ["spd", "移動速度", pc(B.spdMul || 1)], ["hp", "生命", B.maxHp], ["mp", "真氣", B.maxMp]],
-    def: [["armor", "護甲", Math.round(B.armor || 0)], ["dodge", "閃避", pc(B.dodge || 0)], ["supp", "法術壓制", pc(B.supp || 0)], ["res", "元素抗性", pc(B.res || 0)], ["es", "能量護盾", B.maxEs || 0], ["leech", "吸血", pc(B.leech || 0)], ["mpRegen", "真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒"]],
+    res: [["phys", "物理減免", pc(physRed())]].concat(ELES.map((e) => ["res" + e, RES_N[e], pc(effRes(e)), effRes(e) < 0 ? "neg" : effRes(e) >= RES_CAP ? "cap" : ""])),
+    def: [["armor", "護甲", Math.round(B.armor || 0)], ["dodge", "閃避", pc(B.dodge || 0)], ["supp", "法術壓制", pc(B.supp || 0)], ["es", "能量護盾", B.maxEs || 0], ["leech", "吸血", pc(B.leech || 0)], ["mpRegen", "真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒"]],
   };
 }
-const chRow = ([k, n, v]) => `<button class="chrow${chHelp === k ? " sel" : ""}" data-help="${k}"><span>${n}</span><b>${v}</b></button>`;
+const chRow = ([k, n, v, c]) => `<button class="chrow${chHelp === k ? " sel" : ""}${c ? " " + c : ""}" data-help="${k}"><span>${n}</span><b>${v}</b></button>`;
 function chAttr() {
   const w = save.w, s = chStats();
-  return `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}</button><b>${w.ap[k]}</b>
+  const res5 = `<div class="res5">${s.res.map(([k, n, v, c]) => `<button class="r5${chHelp === k ? " sel" : ""}${c ? " " + c : ""}" data-help="${k}"><span>${k === "phys" ? "物理" : n}</span><b>${v}</b></button>`).join("")}</div>${resPen() > 0 ? `<div class="r5pen">此地元素抗性 −${Math.round(resPen() * 100)}%（上面已經算進去）</div>` : ""}`;
+  return res5 + `<div class="chsec">${["str", "agi", "wis", "vit"].map((k) => `<div class="chap${chHelp === k ? " sel" : ""}"><button class="chname" data-help="${k}">${AP[k].n}</button><b>${w.ap[k]}</b>
       <button class="apb" data-k="${k}" data-n="1" ${w.free ? "" : "disabled"}>＋</button><button class="apb" data-k="${k}" data-n="5" ${w.free >= 5 ? "" : "disabled"}>＋5</button></div>`).join("")}
     <div class="chapfoot"><span>能力點 <b class="${w.free ? "hot" : ""}">${w.free}</b></span><button id="apReset">重新配點 ${typeof curN === "function" && curN("regret") ? "−1 洗心丹" : `−${20 * w.lv} 靈石`}</button></div></div>
     <div class="chhead">主要</div><div class="chgrid">${s.main.map(chRow).join("")}</div>

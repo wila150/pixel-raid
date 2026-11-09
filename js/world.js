@@ -243,7 +243,7 @@ function worldStats() {
   b.spdMul *= 1 + a.agi * 0.005;
   b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);
   b.supp = Math.min(0.6, (b.supp || 0) + a.agi * 0.003);
-  b.res = Math.min(0.75, b.res || 0);
+  for (const e of ELES) b["res" + e] = b["res" + e] || 0; // 抗性上限、地區扣抗性在 effRes 算（看當下位置）
   b.armor = (b.armor || 0) + a.str * 3 + a.vit;
   b.maxEs = Math.round((b.es || 0) * (1 + a.wis * 0.02) + a.wis * 6);
   b.maxMp = 60 + w.lv * 2 + a.wis * 4;
@@ -499,6 +499,33 @@ function tianfa() {
   W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.5, r: 120, c: "255,210,110" });
   floatText(p.x, p.y - 30, "天罰！", "#ffd84a", true);
 }
+// ───── 物理減免＋四元素抗性（企劃 22）─────
+const ELES = ["F", "W", "T", "P"];
+const RES_N = { F: "火焰", W: "冰冷", T: "閃電", P: "混沌" }, RES_S = { F: "火", W: "冰", T: "雷", P: "混沌" }; // ELE_N／ELE_C 在 equip.js（武器元素用）
+const ELE_PILL = { F: "fireres", W: "iceres", T: "thres", P: "psnres" }; // econ.js 的 BUFFS
+const ZONE_RES_PEN = { snow: 0.2, swamp: 0.2, thunder: 0.4, sky: 0.6 };
+const RES_CAP = 0.75, RES_MIN = -0.6;
+function resPen() { // 這裡扣多少元素抗性
+  if (!W0) return 0;
+  if (typeof RIFT !== "undefined" && RIFT && RIFT.tier >= 11) return 0.6;
+  if (typeof tjBoss === "function" && tjBoss()) return 0.6;
+  return ZONE_RES_PEN[zoneAt(W0.x, W0.y)] || 0;
+}
+const pillRes = (e) => (typeof buffOn === "function" && buffOn(ELE_PILL[e]) ? 0.3 : 0);
+const resCap = (e) => (pillRes(e) ? 0.8 : RES_CAP);
+const rawRes = (e, b = B) => ((b && b["res" + e]) || 0) + pillRes(e); // 裝備＋丹藥，還沒扣地區
+const effRes = (e, b = B) => Math.max(RES_MIN, Math.min(resCap(e), rawRes(e, b) - resPen()));
+const BUFFS_N = (e) => (typeof BUFFS !== "undefined" && BUFFS[ELE_PILL[e]] ? BUFFS[ELE_PILL[e]].n : "丹藥");
+const armorRed = (armor, dmg) => Math.min(0.75, armor / (armor + 5 * dmg));
+const refHit = () => 10 * (1 + 0.22 * ((save.w ? save.w.lv : 1) - 1)); // 同等級一般怪一下（顯示物理減免用）
+const physRed = (b = B) => armorRed((b && b.armor) || 0, refHit());
+// 這一下是什麼元素：招式直接帶（F/W/T/P）＞打人的怪＞打王場地裡的王；都沒有＝物理
+function hitEle(from, kind) {
+  if (ELES.includes(kind)) return kind;
+  if (from && from.type) return typeof mobEle === "function" ? mobEle(from) : (WMOBS[from.type] && WMOBS[from.type].ele) || null;
+  if (kind === "ele" && typeof wbArena === "function") { const a = wbArena(); if (a) return (typeof mobEle === "function" ? mobEle(a.m) : WMOBS[a.m.type].ele) || null; }
+  return null;
+}
 let chillHit = false; // 冰靈的冰彈打中時設成 true
 // kind：phys 物理（怪物近戰）、spell 法術（子彈）、ele 元素法術（火、冰，吃抗性）
 function hurtW(dmg, from, kind) {
@@ -507,14 +534,17 @@ function hurtW(dmg, from, kind) {
   if (p.invT > 0) return; // 吸血鬼：血霧無敵
   if (p.mistT > 0 && (kind || (from ? "phys" : "spell")) === "phys") { if (!p.mistMsg || time - p.mistMsg > 0.6) { p.mistMsg = time; popWord(p, "霧化", "#9aff9a"); } return; }
   if (p.iframe > 0 || !(state === "world" || ((state === "paused" || state === "pick") && pausedFrom === "world"))) return;
+  const ele = hitEle(from, kind); // 企劃 22：元素傷害吃該元素抗性，沒元素的就是物理（吃護甲）
+  if (ELES.includes(kind)) kind = "ele";
   kind = kind || (from ? "phys" : "spell");
   if (kind === "phys" && Math.random() < B.dodge) { p.iframe = 0.25; popWord(p, "DODGE", "#7dff6a"); return; } // 敏捷：閃避
   if (kind !== "phys" && Math.random() < B.supp) { dmg *= 0.5; popWord(p, "SUPPRESSED", "#6fb8ff"); } // 敏捷：法術壓制
-  if (kind === "phys" && B.armor > 0) { // 力量：護甲（傷害越小擋越多）
-    const r = Math.min(0.75, B.armor / (B.armor + 5 * dmg)); dmg *= 1 - r;
+  if (!ele && kind !== "spell" && B.armor > 0) { // 物理減免：護甲（傷害越小擋越多）
+    const r = armorRed(B.armor, dmg); dmg *= 1 - r;
     if (r > 0.08) { burst(p.x + rand(-4, 4), p.y - 4, "#ffe9a0", 6, 70, 0.25); burst(p.x, p.y - 4, "#c8d0e0", 4, 40, 0.2); }
   }
-  if (kind === "ele") dmg *= 1 - B.res;
+  let eleHurt = null;
+  if (ele) { const r = effRes(ele); dmg *= 1 - r; if (r < 0) eleHurt = ele; }
   dmg = dmg * (B.uq.vajra && p.hp < p.maxHp * 0.3 ? 0.5 : 1) * (W0.guardT > 0 && curWeapon() === "fist" ? 0.85 : 1);
   dmg = Math.max(1, Math.round(dmg));
   p.esT = 3; // 脫戰 3 秒才回充護盾
@@ -525,6 +555,7 @@ function hurtW(dmg, from, kind) {
   }
   p.hp -= dmg; p.iframe = 0.45; p.hurt = 0.2;
   floatText(p.x, p.y - 14, `-${dmg}`, "#ff6b6b");
+  if (eleHurt) { floatText(p.x + 16, p.y - 16, RES_S[eleHurt] + "↓", ELE_C[eleHurt]); seenHint("resneg", `${RES_N[eleHurt]}抗性是負的，被${RES_S[eleHurt]}打會更痛！戒指、耳飾的抗性詞綴或${BUFFS_N(eleHurt)}可以補。`); }
   sfx("hurt"); shake = Math.max(shake, 5); flashT = 0.1; flashColor = "255,40,40";
   if (from && B.thorns > 0 && from.hp !== undefined) hitMob(from, dmg * B.thorns * 3, 0, null, true);
   if (from) { const a = angTo(from, p); moveBody(p, Math.cos(a) * 8, Math.sin(a) * 8, 5); }
@@ -605,7 +636,7 @@ function updateWorld(dt) {
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
-  if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "ele"); } }
+  if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
 
   const near = (max) => { if (mouseAim()) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
   const useSkill = (k) => { if (p.cds[k] > 0 || p.mp < WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / (B.aspd || 1) : 1) * ((B.skCd && B.skCd[k]) || 1); p.mp -= WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1); if (k === "attack") W0.justAtk = true; if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
@@ -930,8 +961,8 @@ function updateWorld(dt) {
         if (dp < d.range && m.atkT <= 0 && !(m.wind > 0)) { m.wind = m.windMax = 0.3; m.atkT = 99; }
         if (m.wind > 0 && (m.wind -= dt) <= 0) {
           m.wind = 0; m.atkT = m.mod === "狂暴" ? 0.9 : 1.4;
-          if (d.lob) { wbZone({ k: "circle", x: p.x, y: p.y, r: 16, max: 0.6, dmg: mobDmg(m, d), lob: { x: m.x, y: m.y - 6 }, pool: { r: 16, dur: 5, dmg: mobDmg(m, d) * 0.3 }, c: "140,255,110" }); continue; } // 腐沼樹妖：拋毒泥打你腳下
-          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff3a3a" : d.chill ? "#d050ff" : "#ff4aa0", chill: d.chill, ele: !!d.ele }); // 怪物彈幕：亮紅／亮紫
+          if (d.lob) { wbZone({ k: "circle", x: p.x, y: p.y, r: 16, max: 0.6, dmg: mobDmg(m, d), ele: mobEle(m), lob: { x: m.x, y: m.y - 6 }, pool: { r: 16, dur: 5, dmg: mobDmg(m, d) * 0.3 }, c: "140,255,110" }); continue; } // 腐沼樹妖：拋毒泥打你腳下
+          W0.eshots.push({ x: m.x, y: m.y - 3, vx: Math.cos(a) * d.shot, vy: Math.sin(a) * d.shot, life: 2, dmg: mobDmg(m, d), c: m.type === "crow" ? "#ff3a3a" : d.chill ? "#d050ff" : "#ff4aa0", chill: d.chill, ele: mobEle(m) }); // 怪物彈幕：亮紅／亮紫
         }
       } else if (d.ai === "bomber") {
         if (m.fuse > 0) {
@@ -988,7 +1019,7 @@ function updateWorld(dt) {
     if (W0.originT > 0) continue;
     s.x += s.vx * B.slow * dt; s.y += s.vy * B.slow * dt; s.life -= dt;
     if (solid(s.x, s.y) || safeAt(s.x, s.y)) s.life = 0;
-    if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg, null, s.ele ? "ele" : "spell"); chillHit = false; }
+    if (Math.hypot(s.x - p.x, s.y - p.y) < (s.big ? 8 : 6) && p.iframe <= 0) { s.life = 0; chillHit = !!s.chill; hurtW(s.dmg, null, typeof s.ele === "string" ? s.ele : s.ele ? "ele" : "spell"); chillHit = false; }
   }
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
   W0.combatT = aggro ? W0.combatT + dt : 0;
@@ -1100,7 +1131,7 @@ function renderAP() {
     + row("等級", w.lv) + row("生命", B.maxHp, " hp") + row("真氣", B.maxMp, " mp") + row("經驗", `${w.exp} / ${en}（${Math.floor(w.exp / en * 100)}%）`) + row("戰力", totalCP());
   const aps = Object.keys(AP).map((k) => `<div class="sr ap"><span title="每點 ${AP[k].d}">${AP[k].n.split(" ")[0]}</span><b>${w.ap[k]}</b><button class="apb" data-k="${k}" data-n="1" ${w.free ? "" : "disabled"}>＋</button><button class="apb" data-k="${k}" data-n="5" ${w.free >= 5 ? "" : "disabled"}>＋5</button><small>${AP[k].d}</small></div>`).join("");
   const right = row("攻擊", "×" + B.atk.toFixed(2)) + row("爆擊率", pc(B.crit || 0)) + row("爆擊傷害", pc(B.critDmg || 2)) + row("攻擊速度", pc(B.aspd || 1)) + row("移動速度", pc(B.spdMul || 1))
-    + row("護甲", Math.round(B.armor || 0)) + row("閃避", pc(B.dodge || 0)) + row("法術壓制", pc(B.supp || 0)) + row("元素抗性", pc(B.res || 0)) + row("能量護盾", B.maxEs || 0) + row("吸血", pc(B.leech || 0)) + row("真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒");
+    + row("物理減免", pc(physRed())) + ELES.map((e) => row(RES_N[e] + "抗性", pc(effRes(e)))).join("") + row("閃避", pc(B.dodge || 0)) + row("法術壓制", pc(B.supp || 0)) + row("能量護盾", B.maxEs || 0) + row("吸血", pc(B.leech || 0)) + row("真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒");
   screenEl.innerHTML = `<div class="panel wide equip charwin"><div class="winhead">角色資料</div>
     <div class="cw2"><div class="stbox"><div class="stl">${left}</div><div class="stl aps">${aps}</div>
       <div class="apfoot"><span>能力點</span><b>${w.free}</b><button id="apReset" class="sbtn">重新配點 −${20 * w.lv} 靈石</button></div></div>
@@ -1453,6 +1484,7 @@ function drawWorldHud() {
     ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#cfc4dc";
     const sub = W0.zone === "town" ? "安全區・補滿丹藥、帶回裝備" : W0.zone === "snow" ? `妖獸 Lv.${z.lv[0]}–${z.lv[1]}・被打中會凍傷變慢` : `妖獸 Lv.${z.lv[0]}–${z.lv[1]}`;
     ctx.lineWidth = 3; ctx.lineJoin = "round"; ctx.strokeStyle = "#1b1424"; ctx.strokeText(sub, W / 2, H * 0.3 + 22); ctx.fillText(sub, W / 2, H * 0.3 + 22);
+    const pen = resPen(); if (pen > 0) { const t2 = `此地元素抗性 −${Math.round(pen * 100)}%`; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ff9a7a"; ctx.strokeText(t2, W / 2, H * 0.3 + 38); ctx.fillText(t2, W / 2, H * 0.3 + 38); }
     ctx.globalAlpha = 1;
   }
   drawTut();

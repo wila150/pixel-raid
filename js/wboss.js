@@ -12,19 +12,19 @@ const WB_LV = 22, WB_ARENA = 170, WB_EDGE = WB_ARENA + 20, WB_OUT = 3;
 function wbArena() { const m = W0 && W0.mobs.find((x) => x.boss && !x.dead && x.rb); if (!m) return null; const R = rbOf(m); return { x: R.x, y: R.y, r: WB_EDGE, m }; }
 // 區域王資料表：等級、血量、掉落都看王，不看玩家
 const RBOSS = {
-  volcano: { type: "wboss", n: "焚天石魔", lv: 22, x: ALTAR.x, y: ALTAR.y, hp: 9000, cool: 90, rec: 18, col: "255,80,40", bar: ["#ff8a2e", "#ff5a2a", "#ff2a1a"], shards: 20,
+  volcano: { type: "wboss", n: "焚天石魔", lv: 22, x: ALTAR.x, y: ALTAR.y, hp: 11000, cool: 90, rec: 18, col: "255,80,40", bar: ["#ff8a2e", "#ff5a2a", "#ff2a1a"], shards: 20,
     where: "焚天火山北邊祭壇", loot: "4 件好裝、2 寶石、精髓 3、25% 超技能寶石、15% 王卡",
     wake: "焚天石魔甦醒了！", sleep: "焚天石魔沉回熔岩⋯⋯", p2: "石魔暴走！", p3: "元神燃燒！", addMsg: "召喚熔岩妖群！", addN: 3,
     desc: "石魔會在這裡現身，用你自己的招式打倒它；看到紅色範圍就閃開。" },
-  swamp: { type: "rbswamp", n: "腐骨蟾王", lv: 50, x: 3800, y: 1650, hp: 500000, dmgMul: 1.3, cool: 120, rec: 45, col: "120,230,110", bar: ["#8ad86a", "#6ac04a", "#4aa83a"], shards: 15, addType: "toad", addN: 2,
+  swamp: { type: "rbswamp", n: "腐骨蟾王", lv: 50, x: 3800, y: 1650, hp: 750000, dmgMul: 1.3, cool: 120, rec: 45, col: "120,230,110", bar: ["#8ad86a", "#6ac04a", "#4aa83a"], shards: 15, addType: "toad", addN: 2,
     where: "幽冥沼澤東南深處祭壇", loot: "3 件裝備（至少 1 件玄品）、12% 傳說「萬毒蟾衣」、10% 王卡、精髓 2",
     wake: "腐骨蟾王從泥沼爬出來了！", sleep: "腐骨蟾王沉回泥沼⋯⋯", p2: "蟾王發狂！會跳了！", p3: null, addMsg: "叫來毒沼蟾！",
     desc: "紅線＝舌頭，往旁邊閃；紅圈落地會留下毒池，別站在池子裡。<br>蟾王站進毒池時受到的傷害 +25%，可以引牠進去。<br>毒屬性：帶雷元素武器打牠 +30%。" },
-  thunder: { type: "rbthunder", n: "九雷鵬王", lv: 75, x: 3600, y: 330, hp: 2100000, dmgMul: 1.4, cool: 150, rec: 70, col: "150,200,255", bar: ["#a8d0ff", "#7aa8ff", "#5a80ff"], shards: 20, addType: "thawk", addN: 2, clr: 11, alt: "#262a40",
+  thunder: { type: "rbthunder", n: "九雷鵬王", lv: 75, x: 3600, y: 330, hp: 3700000, dmgMul: 1.4, cool: 150, rec: 70, col: "150,200,255", bar: ["#a8d0ff", "#7aa8ff", "#5a80ff"], shards: 20, addType: "thawk", addN: 2, clr: 11, alt: "#262a40",
     where: "雷霆峽谷北邊高地祭壇", loot: "3 件裝備（至少 1 件玄品）、12% 傳說「踏雷靴」、10% 王卡、20% 超技能寶石、精髓 2",
     wake: "九雷鵬王從雷雲裡俯衝下來！", sleep: "九雷鵬王飛回雷雲⋯⋯", p2: "鵬王狂怒！四連俯衝！", p3: null, addMsg: "叫來雷鷹！",
     desc: "紅線＝俯衝路線，一條一條往旁邊閃；白藍圈分兩批落雷，第一批打完就站進剛打完的位置。<br>60% 以下最後一衝會撞地：1.5 秒不能動、受傷 +50%，趁機打。<br>雷屬性：帶冰元素武器打牠 +30%。" },
-  sky: { type: "rbsky", n: "無相劍尊", lv: 110, x: 4560, y: 900, hp: 5000000, dmgMul: 1.7, cool: 180, rec: 105, col: "255,225,150", bar: ["#ffe9a8", "#ffd070", "#ffb040"], shards: 30, addType: "jianling", addN: 2, clr: 11, alt: "#3a3a52",
+  sky: { type: "rbsky", n: "無相劍尊", lv: 110, x: 4560, y: 900, hp: 10500000, dmgMul: 1.7, cool: 180, rec: 105, col: "255,225,150", bar: ["#ffe9a8", "#ffd070", "#ffb040"], shards: 30, addType: "jianling", addN: 2, clr: 11, alt: "#3a3a52",
     where: "天外仙域最東雲台", loot: "4 件裝備（至少 2 件玄品）、10% 傳說「無相劍」、8% 王卡、30% 超技能寶石、精髓 3；第一次擊敗多送一件傳說",
     wake: "無相劍尊睜開眼睛⋯⋯", sleep: "無相劍尊閉目入定⋯⋯", p2: "劍尊：「再快一點。」", p3: null, addMsg: "劍靈護法！",
     desc: "喊「近！」就貼到它身邊，喊「遠！」就跑遠；「＋」「×」紅線是劍雨。<br>60%、30% 會立 4 根劍柱：有柱子時劍尊受傷 −75%，先打柱子；8 秒內沒打完會放全場大招（貼著劍尊可以躲）。<br>無屬性：不剋也不被剋，考的是裝備和走位。" },
@@ -212,7 +212,7 @@ const inPool = (o, q) => Math.hypot(o.x - q.x, (o.y - q.y) / 0.55) < q.r;
 function poolHurt(dmg) { // 不給無敵時間（不然站在池子裡反而擋掉別的攻擊）
   const p = W0;
   if (p.shield > 0 || p.invT > 0 || safeAt(p.x, p.y) || state !== "world") return;
-  dmg = Math.max(1, Math.round(dmg * (1 - B.res)));
+  dmg = Math.max(1, Math.round(dmg * (1 - effRes("P")))); // 毒池＝混沌
   p.esT = 3;
   if (p.es > 0) { const a = Math.min(p.es, dmg); p.es -= a; dmg -= a; if (dmg <= 0) return; }
   p.hp -= dmg; floatText(p.x + rand(-4, 4), p.y - 14, `-${dmg}`, "#9aff6a");
@@ -256,7 +256,7 @@ function updateWBZones(dt) {
       const c = z.c || "255,140,50";
       fxBoom(z.x, z.y, z.r * 1.3, c); burst(z.x, z.y, `rgb(${c})`, z.r > 18 ? 14 : 8, 90, 0.4); shake = Math.max(shake, z.r > 18 ? 3 : 1);
       if (Math.random() < 0.5) sfx("break");
-      if (Math.hypot(p.x - z.x, (p.y - z.y) / 0.55) < z.r) hurtW(z.dmg, null, z.kind || "ele");
+      if (Math.hypot(p.x - z.x, (p.y - z.y) / 0.55) < z.r) hurtW(z.dmg, null, z.ele || z.kind || "ele");
       if (z.pool) addPool(z.x, z.y, z.pool.r, z.pool.dur, z.pool.dmg);
     }
   }
@@ -424,7 +424,7 @@ function ringDone(z) { // 甜甜圈／內圓：正圓判定
 function zapDone(z) { // 落雷：中傷害＋緩速 ×0.5、1 秒（沒有麻痺）
   bolts.push({ x: z.x, y: z.y, life: 0.25 }); fxBoom(z.x, z.y, z.r, "190,220,255"); burst(z.x, z.y, "#dfefff", 8, 80, 0.3);
   if (Math.random() < 0.3) sfx("crit");
-  if (Math.hypot(W0.x - z.x, (W0.y - z.y) / 0.55) < z.r && W0.iframe <= 0) { hurtW(z.dmg, null, "ele"); if (W0.hp > 0 && !(W0.shield > 0)) W0.zapT = 1; }
+  if (Math.hypot(W0.x - z.x, (W0.y - z.y) / 0.55) < z.r && W0.iframe <= 0) { hurtW(z.dmg, null, "T"); if (W0.hp > 0 && !(W0.shield > 0)) W0.zapT = 1; }
 }
 
 // ───── 九雷鵬王：三連俯衝、落雷棋盤、斷翼（60%↓）、俯衝落點炸雷（25%↓）─────

@@ -135,7 +135,7 @@ function tjTick(m, dt) {
       a.hp = a.max = WMOBS[a.type].hp * 1.2 * (1 + 0.35 * (a.lv - 1)) * 0.6; burst(a.x, a.y, "#ff7ad8", 14, 80);
     }
   }
-  if (m.tj.includes("pool") && (T.pool -= dt) <= 0) { T.pool = 3.5; wbZone({ k: "circle", x: W0.x, y: W0.y, r: 24, max: 0.9, dmg: wbDmg(m, 0.5), kind: "ele", c: "120,230,110", pool: { r: 24, dur: 5, dmg: wbDmg(m, 0.12) } }); }
+  if (m.tj.includes("pool") && (T.pool -= dt) <= 0) { T.pool = 3.5; wbZone({ k: "circle", x: W0.x, y: W0.y, r: 24, max: 0.9, dmg: wbDmg(m, 0.5), kind: "P", c: "120,230,110", pool: { r: 24, dur: 5, dmg: wbDmg(m, 0.12) } }); }
   if (m.tj.includes("zap") && (T.zap -= dt) <= 0) {
     T.zap = 4;
     for (let i = 0; i < 2; i++) wbZone({ k: "circle", x: W0.x + (i ? rand(-40, 40) : 0), y: W0.y + (i ? rand(-25, 25) : 0), r: 20, max: 0.7, dmg: wbDmg(m, 0.6), c: "190,220,255", fc: "150,190,255", done: zapDone });

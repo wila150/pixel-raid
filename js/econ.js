@@ -49,9 +49,10 @@ function matUses(k) { const r = RECIPES.filter((x) => x.need[k]).map((x) => x.n)
 
 // ───────── 配方（鍛造：王裝保底／部位鍛造；煉丹；鑰匙）─────────
 const BUFFS = {
-  fireres: { n: "避火丹", g: "火", c: "#ff7a3a", d: "火元素傷害 −25%", ele: "F" },
-  psnres: { n: "避毒丹", g: "毒", c: "#8dff6a", d: "毒元素傷害 −25%", ele: "P" },
-  thres: { n: "避雷丹", g: "雷", c: "#c8b8ff", d: "雷元素傷害 −25%", ele: "T" },
+  fireres: { n: "避火丹", g: "火", c: "#ff7a3a", d: "火焰抗性 +30%（上限變 80%）", ele: "F" },
+  iceres: { n: "避寒丹", g: "寒", c: "#9fdcff", d: "冰冷抗性 +30%（上限變 80%）", ele: "W" },
+  thres: { n: "避雷丹", g: "雷", c: "#c8b8ff", d: "閃電抗性 +30%（上限變 80%）", ele: "T" },
+  psnres: { n: "避毒丹", g: "毒", c: "#8dff6a", d: "混沌抗性 +30%（上限變 80%）", ele: "P" },
   atkup: { n: "破軍丹", g: "攻", c: "#ff9a6a", d: "攻擊 +10%" },
   dropup: { n: "尋寶丹", g: "寶", c: "#ffd84a", d: "掉寶 +15%" },
   expup: { n: "悟道丹", g: "悟", c: "#9fe8ff", d: "經驗 +20%" },
@@ -62,6 +63,7 @@ const RECIPES = [
   { id: "u_tstep", kind: "forge", n: "踏雷靴（王裝保底）", u: "tstep", lv: 75, need: { b_thunder: 20, tcore: 10, hide: 20, stone: 6000 } },
   { id: "u_wuxiang", kind: "forge", n: "無相劍（王裝保底）", u: "wuxiang", lv: 110, need: { b_sky: 20, jsoul: 10, wood: 20, stone: 12000 } },
   { id: "p_fireres", kind: "pill", n: "避火丹", b: "fireres", need: { lavac: 10, stone: 200 } },
+  { id: "p_iceres", kind: "pill", n: "避寒丹", b: "iceres", need: { icem: 10, stone: 250 } },
   { id: "p_psnres", kind: "pill", n: "避毒丹", b: "psnres", need: { venomsac: 10, stone: 300 } },
   { id: "p_thres", kind: "pill", n: "避雷丹", b: "thres", need: { tfeather: 10, stone: 400 } },
   { id: "p_atkup", kind: "pill", n: "破軍丹", b: "atkup", need: { horn: 3, wood: 10, stone: 300 } },
@@ -170,7 +172,7 @@ function bindCur(it, again) {
   on("cVaal", () => {
     if (!curN("vaal")) return; const r = Math.random();
     if (r < 0.25) { it.cor = 1; done("vaal", "渡劫：什麼都沒發生（已渡劫，不能再改）", "click"); }
-    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {}))); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFFIX[k].hi * (1 + 0.35 * it.il) * 1.5 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
+    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {}))); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFFIX[k].hi * affMul(k, it.il) * 1.5 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
     else if (r < 0.75) { if (!it.u) { const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); } it.cor = 1; done("vaal", "渡劫：詞綴全部重洗了", "arrive"); }
     else { useCur("vaal"); ungem(it); save.bag = save.bag.filter((b) => b !== it); for (const k of SLOT_KEYS) if (save.eq[k] === it) delete save.eq[k]; if (save.w.ws) save.w.ws = save.w.ws.map((b) => (b === it ? null : b)); eqSel = null; writeSave(); sfx("hurt"); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(`渡劫失敗⋯⋯${it.name}碎掉了`); }
   });
@@ -243,15 +245,7 @@ const _worldStatsEc = worldStats;
 worldStats = function () { const b = _worldStatsEc.apply(this, arguments); if (buffOn("atkup")) b.atk *= 1.1; if (buffOn("dropup")) b.drop = (b.drop || 0) + 0.15; return b; };
 const _gainExpEc = gainExp;
 gainExp = function (n) { return _gainExpEc.call(this, buffOn("expup") ? Math.round(n * 1.2) : n); };
-const _hurtWEc = hurtW;
-hurtW = function (dmg, from, kind) {
-  if (save.w && save.w.buffs) {
-    let ele = from && from.type && WMOBS[from.type] ? WMOBS[from.type].ele : null;
-    if (!ele && W0) { const bm = W0.mobs.find((m) => m.boss && !m.dead); if (bm && WMOBS[bm.type]) ele = WMOBS[bm.type].ele; }
-    if (ele) for (const k in BUFFS) if (BUFFS[k].ele === ele && buffOn(k)) { dmg *= 0.75; break; }
-  }
-  return _hurtWEc.call(this, dmg, from, kind);
-};
+// 避火／避寒／避雷／避毒丹：world.js 的 effRes 直接加抗性（企劃 22）
 // 狀態圖示欄（hud2.js）加增益丹
 if (typeof STATUS !== "undefined") for (const k in BUFFS) STATUS.push({ k: "b_" + k, g: BUFFS[k].g, c: BUFFS[k].c, on: () => buffOn(k), sub: () => { const t = (save.w.buffs[k] - Date.now()) / 1000; return t > 600 ? 0 : t; }, txt: () => "" });
 // 追蹤配方：左上任務欄下面

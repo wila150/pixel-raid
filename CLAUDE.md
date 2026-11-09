@@ -248,3 +248,10 @@
   - 寶石 `GEM_REQ0`＋`GEM_REQ_ADD`（2–5 級 +10／20／35／50）、`gemReqOk`：不夠等級 `gemLv` 不算、不能鑲；顏色 `GEM_COL`（紅／綠／藍）邊框＋標籤，背包照顏色排。
   - 測試：scratchpad `#func` 21 項全過（鎖／開、舊存檔保留、E 鎖、自動成長倍率、退點、寶石等級、換招規則、UI 點選鑲拆），沒有 JS 錯誤；bot 打王 DPS 新舊比對還沒做。
 - **v6.7.1 等級差（使用者 11/09：「我 50 等但是打得贏九雷鵬王」）**：world.js `lvGap(m)`＝怪等級−玩家等級−5（0～20），秘境（`RIFT`）、天劫王（`m.tj`）不算。`hitMob` 傷害 ×(1−0.03×gap)，`mobDmg`／`wbDmg` ×`lvGapIn`（1+0.03×gap）；Lv.50 打 Lv.75 鵬王＝傷害 ×0.4、受傷 ×1.6。打到有等級差的王劍靈提示一次（`W0.gapMsg`）。測試 `#gap` 全過。
+- **v6.8 物理減免＋四元素抗性、王血量重調（總表第 14 項，企劃 22，11/09）**：
+  - 計算在 world.js `hurtW` 前面：`ELES`、`RES_N`／`RES_S`（**`ELE_N`／`ELE_C` 是 equip.js 武器元素用的，別重複宣告**）、`ZONE_RES_PEN`（雪域／沼澤 0.2、雷谷 0.4、仙域 0.6）、`resPen()`（秘境 ≥11 層、天劫王 0.6）、`effRes(e,b)`＝clamp(−0.6, 上限, 裝備＋丹藥−扣抗)（上限 75%，吃對應丹藥 80%；先扣再封頂＝PoE，堆超過上限有用）、`physRed()`＝護甲對「同等級一般怪一下」`refHit()` 的減免（只拿來顯示）。
+  - `hitEle(from, kind)`：kind 可以直接是 `F/W/T/P`；否則看打人的怪 `mobEle`（含秘境 `m.ele`）；`kind:"ele"` 沒來源就看 `wbArena()` 的王；都沒有＝物理。元素傷害不吃護甲、吃抗性（近戰元素怪還是能閃避）；沒元素的 `ele` 改吃護甲。熔岩地＝F、`zapDone`＝T、毒池 `poolHurt`＝P、天劫毒池 kind "P"、怪物子彈 `s.ele` 帶字母、樹妖拋射 `wbZone` 帶 `ele`（`hurtW(z.dmg,null,z.ele||z.kind||"ele")`）。抗性負的被打時旁邊飄「雷↓」＋劍靈提示一次（`resneg`）。
+  - equip.js：`AFFIX` 的 `res` 拆成 `resF/resW/resT`（6–15）、`resA` 全元素（3–8，**不含混沌**）、`resP` 混沌（4–10）；抗性 `sc:0.12`（每級裝備只 +12%，`affMul(k,il)`）、`rw` 出現權重（0.5／0.3／0.2，飾品 ×2.5，`rollAffixes` 改加權抽）。舊 `res` 留成 `t:"x"`（不掉，算全元素一半）。冰靈卡 `resW 25`、蟾王卡 `resP 20`。
+  - econ.js：丹藥改 +30% 抗性（舊的 hurtW −25% 包裝拿掉），新增 `iceres` 避寒丹（寒冰髓 10）。rift.js `lowres` 四種各 −20%。
+  - 新檔 `js/resist.js`（riftmod.js 後）：`resMigrate`（`save.resMig`：整個存檔找 `aff.res`→`resA` 一半、精髓搬家、送雷羽／蟾毒囊各 10＋700 靈石）、包 `cmpRows` 顯示穿上後抗性、包 `updateWorld` 第一次進扣抗地區劍靈說明（`respen`）。角色頁屬性第一排 `.res5`、地區大字下多一行「此地元素抗性 −N%」、行囊 defbox、舊角色資料都換成五個數字。
+  - 王血量（v6.7 自動成長讓 bot 多了攻擊 ×(1+0.01×(Lv−1))）：見企劃 22 §9 的 bot 數字。

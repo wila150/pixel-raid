@@ -254,7 +254,7 @@ hitMob = function (m, dmg, kb, from, quiet) {
 const _worldStatsR = worldStats;
 worldStats = function () {
   const b = _worldStatsR.apply(this, arguments);
-  if (RIFT) { const ks = RIFT.key.mods; if (ks.includes("nomp")) b.mpRegen *= 0.6; if (ks.includes("lowres")) b.res = (b.res || 0) - 0.2; }
+  if (RIFT) { const ks = RIFT.key.mods; if (ks.includes("nomp")) b.mpRegen *= 0.6; if (ks.includes("lowres")) for (const e of ELES) b["res" + e] -= 0.2; }
   return b;
 };
 // 秘境裡：不更新戰爭迷霧、不送位置、不畫別人、不能御劍傳送

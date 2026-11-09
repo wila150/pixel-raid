@@ -54,7 +54,13 @@ const AFFIX = {
   // 後綴：速度與抗性
   spd: { n: "移動速度", lo: 2, hi: 5, w: 6, t: "s" },
   aspd: { n: "攻擊速度", lo: 2, hi: 5, w: 7, pct: true, t: "s" },
-  res: { n: "元素抗性", lo: 4, hi: 9, w: 4, pct: true, t: "s", cap: 1 },
+  // 抗性（企劃 22）：sc＝每級裝備只 +12%（不然高等一條就滿）；rw＝出現權重（全抗、混沌比較少見），飾品抗性 ×2.5
+  resF: { n: "火焰抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
+  resW: { n: "冰冷抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
+  resT: { n: "閃電抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
+  resA: { n: "全元素抗性", lo: 3, hi: 8, w: 9, pct: true, t: "s", sc: 0.12, rw: 0.3 },
+  resP: { n: "混沌抗性", lo: 4, hi: 10, w: 5, pct: true, t: "s", sc: 0.12, rw: 0.2 },
+  res: { n: "元素抗性（舊）", w: 4, pct: true, t: "x" }, // 舊存檔：載入時換成全元素抗性一半（resMig）
   dodge: { n: "閃避", lo: 1, hi: 3, w: 10, pct: true, t: "s", cap: 1 },
   supp: { n: "法術壓制", lo: 2, hi: 5, w: 6, pct: true, t: "s", cap: 1 },
   crit: { n: "爆擊率", lo: 1, hi: 3, w: 12, pct: true, t: "s" },
@@ -80,7 +86,7 @@ const AFFIX = {
 const AFF_CAP = [0, 1, 3, 2];
 
 // 詞綴名字：前綴放在名字前面、後綴放在後面（靈品一個、玄品兩個）
-const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", es: "玄光", def: "堅石", leech: "嗜血", thorns: "荊棘", spd: "迅捷", aspd: "疾刃", res: "辟邪", dodge: "幻影", supp: "鎮魂", crit: "致命", critD: "破軍", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
+const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", es: "玄光", def: "堅石", leech: "嗜血", thorns: "荊棘", spd: "迅捷", aspd: "疾刃", resF: "避火", resW: "避寒", resT: "避雷", resA: "辟邪", resP: "鎮毒", dodge: "幻影", supp: "鎮魂", crit: "致命", critD: "破軍", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
 function nameItem(it) {
   const en = it.en ? ` +${it.en}` : "";
   if (it.u) { it.name = UNIQUES[it.u].n + en; return; }
@@ -182,7 +188,7 @@ const CARDS = {
   crow: { n: "火鴉卡", slot: "sword", st: { eleF: 20 } },
   lava: { n: "熔岩獸卡", slot: "sword", st: { sizeL: 25 } },
   frostwolf: { n: "霜狼卡", slot: "sword", st: { sizeM: 20 } },
-  icewisp: { n: "冰靈卡", slot: "robe", st: { res: 15 } },
+  icewisp: { n: "冰靈卡", slot: "robe", st: { resW: 25 } },
   yeti: { n: "雪巨猿卡", slot: "sword", st: { eleW: 25 } },
   hunter: { n: "獵寶妖卡", slot: "robe", st: { drop: 25 } },
   toad: { n: "毒沼蟾卡", slot: "robe", st: { leech: 2 } },
@@ -196,7 +202,7 @@ const CARDS = {
   guardian: { n: "天兵石像卡", slot: "robe", st: { es: 200 } },
   jianling: { n: "劍靈卡", slot: "sword", st: { atkP: 15 } },
   wboss: { n: "焚天石魔卡", slot: "sword", st: { critL: 10, sizeL: 15 } },
-  rbswamp: { n: "腐骨蟾王卡", slot: "robe", st: { res: 20, hp: 500 } },
+  rbswamp: { n: "腐骨蟾王卡", slot: "robe", st: { resP: 20, hp: 500 } },
   rbthunder: { n: "九雷鵬王卡", slot: "sword", st: { sizeS: 25 }, d: "爆擊時 20% 連鎖電 2 隻" },
   rbsky: { n: "無相劍尊卡", slot: "robe", st: {}, d: "受到致命傷時不會倒下，改成無敵 3 秒（冷卻 90 秒）" },
 };
@@ -235,7 +241,9 @@ function shardItem(slot, q) {
   }
   nameItem(it); return it;
 }
-const rollAffVal = (k, il) => { const a = AFFIX[k], v = (a.lo + Math.random() * (a.hi - a.lo)) * (1 + 0.35 * il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
+const affMul = (k, il) => 1 + (AFFIX[k].sc !== undefined ? AFFIX[k].sc : 0.35) * il;
+const isResAff = (k) => k.startsWith("res");
+const rollAffVal = (k, il) => { const a = AFFIX[k], v = (a.lo + Math.random() * (a.hi - a.lo)) * affMul(k, il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
 function rollAffixes(it, n, force = null) {
   const cap = AFF_CAP[it.q] || 1, cnt = { p: 0, s: 0 };
   let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)));
@@ -245,11 +253,13 @@ function rollAffixes(it, n, force = null) {
   for (let i = 0; i < n; i++) {
     const ok = pool.filter((k) => cnt[AFFIX[k].t] < cap);
     if (!ok.length) break;
-    const k = ok[Math.floor(Math.random() * ok.length)];
+    const acc = SLOTS[it.slot] && SLOTS[it.slot].acc, wt = (k) => (AFFIX[k].rw || 1) * (acc && isResAff(k) ? 2.5 : 1); // 企劃 22：飾品比較常出抗性
+    let r = Math.random() * ok.reduce((s, k) => s + wt(k), 0), k = ok[ok.length - 1];
+    for (const x of ok) { r -= wt(x); if (r < 0) { k = x; break; } }
     pool = pool.filter((x) => x !== k); cnt[AFFIX[k].t]++; it.aff[k] = rollAffVal(k, it.il);
   }
 }
-const affTier = (k, v, il) => { const a = AFFIX[k]; if (!a.hi) return ""; const f = (v / (1 + 0.35 * il) - a.lo) / (a.hi - a.lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; };
+const affTier = (k, v, il) => { const a = AFFIX[k]; if (!a.hi) return ""; const f = (v / affMul(k, il) - a.lo) / (a.hi - a.lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; };
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
 function rollItem(boost = 0, ilv = null, wt = null) {
   const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
@@ -307,7 +317,7 @@ function applyBuild(b, daily) {
   b.maxHp = Math.round((b.maxHp + g("hp")) * (sc === "ti" ? 1.2 : sc === "fa" ? 0.8 : 1));
   b.atk *= (1 + g("atk") / 100) * (1 + g("atkP") / 100) * (sc === "fa" ? 1.35 : 1);
   b.armor = g("def"); b.dmgTaken = 1; // 護甲在 worldStats／hurtW 算（物理減傷）
-  b.es = g("es"); b.res = g("res") / 100; b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
+  b.es = g("es"); for (const e of ["F", "W", "T"]) b["res" + e] = (g("res" + e) + g("resA") + g("res") / 2) / 100; b.resP = g("resP") / 100; // 全元素抗性不含混沌（PoE） b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
   b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), eF: g("eleF"), eW: g("eleW"), eT: g("eleT"), eP: g("eleP") }; // 屬性卡片用 e 開頭（P 已經是植物系）
   b.drop = g("drop") / 100;
   b.spdMul = 1 + g("spd") / 100;
