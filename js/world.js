@@ -240,7 +240,7 @@ function worldStats() {
   const main = (typeof TR_WMAIN !== "undefined" && TR_WMAIN[wt]) || "str"; // 企劃 25 §13：武器看顏色吃主屬性
   const b = bonus();
   b.maxHp = Math.round(b.maxHp + (w.lv - 1) * 12 + a.vit * 12);
-  b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a[main] * (main === "agi" ? 0.014 : 0.03));
+  b.atk *= (1 + (w.lv - 1) * 0.1) * (1 + a[main] * (main === "agi" ? 0.017 : 0.03));
   b.aspd = (b.aspd || 1) * (1 + (main === "agi" ? a.agi * 0.003 : 0));
   b.spdMul *= 1 + Math.min(a.agi, AGI_SPD_PTS) * 0.005; // 企劃 24：只算前 80 點；總上限在 cap.js
   b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);

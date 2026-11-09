@@ -277,7 +277,7 @@ function trPanel() {
     const a = treeAttr(), main = TR_WMAIN[curWeapon()] || "agi";
     h = `<div class="trcard"><div class="trname">${T.s ? "點格子看說明" : "先選一個起點"}<small>${T.s ? "遠的格子也能直接點，會自動找最短路" : "點外圈 6 個大圓其中一個（紅＝力量、綠＝敏捷、藍＝智力）"}</small></div>
       <div class="trlines">${["str", "agi", "wis", "vit"].map((k) => `<span style="color:${TR_ATTR[k].c}">${TR_ATTR[k].n} ${a[k]}${k === main ? "（主屬性）" : ""}</span>`).join("")}</div>
-      <small class="dim">你現在拿${WEAPONS[curWeapon()].job.replace(/修$/, "")}：主屬性是${TR_ATTR[main].n}（${main === "agi" ? "每點傷害 +1.4%、攻速 +0.3%" : "每點傷害 +3%"}）。兩指縮放、一指拖動。</small></div>`;
+      <small class="dim">你現在拿${WEAPONS[curWeapon()].job.replace(/修$/, "")}：主屬性是${TR_ATTR[main].n}（${main === "agi" ? "每點傷害 +1.7%、攻速 +0.3%" : "每點傷害 +3%"}）。兩指縮放、一指拖動。</small></div>`;
   }
   info.innerHTML = h + (trMsg ? `<div class="trmsg">${trMsg}</div>` : "");
   trMsg = "";
