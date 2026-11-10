@@ -153,7 +153,7 @@ hitMob = function (m, dmg, kb, from, quiet) {
   if (m && !m.dead && !m.air) {
     if (Array.isArray(m.tj) && m.tj.includes("iron")) arguments[1] = dmg * 0.7;
     if (ksOn("shayi") && W0.ksK > 0) arguments[1] = arguments[1] * (1 + 0.03 * W0.ksK);
-    if (ksOn("jianyi") && !quiet) W0.mp = Math.min(B.maxMp, W0.mp + 2); // 原本每下 +1，共 3
+    if (ksOn("jianyi") && !quiet) W0.mp = Math.min(B.maxMp, W0.mp + 3); // 企劃 61：打中 +1 拿掉了，劍意自己給 3
     if (m.elite && eHas(m, "雷擊") && !(m.zapCd > 0) && Math.random() < 0.2) {
       m.zapCd = 1.5; wbZone({ k: "circle", x: W0.x, y: W0.y, r: 20, max: 0.5, dmg: mobDmg(m, WMOBS[m.type]) * 0.8, c: "190,220,255", fc: "150,190,255", done: zapDone });
       seenHint("ezap", "雷擊精英：打牠有機會在你腳下落雷，看到圈就閃");

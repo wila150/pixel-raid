@@ -252,7 +252,7 @@ const GEMS = {
   burst: { n: "爆裂", c: "#ff8a3d", d: (l) => `這招斬殺的妖獸會炸開，傷害周圍（威力 ${l} 級）` },
   pierce: { n: "穿透", c: "#d8d2e0", d: (l) => `穿過所有怪，傷害 +${l * 5}%` },
   blood: { n: "嗜血", c: "#c0304a", d: (l) => `吸血 +${(l * 0.5).toFixed(1)}%` },
-  lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `多 ${l >= 3 ? 4 : 2} 道（每道 70%）` },
+  lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `多 ${l >= 3 ? 4 : 2} 道（每道 ${l >= 3 ? 30 : 45}%）` },
   ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）。一招只能一種元素` },
   fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）。一招只能一種元素：用冰的招凍住，再用火的招打` },
   volt: { n: "元素轉化：雷", c: "#c8b8ff", d: (l) => `打中 ${25 + l * 7}% 雷電跳到旁邊 ${l >= 3 ? 2 : 1} 隻（50% 傷害）；打中毒的怪「毒爆」` },
@@ -269,7 +269,7 @@ const GEMS = {
   rshield: { n: "護盾", c: "#9fdcff", d: (l) => `位移後 ${(1.5 + l * 0.25).toFixed(2).replace(/0$/, "")} 秒內擋下一次傷害` },
   icepath: { n: "冰徑", c: "#bfefff", d: (l) => `位移的路上結冰 ${(1.5 + l * 0.5).toFixed(1)} 秒，怪踩到變慢` },
   focus: { n: "集中", c: "#ff9a6a", d: (l) => `取捨：範圍 −30%、傷害 +${25 + l * 5}%` },
-  volley: { n: "齊射", c: "#d8ffa0", d: (l) => `多重投射改成並排往前（比較集中）；沒串多重投射時多 2 道並排（${55 + l * 3}%）` },
+  volley: { n: "齊射", c: "#d8ffa0", d: (l) => `多重投射改成並排往前（比較集中）；沒串多重投射時多 2 道並排（${40 + l * 3}%）` },
   rapid: { n: "連打", c: "#ff8a8a", d: (l) => `近戰攻擊招自動再揮 2 次（每下 ${65 + l * 2}%）` },
   trigc: { n: "觸發：暴擊", c: "#c8a0ff", d: () => `只能串 E：其他招暴擊時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
   trigh: { n: "觸發：受傷", c: "#b090ff", d: () => `只能串 E：受傷時自動放 E，不用天罰能量（每次花 ${TRIG_MP} 真氣×倍率）` },
@@ -280,12 +280,12 @@ const GEMS = {
   efocus: { n: "元素集中", c: "#d0a8ff", d: (l) => `有元素的這招傷害 +${20 + l * 5}%` },
 };
 // 企劃 21 §8-6：每顆都有代價；真氣倍率串幾顆就相乘（省元 −15%／級）
-const GEM_MP = { power: 1.1, pierce: 1.1, blood: 1.1, frost: 1.1, enlarge: 1.1, haste: 1.1, burst: 1.1, det: 1.1, seek: 1.1, trail: 1.1, rshield: 1.1, icepath: 1.1, exec: 1.3, ice: 1.1, fire: 1.1, volt: 1.1, venom: 1.1,
-  split: 1.3, volley: 1.3, chain: 1.3, focus: 1.3, efocus: 1.3, bell: 1.3, spread: 1.3, bounce: 1.3, multi: 1.3, after: 1.3, lmp: 1.5, rapid: 1.5, boomer: 1.5, totem: 2, trigc: 2, trigh: 2, thrift: 1 };
-const GEM_COST = { exec: "整個角色只能串一顆（每種輔助寶石都一樣）", split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%；同一次打到同一隻王，第 2 道起只算 50%", chain: "跳到的那隻只有 70% 傷害", lmp: "多出來的每道只有 70%；同一次打到同一隻王，第 2 道起只算 50%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
+const GEM_MP = { power: 1.2, pierce: 1.2, blood: 1.2, frost: 1.2, enlarge: 1.2, haste: 1.2, burst: 1.2, det: 1.2, seek: 1.2, trail: 1.2, rshield: 1.2, icepath: 1.2, exec: 1.4, ice: 1.2, fire: 1.2, volt: 1.2, venom: 1.2,
+  split: 1.4, volley: 1.4, chain: 1.4, focus: 1.4, efocus: 1.4, bell: 1.4, spread: 1.4, bounce: 1.4, multi: 1.4, after: 1.4, lmp: 1.7, rapid: 1.7, boomer: 1.7, totem: 2.3, trigc: 2.3, trigh: 2.3, thrift: 1 };
+const GEM_COST = { exec: "整個角色只能串一顆（每種輔助寶石都一樣）", split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%；同一次打到同一隻怪，第 2 道起只算 50%", chain: "跳到的那隻只有 70% 傷害", lmp: "同一次打到同一隻怪，第 2 道起只算 50%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
   focus: "範圍 −30%", efocus: "不會冰凍、燃燒、中毒，也不會觸發融化、蒸汽、毒爆", totem: "傷害 −50%", trigc: "自動放的傷害 −20%；冷卻 1 秒", trigh: "自動放的傷害 −20%；冷卻 1 秒", bounce: "每跳一次傷害 −20%", after: "第二下傷害較低",
   spread: "要跟火元素串在同一招", bell: "只有近戰招打中才疊", thrift: "沒有" };
-const gemMp = (k) => GEM_MP[k] || 1.1;
+const gemMp = (k) => GEM_MP[k] || 1.2;
 const gemCostTxt = (k) => { const m = gemMp(k), t = GEM_COST[k]; return k === "thrift" ? "沒有" : `${t ? t + "；" : ""}這招真氣 ×${m}`; };
 const gemDesc = (g) => { const [k, l] = g.split(":"); return `好處：${GEMS[k].d(+l)}<br>代價：${gemCostTxt(k)}`; };
 const GEM_KEYS = Object.keys(GEMS);

@@ -122,10 +122,11 @@ function dotTick(m, dt) {
   return false;
 }
 // 多重投射：飛行招式多射 2 道（3 級以上 4 道），每道 70%
+const lmpDm = (g) => (g >= 3 ? 0.3 : 0.45), volDm = (v) => 0.4 + v * 0.03;
 function multiShots(a, o, push) { // 齊射：改成並排往前（沒串多重投射時自己多 2 道）
   if (o.noMulti) return;
   const g = gemLv("lmp"), v = gemLv("volley"); if (!g && !v) return;
-  const n = g >= 3 ? 2 : 1, dm = g ? 0.7 : 0.55 + v * 0.03, px = -Math.sin(a), py = Math.cos(a);
+  const n = g >= 3 ? 2 : 1, dm = g ? lmpDm(g) : volDm(v), /* 企劃 61 B：bot 量到多投單體 +125%、清怪 +155–180%，降 */ px = -Math.sin(a), py = Math.cos(a);
   for (let i = 1; i <= n; i++) for (const s of [-1, 1]) {
     const c = Object.assign({}, o, { dmg: o.dmg * dm, noMulti: true, pdone: 1 });
     if (v) { c.x = W0.x + px * s * i * 7; c.y = W0.y - 3 + py * s * i * 7; push(a, c); } else push(a + s * i * 0.22, c);

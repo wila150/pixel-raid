@@ -25,7 +25,7 @@ function trTagMul(sl) { // 這一招的標籤加成（加算）
   if (!sl || typeof slotTags !== "function") return 1;
   const s = treeSum(), tags = slotTags(sl); let a = 0;
   for (const t of tags) a += s["t" + t] || 0;
-  return 1 + a / 100;
+  return 1 + a / 100 + (typeof kcBonus === "function" ? kcBonus() : 0); // 企劃 64：連斬增傷也在這池
 }
 
 // ───────── 3. 屬性門檻（企劃 27 A）：玄品以上、物品等級 20 以上要屬性＝物品等級×2，不夠每差 10 點 −5%（最低 60%）─────────

@@ -12,7 +12,7 @@ const TR_WMAIN = { blade: "str", fist: "str", sword: "agi", bow: "agi", staff: "
 const TR_EFF = { // 效果顯示文字（數字是 %，力量那四個是點數）
   str: "力量 +", agi: "敏捷 +", wis: "智力 +", vit: "體魄 +", atk: "攻擊 +%", crit: "爆擊率 +%", cdmg: "爆擊傷害 +%", aspd: "攻擊速度 +%", spd: "移動速度 +%",
   hp: "生命 +%", armor: "護甲 +%", dodge: "閃避 +%", supp: "法術壓制 +%", es: "能量護盾 +%", mp: "真氣上限 +", mpr: "真氣回復 +%", leech: "吸血 +%", res: "火、冰、雷抗性 +%", loot: "秘境物品數量 +%",
-  tp: "投射招傷害 +%", tm: "近戰招傷害 +%", ta: "範圍招傷害 +%", td: "持續招傷害 +%", tv: "位移招傷害 +%",
+  kcr: "每 5 連斬傷害 +%", kc: "連斬增傷上限 +%", tp: "投射招傷害 +%", tm: "近戰招傷害 +%", ta: "範圍招傷害 +%", td: "持續招傷害 +%", tv: "位移招傷害 +%",
   fire: "火焰傷害 +%", ice: "冰冷傷害 +%", thun: "閃電傷害 +%", chaos: "混沌（毒）傷害 +%", // 企劃 42：元素（看這一招的元素）
 };
 const trEffTxt = (e) => Object.keys(e).map((k) => { const t = TR_EFF[k]; return t.endsWith("%") ? t.slice(0, -1) + e[k] + "%" : t + e[k]; });
@@ -27,6 +27,7 @@ const TR_TH = {
   dodge: { s: { dodge: 2 }, n: "凌波", e: { dodge: 4, spd: 5 } },
   es: { s: { es: 8 }, n: "玄光", e: { es: 20, mp: 20 } },
   mp: { s: { mpr: 10 }, n: "吐納", e: { mpr: 25, mp: 30 } },
+  kc: { s: { kcr: 0.5, kc: 3 }, n: "連斬", e: { kc: 6 } }, // 企劃 64：點滿每 5 連斬 +2%、最多 +18%（增加）
   leech: { s: { leech: 0.3 }, n: "嗜血", e: { leech: 1 } },
   res: { s: { res: 4 }, n: "避劫", e: { res: 10 } },
   loot: { s: { loot: 4 }, n: "聚寶", e: { loot: 12 } },
@@ -49,6 +50,7 @@ const TR_TH = {
 };
 // 第二版：重要天賦的特殊效果（效果在 tree2.js）
 const TR_SP = {
+  kc: "連斬時間 4 → 5 秒（5 秒內殺下一隻才接得上）",
   atk: "對精英、王傷害再 +10%", crit: "爆擊後 2 秒內爆擊率 +15%", cdmg: "對 30% 血以下的敵人爆擊傷害再 +30%", aspd: "閃身後 2 秒攻速 +20%（受攻速上限）",
   life: "生命低於 35% 時受到的傷害 −15%", armor: "站著不動 1 秒後，物理傷害 −8%", dodge: "閃避成功後 1 秒移速 +30%", es: "能量護盾被打破時 1 秒無敵（冷卻 20 秒）",
   mp: "真氣低於 20% 時，回復速度 ×2", leech: "吸血可以超過生命上限，最多 10% 變成血盾（3 秒沒補就消失）", res: "被元素打到後 3 秒，那個元素抗性 +15%（上限可到 80%）",
@@ -130,6 +132,7 @@ const TREE = {};
     add(base + "n", cx, cy, "note", { e: Object.assign({}, T.e), n: T.n, sec: -1, th: thk }); link(ring[2], base + "n");
     link(from, ring[0]); return ring[2];
   };
+  { const a3 = TR_SEC[3].a; clusterAt("kc", 640, a3, "kc", "3p3"); } // 企劃 64：紅綠區中線岔出「連斬」群（新 id kc0–kc3、kcn）
   GAP.forEach((G, i) => {
     const S = TR_SEC[i], S2 = TR_SEC[(i + 1) % 6], ang = S.a + 30, g = "g" + i;
     let pv = clusterAt(g + "C", 730, ang, G.th[0], "x" + i);

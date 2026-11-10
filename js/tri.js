@@ -7,8 +7,8 @@ const TRI = {
   sword: {
     a: [
       { k: "dance", n: "劍舞", d: "三段連擊，第 3 下範圍變大、傷害 ×1.65、擊退強；前兩下 90%（近身割草）" },
-      { k: "ray", n: "劍芒", d: "每下都多射一道短劍氣（距離 80、傷害 45%），本體 70%，不用貼臉" },
-      { k: "break", n: "破軍", d: "只打正前方（扇形很窄），傷害 ×1.2，對精英／王再 +30%（單體、打王）" },
+      { k: "ray", n: "劍芒", d: "每下都多射一道短劍氣（距離 80、傷害 52%），本體 70%，不用貼臉" },
+      { k: "break", n: "破軍", d: "只打正前方（扇形很窄），最近那隻傷害 ×2.1、其他只有 35%，對精英／王再 +30%（單體、打王）" },
     ],
     q: [
       { k: "wan", n: "萬劍", d: "5 道穿透劍氣、扇形更寬，每道傷害 60%（清怪）" },
@@ -256,6 +256,10 @@ function gemGrpMig() {
   w.gemGrp = 1; return n;
 }
 function slotEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
+// 企劃 61 §A-2：同一招串的第 3 顆起，每多一顆這招傷害 ×0.92（更多，相乘；省元不算）
+const CHAIN_DM = 0.92;
+function chainGemN(sl) { if (!save.w) return 0; let n = 0; for (const g of chainRow(sl)) if (g && gemReqOk(g) && gemFits(g, sl) && !g.startsWith("thrift:")) n++; return n; }
+const chainDmMul = (sl) => Math.round(Math.pow(CHAIN_DM, Math.max(0, chainGemN(sl) - 2)) * 100) / 100;
 function chainMpMul(sl) { // 真氣倍率：每顆相乘，省元 −15%／級
   if (!save.w) return 1; let m = 1, th = 0;
   for (const g of chainRow(sl)) { if (!g || !gemReqOk(g) || !gemFits(g, sl)) continue; const [k, l] = g.split(":"); if (k === "thrift") th += +l; else m *= gemMp(k); }
@@ -319,7 +323,7 @@ function renderTri(msg = "") {
     }
     const cards = first.concat(idx.map(([o, need]) => card(l, o.k, o.n, o.d, need))).join("");
     const tags = [...slotTags(l)].map((t) => TAG_N[t]).join("・"), mm = chainMpMul(l);
-    const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${mm !== 1 ? `・真氣 ×${mm}` : ""}`;
+    const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
     return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
   };
   return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>`;
