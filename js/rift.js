@@ -9,8 +9,8 @@ const RIFT_LIVES = 3;
 const riftLives = (tier) => (tier <= 10 ? 3 : tier <= 15 ? 2 : 1); // 企劃 52
 const riftMobLv = (tier) => Math.max(riftLv(tier), ((save.w && save.w.lv) || 1) - 5); // 企劃 52：怪等級跟著你（最低是這層的等級）
 const riftHpK = (tier) => 1 + 0.03 * tier; // 企劃 52：小怪血量小加
-const RIFT_TK_HP = 1.12, RIFT_TK_DMG = 1.1; // 企劃 65：第 11 層起每層（複利）怪血 ×1.12、傷害 ×1.1（bot 量過：企劃原本 ×1.05 太小）
-const riftTierK = (tier) => { const n = Math.max(0, (tier || 0) - 10); return { hp: Math.pow(RIFT_TK_HP, n), dmg: Math.pow(RIFT_TK_DMG, n) }; };
+const RIFT_TK_HP = 1.08, RIFT_TK_HP2 = 1.15, RIFT_TK_DMG = 1.1; // 企劃 65 §8：血量 11–15 層 ×1.08、16 層起 ×1.15／層 // 企劃 65：第 11 層起每層（複利）怪血 ×1.12、傷害 ×1.1（bot 量過：企劃原本 ×1.05 太小）
+const riftTierK = (tier) => { const n = Math.max(0, (tier || 0) - 10), a = Math.min(n, 5), c = n - a; return { hp: Math.pow(RIFT_TK_HP, a) * Math.pow(RIFT_TK_HP2, c), dmg: Math.pow(RIFT_TK_DMG, n) }; }; // 企劃 65 §8：血量兩段
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
 const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : tier <= 15 ? (tier % 2 ? "swamp" : "thunder") : "sky"); // 11–15 沼澤／雷谷、16 以上仙域（企劃 16 §3-2）
 const riftUnlocked = () => !!save.w && ((save.w.wp || []).includes("swamp") || save.w.lv >= 30);
