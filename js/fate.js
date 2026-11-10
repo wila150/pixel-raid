@@ -56,10 +56,10 @@ const fateEles = () => { const F = fateOn(); return F ? F.took.filter((o) => o.p
 const fateTjs = () => { const F = fateOn(); return F ? F.took.filter((o) => o.pen === "b_tj").map((o) => o.tj) : []; };
 
 // ───────── 出現：每張 50% 1 座、15% 2 座（第 11 層以上 60%／25%）；輿圖天賦「天命」每點 +10% ─────────
-if (typeof TAL !== "undefined") TAL.fate = { n: "天命", c: "#ff9ad8", d: (l) => `天命祭壇出現機率 +${l * 10}%` };
-function fateCount(tier) {
-  const hi = tier >= 11, p2 = hi ? 0.25 : 0.15, p1 = (hi ? 0.6 : 0.5) + 0.1 * (typeof talLv === "function" ? talLv("fate") : 0), r = Math.random();
-  return r < p2 ? 2 : r < p2 + p1 ? 1 : 0;
+if (typeof TAL !== "undefined") TAL.fate = { n: "天命", c: "#ff9ad8", d: (l) => `鑰匙骰到「天命」前綴的機率 +${l * 50}%${l >= 4 ? "、天命祭壇多 1 座" : ""}` }; // 企劃 51 §8
+function fateCount(tier, key) { // 企劃 51 §8：只有鑰匙有「天命」前綴才出（2 座、第 11 層以上 3 座；輿圖天賦 4 點多 1 座）
+  if (!key || !key.mods || !key.mods.includes("fate")) return 0;
+  return (tier >= 11 ? 3 : 2) + (typeof talLv === "function" && talLv("fate") >= 4 ? 1 : 0);
 }
 function fatePlace(R) {
   const all = () => (R.evs || []).concat(R.fate.alt);
@@ -80,7 +80,7 @@ riftEnter = function () {
   _riftEnterFate.apply(this, arguments);
   if (!RIFT || RIFT.fate) return;
   const R = RIFT; R.fate = { alt: [], took: [], boss: false };
-  const n = fateCount(R.tier || 1);
+  const n = fateCount(R.tier || 1, R.key);
   for (let i = 0; i < n; i++) fatePlace(R);
   if (R.fate.alt.length) setTimeout(() => { if (RIFT === R) notice(`這張秘境有 ${R.fate.alt.length} 座天命祭壇（小地圖紅點）：走過去二選一，賭懲罰換獎勵`, "#ff9ad8"); }, 2600);
 };

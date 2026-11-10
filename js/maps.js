@@ -10,6 +10,7 @@ const MAP_MODS = {
   elites: { t: "p", n: "精英成群（精英 ×3）", q: 10 },
   swarm: { t: "p", n: "怪物數量 +40%", q: 20 },
   keyf: { t: "p", n: "鑰匙掉率 +30%（高一層）", q: 5 },
+  fate: { t: "p", n: "天命：出現 2 座天命祭壇（二選一的賭注；第 11 層以上 3 座）", q: 0 }, // 企劃 51 §8：祭壇只看這條（fate.js）
   // 後綴（危險）
   hp: { t: "s", n: "怪物血量 +40%", q: 12 },
   fast: { t: "s", n: "怪物移速 +25%", q: 10 },
@@ -47,7 +48,8 @@ function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時�
   const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
   const grp = {}; suf = suf.filter((m) => { const g = MAP_MODS[m].g; if (!g) return true; (grp[g] = grp[g] || []).push(m); return false; }); // 同一組（四種元素）只留一條，機率跟一般詞綴一樣
   for (const g in grp) suf.push(grp[g][Math.floor(Math.random() * grp[g].length)]);
-  const pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
+  const wOf = (m) => (m === "fate" && typeof talLv === "function" ? 1 + 0.5 * talLv("fate") : 1); // 輿圖天賦「天命」每點權重 +50%
+  const pick = (arr) => { let r = Math.random() * arr.reduce((s, m) => s + wOf(m), 0), i = arr.length - 1; for (let j = 0; j < arr.length; j++) if ((r -= wOf(arr[j])) < 0) { i = j; break; } return arr.splice(i, 1)[0]; };
   if (opt.keep) { // 只補新的（點金符／淬靈石）
     const has = (m) => k.mods.includes(m) || (MAP_MODS[m].g && k.mods.some((x) => MAP_MODS[x].g === MAP_MODS[m].g));
     const P = pre.filter((m) => !has(m)), S = suf.filter((m) => !has(m)), nS = () => k.mods.filter((m) => MAP_MODS[m].t === "s").length;
