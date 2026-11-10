@@ -7,7 +7,7 @@ function uq2Hit(s, m, fz0) {
     for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + rand(-0.2, 0.2); W0.pshots.push({ x: m.x, y: m.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, a, life: 0.3, dmg: s.dmg * 0.3, kind: "orb", pierce: false, kb: 10, hit: new Set([m]), child: true, hx: 1, sl: s.sl, dm: s.dm }); }
     burst(m.x, m.y, "#bfefff", 12, 110, 0.35); floatText(m.x, m.y - 18, "碎冰", "#bfefff");
   }
-  if (B.uq.liuyun && s.kind === "wind" && s.turned) W0.mp = Math.min(B.maxMp, W0.mp + B.maxMp * 0.002); // 流雲百花扇：回程回真氣
+  if (B.uq.liuyun && s.kind === "wind" && s.turned) mpLeech(B.maxMp * 0.002); // 流雲百花扇：回程回真氣
 }
 // Q 放完（world.js doSpin 最後）：星隕天樞杖多落 2 顆
 function uq2Spin(wt, tq, f0) {

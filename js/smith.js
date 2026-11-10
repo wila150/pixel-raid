@@ -103,6 +103,7 @@ function bindSmith(items) {
   if (it && smTab === "aff") bindCur(it, (m) => { if (!smItems().includes(smSel)) { smSel = null; smPrev = null; } again(m); });
   ov.querySelectorAll("[data-ess]").forEach((b) => b.addEventListener("click", () => {
     const k = b.dataset.ess; if (!atCamp() || !(save.ess[k] > 0) || !it) return;
+    if (!affSlotOk(k, it)) { again(`${AFFIX[k].n}不會出現在這個部位`); return; } // 企劃 67
     if (!essCraft(it, k)) { again("傳說裝不能注入精髓"); return; }
     save.ess[k]--; if (!save.ess[k]) delete save.ess[k]; smStats(); sfx("arrive");
     again(`注入${essName(k)}：${it.name}`);

@@ -727,7 +727,7 @@ function updateWorld(dt) {
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1); if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / ((B.aspd || 1) * eAspd()) : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / ((B.aspd || 1) * eAspd()) : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -1058,7 +1058,7 @@ function updateWorld(dt) {
   if (p.trigCd > 0) p.trigCd -= dt;
   if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && wLv() >= E_LV) {
     const gc = p.critEv ? gemLv("trigc", "e") : 0, gh = p.hurtEv ? gemLv("trigh", "e") : 0, l = Math.max(gc, gh);
-    const cost = Math.round(TRIG_MP * chainMpMul("e") * mpLvMul());
+    const cost = Math.round(TRIG_MP * chainMpMul("e") * mpLvMul() * (1 - (B.mpCut || 0)));
     if (l && mpCan(p, cost)) { p.trigCd = 1; mpPay(p, cost); cast("e", () => ultFx(true), 0.8); }
   }
   p.critEv = 0; p.hurtEv = 0;

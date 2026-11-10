@@ -171,7 +171,7 @@ function bindCur(it, again) {
   on("cChaos", () => { if (!curN("chaos")) return; const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); done("chaos", "混元重骰：詞綴全部換了"); });
   on("cExalt", () => {
     if (!curN("exalt")) return; const cap = AFF_CAP[it.q], cnt = { p: 0, s: 0 }; for (const k in it.aff) if (AFFIX[k]) cnt[AFFIX[k].t]++;
-    const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(k in it.aff) && cnt[AFFIX[k].t] < cap);
+    const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(k in it.aff) && cnt[AFFIX[k].t] < cap && affSlotOk(k, it));
     if (!pool.length) { again("沒有空位了"); return; }
     const k = pool[Math.floor(Math.random() * pool.length)]; it.aff[k] = rollAffVal(k, itLv(it)); done("exalt", `淬靈：多了「${AFFIX[k].n}」`, "arrive");
   });
@@ -179,7 +179,7 @@ function bindCur(it, again) {
   on("cVaal", () => {
     if (!curN("vaal")) return; const r = Math.random();
     if (r < 0.25) { it.cor = 1; done("vaal", "渡劫：什麼都沒發生（已渡劫，不能再改）", "click"); }
-    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {}))); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFF_T[k][tierTop(itLv(it))][1] * 1.3 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
+    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {})) && affSlotOk(k, it)); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFF_T[k][tierTop(itLv(it))][1] * 1.3 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
     else if (r < 0.75) { if (!it.u) { const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); } it.cor = 1; done("vaal", "渡劫：詞綴全部重洗了", "arrive"); }
     else { useCur("vaal"); ungem(it); save.bag = save.bag.filter((b) => b !== it); for (const k of SLOT_KEYS) if (save.eq[k] === it) delete save.eq[k]; if (save.w.ws) save.w.ws = save.w.ws.map((b) => (b === it ? null : b)); eqSel = null; writeSave(); sfx("hurt"); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(`渡劫失敗⋯⋯${it.name}碎掉了`); }
   });
@@ -196,7 +196,7 @@ function econBody(econTab, camp) {
   let body = "";
   const row = (r, btn) => { const ok = matHas(r.need), tr = (save.w.track || []).includes(r.id); return `<div class="rcp${ok ? " ok" : ""}">${r.kind === "pill" && r.b ? ico("mat", r.b, "rcpico") : ""}<div><b>${r.n}</b><small>${matTxt(r.need)}</small></div><button data-trk="${r.id}" class="trk${tr ? " on" : ""}" title="追蹤（最多 2 個）"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M10.5 1 15 5.5l-1.4 1.4-1-.5-2.6 2.6.3 3.1L9 13.4 6.1 10.5 2 14.6 1.4 14l4.1-4.1L2.6 7l1.3-1.3 3.1.3L9.6 3.4l-.5-1z"/></svg></button>${btn(ok)}</div>`; };
   if (econTab === "forge") {
-    const affs = Object.keys(AFFIX).filter((k) => AFFIX[k].t === "p" || AFFIX[k].t === "s");
+    const fIt = { slot: forgeSlot, wt: curWeapon() }, affs = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && affSlotOk(k, fIt)); // 企劃 67：只列這個部位能出的
     body = `<div class="fsel"><select id="fSlot">${SLOT_KEYS.filter(slotOpen).map((k) => `<option value="${k}"${forgeSlot === k ? " selected" : ""}>${k === "sword" ? WEAPONS[curWeapon()].n : SLOTS[k].n}</option>`).join("")}</select><select id="fAff">${affs.map((k) => `<option value="${k}"${forgeAff === k ? " selected" : ""}>保底：${AFFIX[k].n}</option>`).join("")}</select></div>`
       + RECIPES.filter((r) => r.kind === "slot" || r.kind === "forge").filter((r) => r.kind === "forge" || Object.keys(r.need).some((k) => k !== "stone" && matN(k) > 0) || save.w.wp.includes(r.z)).map((r) => row(r, (ok) => `<button data-rcp="${r.id}" ${camp && ok ? "" : "disabled"}>鍛造</button>`)).join("");
   } else if (econTab === "pill") {
@@ -218,7 +218,7 @@ function econBody(econTab, camp) {
 function bindEcon(again) {
   ov.querySelectorAll("[data-et]").forEach((b) => b.addEventListener("click", () => { sfx("click"); econTab = b.dataset.et; again(); }));
   const fs = document.getElementById("fSlot"), fa = document.getElementById("fAff");
-  if (fs) fs.onchange = () => { forgeSlot = fs.value; }; if (fa) fa.onchange = () => { forgeAff = fa.value; };
+  if (fs) fs.onchange = () => { forgeSlot = fs.value; if (fa) { const fIt = { slot: forgeSlot, wt: curWeapon() }, ks = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && affSlotOk(k, fIt)); if (!ks.includes(forgeAff)) forgeAff = ks[0]; fa.innerHTML = ks.map((k) => `<option value="${k}"${forgeAff === k ? " selected" : ""}>保底：${AFFIX[k].n}</option>`).join(""); } }; // 企劃 67：換部位就換詞綴清單 if (fa) fa.onchange = () => { forgeAff = fa.value; };
   ov.querySelectorAll("[data-trk]").forEach((b) => b.addEventListener("click", (e) => {
     e.stopPropagation(); sfx("click"); const w = save.w; w.track = w.track || []; const id = b.dataset.trk;
     if (w.track.includes(id)) w.track = w.track.filter((x) => x !== id); else { w.track.push(id); if (w.track.length > 2) w.track.shift(); }
@@ -227,6 +227,7 @@ function bindEcon(again) {
   ov.querySelectorAll("[data-rcp]").forEach((b) => b.addEventListener("click", () => {
     if (!atCamp()) { again("回營地才能用"); return; }
     const r = recipe(b.dataset.rcp); if (!r || !matHas(r.need)) return;
+    if (r.kind === "slot" && !affSlotOk(forgeAff, { slot: forgeSlot, wt: curWeapon() })) { again(`${AFFIX[forgeAff].n}不會出現在這個部位`); return; } // 企劃 67
     if ((r.kind === "forge" || r.kind === "slot") && !bagRoomAny()) { again("行囊和倉庫都滿了"); return; }
     matUse(r.need);
     if (r.kind === "forge") { const it = rbUnique(r.u, Math.floor(r.lv / 3) + 2); bagAdd(it); sfx("win"); again(`鍛造成功：${it.name}`); }

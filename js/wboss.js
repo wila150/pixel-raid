@@ -236,7 +236,7 @@ function updatePools(dt) {
     p.poolTick = (p.poolTick || 0) - dt;
     if (p.poolTick <= 0) {
       p.poolTick = 0.5;
-      if (B.uq.psnHit) { p.mp = Math.min(B.maxMp, p.mp + B.maxMp * 0.04); if (Math.random() < 0.3) floatText(p.x, p.y - 14, "+真氣", "#9fdcff"); }
+      if (B.uq.psnHit) { mpLeech(B.maxMp * 0.04); if (Math.random() < 0.3) floatText(p.x, p.y - 14, "+真氣", "#9fdcff"); }
       else poolHurt(worst);
     }
   } else p.poolTick = 0;

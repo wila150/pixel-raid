@@ -25,6 +25,7 @@ const SLOT_JOB = { ring: 3, ear: 4 }; // 部位要幾轉才開
 const slotOpen = (k) => !SLOT_JOB[k] || (typeof jobLv === "function" && save.w ? jobLv() : 0) >= SLOT_JOB[k];
 const slotLockTxt = (k) => `${["", "一", "二", "三", "四"][SLOT_JOB[k]]}轉開放`;
 const ACC_NO = ["def", "es", "thorns"]; // 戒指／耳飾不出護甲類
+const affSlotOk = (k, it) => { const a = AFFIX[k]; if (!a || !it) return !!a; if (SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)) return false; return !a.sl || a.sl.includes(it.slot === "sword" ? wtOf(it) : it.slot); }; // 企劃 67：部位限制
 // 掉落部位：開放的部位，戒指／耳飾權重一半
 function pickSlot() { const ks = SLOT_KEYS.filter(slotOpen), ws = ks.map((k) => (SLOTS[k].acc ? 1 : 2)); let r = Math.random() * ws.reduce((a, b) => a + b, 0); for (let i = 0; i < ks.length; i++) if ((r -= ws[i]) < 0) return ks[i]; return ks[0]; }
 const SLOT_KEYS = Object.keys(SLOTS);
@@ -51,9 +52,12 @@ const AFFIX = {
   def: { n: "護甲", lo: 6, hi: 16, w: 2.5, t: "p" },
   leech: { n: "吸血", lo: 0.4, hi: 1, w: 40, pct: true, dec: 1, t: "p" },
   thorns: { n: "反震", lo: 5, hi: 12, w: 4, pct: true, t: "p" },
+  mp: { n: "最大真氣", lo: 8, hi: 12, w: 0.8, t: "p", rw: 0.5, sl: ["crown", "robe", "charm", "ring", "ear"] }, // 企劃 67：sl＝只出現在這些部位（武器寫武器種類）
   // 後綴：速度與抗性
   spd: { n: "移動速度", lo: 2, hi: 5, w: 6, t: "s" },
   aspd: { n: "攻擊速度", lo: 2, hi: 5, w: 7, pct: true, t: "s" },
+  mpr: { n: "真氣回復", lo: 3, hi: 5, w: 1.5, pct: true, t: "s", rw: 0.5, sl: ["crown", "charm", "ring", "ear", "staff", "fan"] },
+  mpc: { n: "減少真氣消耗", lo: 2, hi: 3, w: 4, pct: true, t: "s", rw: 0.5, sl: ["crown", "charm", "ring", "ear"] },
   // 抗性（企劃 22）：sc＝每級裝備只 +12%（不然高等一條就滿）；rw＝出現權重（全抗、混沌比較少見），飾品抗性 ×2.5
   resF: { n: "火焰抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
   resW: { n: "冰冷抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
@@ -84,9 +88,10 @@ const AFFIX = {
 };
 // 前綴／後綴數量上限（凡、靈、玄、傳說）
 const AFF_CAP = [0, 1, 3, 2];
+const MPC_CAP = 0.3; // 企劃 67：減少真氣消耗全身最多 30%
 
 // 詞綴名字：前綴放在名字前面、後綴放在後面（靈品一個、玄品兩個）
-const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", es: "玄光", def: "堅石", leech: "嗜血", thorns: "荊棘", spd: "迅捷", aspd: "疾刃", resF: "避火", resW: "避寒", resT: "避雷", resA: "辟邪", resP: "鎮毒", dodge: "幻影", supp: "鎮魂", crit: "致命", critD: "破軍", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
+const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", es: "玄光", def: "堅石", leech: "嗜血", thorns: "荊棘", mp: "靈泉", mpr: "吐納", mpc: "凝神", spd: "迅捷", aspd: "疾刃", resF: "避火", resW: "避寒", resT: "避雷", resA: "辟邪", resP: "鎮毒", dodge: "幻影", supp: "鎮魂", crit: "致命", critD: "破軍", swords: "萬劍", ult: "雷罰", magnet: "聚靈" };
 function nameItem(it) {
   const en = it.en ? ` +${it.en}` : "";
   if (it.u) { it.name = UNIQUES[it.u].n + en; return; }
@@ -147,6 +152,7 @@ const AFF_T = {
   resF: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resW: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resT: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]],
   resA: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 16]], resP: [[4, 7], [8, 12], [13, 17], [18, 23], [24, 28]],
   dodge: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]], supp: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]],
+  mp: [[8, 12], [15, 22], [25, 34], [38, 50], [55, 70]], mpr: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 18]], mpc: [[2, 3], [4, 4], [5, 6], [7, 7], [8, 9]], // 企劃 67
   crit: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]], critD: tierCurve(8, CURVE_P), ult: tierCurve(4, CURVE_P), magnet: tierCurve(10, CURVE_P),
 };
 for (const k in AFF_T) { const t = AFF_T[k], st = AFFIX[k].dec ? 0.1 : 1; for (let i = 1; i < 5; i++) if (t[i][0] <= t[i - 1][1]) { t[i][0] = Math.round((t[i - 1][1] + st) * 10) / 10; if (t[i][1] < t[i][0]) t[i][1] = t[i][0]; } } // 各階不重疊（四捨五入後）
@@ -188,7 +194,7 @@ const UNIQUES = {
   wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
   // 企劃 57：每種武器至少 3 把（都是改打法的）
   hanxu: { slot: "sword", wt: "staff", n: "寒髓玄冰杖", d: "法球打中冰凍的怪會碎冰：炸出 6 片冰刃（各 30% 傷害，20% 再冰凍一次）" },
-  xingyun: { slot: "sword", wt: "staff", n: "星隕天樞杖", d: "Q 火雨／流星群／天隕多落 2 顆（各 15% 傷害）；Q 冷卻 +30%" },
+  xingyun: { slot: "sword", wt: "staff", n: "星隕天樞杖", d: "Q 火雨／流星群／天隕多落 2 顆（各 15% 傷害）；Q 冷卻 +30%；真氣回復上限 +3%" },
   zhuifeng: { slot: "sword", wt: "bow", n: "追風逐影弓", d: "閃身後 1 秒內，普攻必定爆擊" },
   jiuyao: { slot: "sword", wt: "bow", n: "九曜連珠弓", d: "每第 9 支箭變成穿透大箭（傷害 ×2.5）" },
   xiuluo: { slot: "sword", wt: "blade", n: "修羅血飲刀", d: "旋風斬／颶風每打中一隻回 0.3% 生命（每秒最多 4%）；轉的時候傷害更多 40%、受到的傷害 −15%" },
@@ -222,7 +228,7 @@ const UQ_FIX = {
   fentian: { bt: 3, aff: { resF: [15, 20], hp: [50, 70] } },
   wuxiang: { bt: 8, aff: { atkP: [30, 35], aspd: [10, 12] } },
   hanxu: { bt: 4, aff: { atkP: [16, 20], resA: [6, 8] } },
-  xingyun: { bt: 7, aff: { atkP: [24, 28], ult: [15, 20] } },
+  xingyun: { bt: 7, aff: { atkP: [24, 28], ult: [15, 20], mpr: [14, 18] } }, // 企劃 67：另外真氣回復上限 +3%（mp.js）
   zhuifeng: { bt: 4, aff: { aspd: [7, 9], crit: [6, 8] } },
   jiuyao: { bt: 7, aff: { aspd: [9, 11], crit: [8, 10] } },
   xiuluo: { bt: 7, aff: { hp: [110, 140], leech: [1.2, 1.6] } },
@@ -346,7 +352,7 @@ const CARDS = {
   crow: { n: "火鴉卡", slot: "sword", st: { eleF: 20 } },
   lava: { n: "熔岩獸卡", slot: "sword", st: { sizeL: 25 } },
   frostwolf: { n: "霜狼卡", slot: "sword", st: { sizeM: 20 } },
-  icewisp: { n: "冰靈卡", slot: "robe", st: { resW: 25 } },
+  icewisp: { n: "冰靈卡", slot: "robe", st: { resW: 25, mp: 30 } },
   yeti: { n: "雪巨猿卡", slot: "sword", st: { eleW: 25 } },
   shield: { n: "鐵盾妖卡", slot: "robe", st: { def: 100 } },
   witch: { n: "妖巫卡", slot: "sword", st: { raceP: 20 } },
@@ -414,7 +420,7 @@ const isTierRes = (k) => ["resF", "resW", "resT", "resA", "resP"].includes(k);
 const rollAffVal = (k, lv, top) => { const a = AFFIX[k], t = AFF_T[k]; if (!t) return a.lo || 1; const [lo, hi] = t[pickTier(lv, top)], v = lo + Math.random() * (hi - lo); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
 function rollAffixes(it, n, force = null, forceTop = false) {
   const cap = AFF_CAP[it.q] || 1, cnt = { p: 0, s: 0 };
-  let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)));
+  let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && affSlotOk(k, it));
   it.aff = {};
   if (force && !pool.includes(force)) force = null; // 飾品不吃護甲類保底
   const lv = itLv(it);
@@ -497,6 +503,7 @@ function applyBuild(b, daily) {
   b.es = g("es"); for (const e of ["F", "W", "T"]) b["res" + e] = (g("res" + e) + g("resA") + g("res") / 2) / 100; b.resP = g("resP") / 100; // 全元素抗性不含混沌（PoE） b.dodge = g("dodge") / 100; b.supp = g("supp") / 100; b.aspd = 1 + g("aspd") / 100;
   b.vs = { S: g("sizeS"), M: g("sizeM"), L: g("sizeL"), critL: g("critL") / 100, B: g("raceB"), P: g("raceP"), R: g("raceR"), eF: g("eleF"), eW: g("eleW"), eT: g("eleT"), eP: g("eleP") }; // 屬性卡片用 e 開頭（P 已經是植物系）
   b.drop = g("drop") / 100;
+  b.gMp = g("mp"); b.gMpr = g("mpr") / 100; b.mpCut = Math.min(MPC_CAP, g("mpc") / 100); // 企劃 67：worldStats 重算真氣之後才套（mp.js）
   b.resCapE = { F: uq.fentian ? 0.03 : 0, W: 0, T: uq.tstep ? 0.03 : 0, P: uq.toadrobe ? 0.03 : 0 }; // 企劃 22 §11：最大抗性只在這 3 件傳說
   b.spdMul = 1 + g("spd") / 100;
   b.crit = 0.15 + g("crit") / 100 + (sc === "qi" ? 0.1 : 0);
