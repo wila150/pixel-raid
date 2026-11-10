@@ -177,21 +177,58 @@ function treeMig(w) {
   if (had) { w.treeHint = 1; if (typeof notice === "function") notice("配點、大節點、巔峰點合成「天賦樹」了（右上「天」／P 鍵），點數全部退回。打開後按「推薦路線」可以一鍵點好", "#ffe066"); }
 }
 function trWStart() { const wt = typeof curWeapon === "function" ? curWeapon() : "sword"; return { str: "s4", agi: "s2", wis: "s0" }[TR_WMAIN[wt] || "agi"]; }
-const treeHas = (id) => { const T = treeSt(); return !!T && T.n.includes(id); };
+// ── 武器組專屬點（總表第 35 項，企劃 46）：每 TRWS_EVERY 級 1 點，三組各一份，只在拿那一組時生效 ──
+const WS_SHORT = { sword: "劍", staff: "法杖", bow: "弓", blade: "大刀", fist: "拳套", fan: "扇" };
+const TRWS_EVERY = 6, TRWS_C = ["#5ab4ff", "#6ae08a", "#ffa64a"];
+let TRM = 0; // 天賦樹畫面：0＝主樹、1–3＝武器組
+const wsCur = () => (save.w && save.w.wi) || 0;
+function wsTree(i) {
+  const w = save.w; if (!w) return { n: [] };
+  if (!Array.isArray(w.treeWs)) {
+    w.treeWs = [{ n: [] }, { n: [] }, { n: [] }];
+    if (w.created && w.lv >= TRWS_EVERY && w.tree && w.tree.s && typeof notice === "function") notice(`每個武器組多了「專屬天賦點」（每 ${TRWS_EVERY} 級 1 點，組 1／2／3 各一份）：打開天賦樹（P）上面切到「武器組」分頁點，只在拿那一組武器時生效`, "#ffe066");
+  }
+  return w.treeWs[i] || (w.treeWs[i] = { n: [] });
+}
+const wsTotal = () => (save.w ? Math.floor(save.w.lv / TRWS_EVERY) : 0);
+const wsFree = (i) => wsTotal() - wsTree(i).n.length;
+const wsWt = (i) => { const w = save.w; if (!w) return null; const it = i === wsCur() ? save.eq.sword : (w.ws || [])[i]; return it ? wtOf(it) : null; };
+const wsNoNode = (N) => N.t === "ks" || N.t === "jw" || N.t === "start"; // 核心、玉槽、起點只能用主樹點
+let TRA = null, TRA_K = "";
+function treeAll() { // 現在生效的格子＝主樹＋目前武器組
+  const T = treeSt(); if (!T) return [];
+  const S = wsTree(wsCur()), k = T.n.length + "/" + wsCur() + "/" + S.n.length;
+  if (TRA && TRA_K === k && TRA.m === T.n && TRA.w === S.n) return TRA;
+  TRA = T.n.concat(S.n); TRA.m = T.n; TRA.w = S.n; TRA_K = k; return TRA;
+}
+function wsPrune() { // 主樹變了：跟主樹重複的拿掉、接不到主樹的退回
+  const T = treeSt(); if (!T) return;
+  const main = new Set(T.n);
+  for (let i = 0; i < 3; i++) {
+    const S = wsTree(i); let L = S.n.filter((id) => TREE[id] && !main.has(id) && !wsNoNode(TREE[id]));
+    if (!T.s) L = [];
+    const left = new Set(L), seen = new Set(), q = [...main];
+    while (q.length) { const u = q.shift(); for (const v of TREE[u].adj) if (left.has(v) && !seen.has(v)) { seen.add(v); q.push(v); } }
+    L = L.filter((id) => seen.has(id));
+    if (L.length !== S.n.length) S.n = L;
+  }
+}
+const trHave = () => { const T = treeSt(); return TRM ? T.n.concat(wsTree(TRM - 1).n) : T.n; };
+const treeHas = (id) => !!save.w && treeAll().includes(id);
 const treeTotal = () => (save.w ? Math.max(0, save.w.lv - 1) + 2 * trJob() : 0);
 const treeUsed = () => { const T = treeSt(); return T ? T.n.filter((id) => id !== T.s).length : 0; };
 const treeFree = () => treeTotal() - treeUsed();
 let TR_SUM = null, TR_SUMA = null, TR_SUML = -1;
 function treeSum() { // 快取：同一個陣列、同樣長度就不重算（寶石門檻每一下都會問）
-  const T = treeSt(), arr = T ? T.n : null, len = arr ? arr.length : 0;
+  const T = treeSt(), arr = T ? treeAll() : null, len = arr ? arr.length : 0;
   if (TR_SUM && arr === TR_SUMA && len === TR_SUML) return TR_SUM;
-  const s = {}; if (T) for (const id of T.n) { const N = TREE[id]; if (N) for (const k in N.e) s[k] = (s[k] || 0) + N.e[k]; }
+  const s = {}; if (T) for (const id of arr) { const N = TREE[id]; if (N) for (const k in N.e) s[k] = (s[k] || 0) + N.e[k]; }
   if (T && typeof trJwSum === "function") trJwSum(T, s); // 企劃 42 B：鑲在已點玉槽上的天賦玉
   TR_SUM = s; TR_SUMA = arr; TR_SUML = len; return s;
 }
 function treeAttr() { const s = treeSum(); return { str: s.str || 0, agi: s.agi || 0, wis: s.wis || 0, vit: s.vit || 0 }; }
 const treeLoot = () => treeSum().loot || 0;
-function treeHasKs(k) { return treeHas("k_" + k); }
+function treeHasKs(k) { const T = treeSt(); return !!T && T.n.includes("k_" + k); }
 // 百分比類的效果：接在 jobStats 後面
 const _jobStatsT = jobStats;
 jobStats = function (b) {
@@ -216,11 +253,12 @@ jobStats = function (b) {
 };
 
 // ───────── 3. 找路、點亮、退點 ─────────
-const trCanPass = (id) => TREE[id].t !== "ks"; // 核心天賦在最外面，只能當終點
+const trCanPass = (id) => TREE[id].t !== "ks" && !(TRM && wsNoNode(TREE[id])); // 核心天賦在最外面，只能當終點；專屬點不能經過玉槽
 function trPath(to) { // 從已點的格子走到 to 的最短路（不含已點的），回傳 id 陣列；走不到 null
-  const T = treeSt(); if (!T || !T.s || T.n.includes(to)) return null;
-  const have = new Set(T.n), prev = {}, q = [];
-  for (const id of T.n) { prev[id] = null; q.push(id); }
+  const T = treeSt(), H = trHave(); if (!T || !T.s || H.includes(to)) return null;
+  if (TRM && wsNoNode(TREE[to])) return null;
+  const have = new Set(H), prev = {}, q = [];
+  for (const id of H) { prev[id] = null; q.push(id); }
   while (q.length) {
     const u = q.shift();
     if (u === to) break;
@@ -233,22 +271,31 @@ function trPath(to) { // 從已點的格子走到 to 的最短路（不含已點
 }
 function trWhyNot(id, path) {
   const N = TREE[id], T = treeSt();
-  if (!T.s) return N.t === "start" ? "" : "先選一個起點";
-  if (!path) return "走不到這裡";
+  if (!T.s) return N.t === "start" && !TRM ? "" : "先在主樹選一個起點";
+  if (TRM && wsNoNode(N)) return N.t === "start" ? "起點只能在主樹選" : "核心天賦、天賦玉槽只能用主樹的點";
+  if (!path) return TRM ? "走不到這裡（專屬點不能穿過玉槽）" : "走不到這裡";
+  if (TRM) return path.length > wsFree(TRM - 1) ? `專屬點不夠（要 ${path.length}，剩 ${wsFree(TRM - 1)}）` : "";
   if (N.t === "ks" && save.w.lv < TR_KS_LV) return `核心天賦 Lv.${TR_KS_LV} 才能點`;
   if (path.length > treeFree()) return `點數不夠（要 ${path.length}，剩 ${treeFree()}）`;
   return "";
 }
 function trAfter() {
-  TR_SUM = null; writeSave();
+  wsPrune(); TR_SUM = null; writeSave();
   if (typeof W0 !== "undefined" && W0) { B = worldStats(); W0.maxHp = B.maxHp; W0.hp = Math.min(W0.hp, B.maxHp); if (typeof applyWeapon === "function") applyWeapon(); if (typeof setPadLabels === "function") setPadLabels(true); }
 }
 function trAlloc(id) {
   const path = trPath(id), why = trWhyNot(id, path); if (why) return why;
-  treeSt().n.push(...path); trAfter(); return "";
+  (TRM ? wsTree(TRM - 1) : treeSt()).n.push(...path); trAfter(); return "";
 }
 function trRemovable(id) {
-  const T = treeSt(); if (!T.n.includes(id) || id === T.s) return false;
+  const T = treeSt();
+  if (TRM) { // 專屬點：剩下的都還接得到主樹
+    const S = wsTree(TRM - 1); if (!S.n.includes(id)) return false;
+    const left = new Set(S.n); left.delete(id); const seen = new Set(), q = [...T.n];
+    while (q.length) { const u = q.shift(); for (const v of TREE[u].adj) if (left.has(v) && !seen.has(v)) { seen.add(v); q.push(v); } }
+    return seen.size === left.size;
+  }
+  if (!T.n.includes(id) || id === T.s) return false;
   const left = new Set(T.n); left.delete(id);
   const seen = new Set([T.s]), q = [T.s];
   while (q.length) { const u = q.shift(); for (const v of TREE[u].adj) if (left.has(v) && !seen.has(v)) { seen.add(v); q.push(v); } }
@@ -257,6 +304,7 @@ function trRemovable(id) {
 const trUndoCost = () => 30 * save.w.lv;
 function trUndo(id) {
   if (!trRemovable(id)) return "這格退了會讓後面的斷掉，先退外面的";
+  if (TRM) { if (!(typeof atCamp === "function" && atCamp())) return "專屬點在城裡或營地結界裡才能退（免費）"; const S = wsTree(TRM - 1); S.n = S.n.filter((x) => x !== id); trAfter(); return ""; }
   if (!useCur("regret")) { if (save.stone < trUndoCost()) return `要 1 個洗心丹或 ${trUndoCost()} 靈石`; save.stone -= trUndoCost(); }
   const T = treeSt(); T.n = T.n.filter((x) => x !== id); trAfter(); return "";
 }
@@ -264,6 +312,7 @@ const trResetCost = () => 100 * save.w.lv;
 function trReset() {
   const T = treeSt();
   if (!(typeof atCamp === "function" && atCamp())) return "在城裡或營地結界裡才能全部重置";
+  if (TRM) { wsTree(TRM - 1).n = []; trAfter(); return ""; } // 專屬點：只重置這一組、免費
   if (T.fr) T.fr = 0;
   else if (curN("regret") >= 5) useCur("regret", 5);
   else if (save.stone >= trResetCost()) save.stone -= trResetCost();
@@ -297,6 +346,32 @@ function trEleVal() { // 推薦路線：只看這把武器普攻／Q 的元素
 let TR_PREF = null;
 // 照主題點（給企劃 bot／測試）：treeRecommendFor(["fire", "fire2", "t_d"])＝先往這些天賦群點，其他照推薦路線
 function treeRecommendFor(ths) { TR_PREF = ths; try { treeRecommend(); } finally { TR_PREF = null; } }
+function wsRecommend(i) { // 專屬點推薦：照那一組武器的主屬性
+  const T = treeSt(); if (!T.s) return "先在主樹選一個起點";
+  const wt = wsWt(i); if (!wt) return `武器組 ${i + 1} 是空的（行囊裡把武器放到武器 ${i + 1}）`;
+  const S = wsTree(i), main = TR_WMAIN[wt] || "agi", M0 = TRM; TRM = i + 1; TR_EV = trEleVal();
+  try {
+    let free = wsFree(i), guard = 200;
+    while (free > 0 && guard--) {
+      const have = new Set(T.n.concat(S.n)), dist = {}, prev = {}, val = {}, q = [];
+      for (const id of have) { dist[id] = 0; val[id] = 0; q.push(id); }
+      let best = null, bs = -1;
+      while (q.length) {
+        const u = q.shift();
+        if (dist[u] >= free || (!have.has(u) && !trCanPass(u))) continue;
+        for (const v of TREE[u].adj) {
+          if (v in dist || wsNoNode(TREE[v])) continue;
+          dist[v] = dist[u] + 1; prev[v] = u; val[v] = val[u] + trValue(TREE[v], main); q.push(v);
+          const sc = val[v] / dist[v]; if (sc > bs) { bs = sc; best = v; }
+        }
+      }
+      if (!best) break;
+      const path = []; for (let u = best; !have.has(u); u = prev[u]) path.unshift(u);
+      S.n.push(...path); free -= path.length;
+    }
+  } finally { TRM = M0; }
+  trAfter(); return "";
+}
 function treeRecommend() {
   const T = treeSt(); if (!T.s) { T.s = trWStart(); T.n = [T.s]; }
   const main = TR_WMAIN[curWeapon()] || "agi"; TR_EV = trEleVal();
@@ -344,25 +419,40 @@ function renderTree(msg) {
   trPanel(); trDraw();
 }
 function trPanel() {
-  const T = treeSt(), free = treeFree(), top = ov.querySelector(".trtop"), info = ov.querySelector(".trinfo"); if (!top) return;
-  const cnt = T.n.filter((x) => x !== T.s).length;
-  top.innerHTML = `<span class="trpts">剩餘 <b class="${free > 0 ? "hot" : ""}">${free}</b> 點<small>已點 ${cnt}・共 ${treeTotal()}</small></span>
+  const T = treeSt(), top = ov.querySelector(".trtop"), info = ov.querySelector(".trinfo"); if (!top) return;
+  const wsName = (i) => { const wt = wsWt(i); return wt ? (WS_SHORT[wt] || wt) : "空"; };
+  const tabs = `<div class="trtabs">${["主樹", "武器組 1", "武器組 2", "武器組 3"].map((n, i) => `<button class="trtab${TRM === i ? " on" : ""}" data-trm="${i}" style="${i ? `--wc:${TRWS_C[i - 1]}` : ""}">${n}${i ? `<small>${wsName(i - 1)}${wsFree(i - 1) > 0 ? `・剩 ${wsFree(i - 1)}` : ""}${wsCur() === i - 1 ? "・手上" : ""}</small>` : `<small>${treeFree() > 0 ? `剩 ${treeFree()}` : "三組共用"}</small>`}</button>`).join("")}</div>`;
+  if (TRM) {
+    const i = TRM - 1, f = wsFree(i), n = wsTree(i).n.length;
+    top.innerHTML = tabs + `<span class="trpts" style="--wc:${TRWS_C[i]}">武器組 ${i + 1} 專屬點 剩 <b class="${f > 0 ? "hot" : ""}">${f}</b><small>已點 ${n}・共 ${wsTotal()}（每 ${TRWS_EVERY} 級 1 點）</small></span>
+    <button id="trHome" class="trb">回到我的格子</button><button id="trRec" class="trb${!n && f > 0 ? " gold" : ""}" ${f > 0 && wsWt(i) ? "" : "disabled"}>推薦路線</button>
+    <button id="trReset" class="trb" ${n ? "" : "disabled"}>重置這組<small>營地免費</small></button>`;
+  } else {
+  const free = treeFree(), cnt = T.n.filter((x) => x !== T.s).length;
+  top.innerHTML = tabs + `<span class="trpts">剩餘 <b class="${free > 0 ? "hot" : ""}">${free}</b> 點<small>已點 ${cnt}・共 ${treeTotal()}</small></span>
     <button id="trHome" class="trb">回到我的格子</button><button id="trRec" class="trb${!cnt && free > 0 ? " gold" : ""}" ${free > 0 ? "" : "disabled"}>推薦路線</button>
     <button id="trReset" class="trb" ${T.s ? "" : "disabled"}>全部重置<small>${T.fr ? "第一次免費" : curN("regret") >= 5 ? "−5 洗心丹" : `−${trResetCost()} 靈石`}</small></button>`;
+  }
   { const q = ov.querySelector(".trq"); if (q) q.style.top = top.offsetHeight + 14 + "px"; } // 搜尋框放在上面那排按鈕底下（直向會換行）
   let h = "";
   if (trSel && TREE[trSel]) {
-    const N = TREE[trSel], has = T.n.includes(trSel), path = has ? null : trPath(trSel), why = has ? "" : trWhyNot(trSel, path);
+    const N = TREE[trSel], has = trHave().includes(trSel), path = has ? null : trPath(trSel), why = has ? "" : trWhyNot(trSel, path);
     const kind = { hub: "樞紐", start: "起點", attr: "屬性", small: "小天賦", note: "重要天賦", ks: "核心天賦（有好有壞）", jw: "天賦玉槽" }[N.t];
     const extra = N.t === "start" ? `<small class="dim">適合：${TR_SEC[N.sec].fit}（不限武器）</small>` : N.t === "ks" ? `<small class="dim">Lv.${TR_KS_LV} 以後才能點</small>` : "";
     let act = "";
     if (!T.s && N.t === "start") act = `<button id="trPick" class="trb gold">選這個起點</button>`;
+    else if (TRM && has && T.n.includes(trSel)) act = `<small class="dim">主樹的格子（切到「主樹」分頁才能退）</small>`;
+    else if (TRM && has) act = trRemovable(trSel) ? `<button id="trUndo" class="trb">退這一格<small>營地免費</small></button>` : `<small class="dim">已點亮（要先退外面的才能退這格）</small>`;
     else if (has) act = trRemovable(trSel) ? `<button id="trUndo" class="trb">退這一格<small>${curN("regret") ? "−1 洗心丹" : `−${trUndoCost()} 靈石`}</small></button>` : trSel === T.s ? `<small class="dim">你的起點</small>` : `<small class="dim">已點亮（要先退外面的才能退這格）</small>`;
     else if (why) act = `<small class="bad">${why}</small>`;
-    else act = `<button id="trGo" class="trb gold">${path.length > 1 ? `點亮這條路（${path.length} 點）` : "點亮（1 點）"}</button>`;
-    if (N.t === "jw" && typeof trJwAct === "function") act += trJwAct(trSel, has);
+    else act = `<button id="trGo" class="trb gold">${TRM ? "用專屬點" : ""}${path.length > 1 ? `點亮這條路（${path.length} 點）` : "點亮（1 點）"}</button>`;
+    if (N.t === "jw" && typeof trJwAct === "function" && !TRM) act += trJwAct(trSel, has);
     h = `<div class="trcard"><div class="trname" style="color:${N.t === "ks" ? "#ff9ae0" : N.t === "note" ? "#ffe066" : "#f0e2c4"}">${trNodeName(N)}<small>${kind}</small></div>
       <div class="trlines">${trNodeLines(N).map((x) => `<span>${x}</span>`).join("") || "<span class='dim'>（沒有效果，只是路）</span>"}</div>${extra}<div class="tract">${act}</div></div>`;
+  } else if (TRM) {
+    const i = TRM - 1, wt = wsWt(i);
+    h = `<div class="trcard"><div class="trname" style="color:${TRWS_C[i]}">武器組 ${i + 1} 的專屬點<small>${wt ? `這組是${(WS_SHORT[wt] || wt)}` : "這組還沒放武器"}</small></div>
+      <div class="trlines"><span>只在拿武器組 ${i + 1} 時生效（按 ${i + 1} 切武器會自動換）</span><span>要接在主樹已點的格子旁邊；核心天賦、天賦玉槽只能用主樹點</span><span>在城裡或營地可以免費退、免費重置這一組</span></div></div>`;
   } else {
     const a = treeAttr(), main = TR_WMAIN[curWeapon()] || "agi";
     h = `<div class="trcard"><div class="trname">${T.s ? "點格子看說明" : "先選一個起點"}<small>${T.s ? "遠的格子也能直接點，會自動找最短路" : "點外圈 6 個大圓其中一個（紅＝力量、綠＝敏捷、藍＝智力）"}</small></div>
@@ -374,8 +464,9 @@ function trPanel() {
   const on = (id, f) => { const b = ov.querySelector("#" + id); if (b) b.onclick = (e) => { e.stopPropagation(); f(); }; };
   const res = (m, ok) => { sfx(m ? "bad" : "good"); renderTree(m || ok); };
   on("trHome", () => { sfx("click"); trCenter(); trDraw(); });
-  on("trRec", () => { treeRecommend(); trSel = null; res("", "照你現在的武器點好了，不喜歡的格子可以退"); });
-  on("trReset", () => { const m = trReset(); if (!m) trSel = null; res(m, "全部退回了，重新選起點"); });
+  on("trRec", () => { if (TRM) { const m = wsRecommend(TRM - 1); trSel = null; res(m, `照武器組 ${TRM} 的武器點好了`); return; } treeRecommend(); trSel = null; res("", "照你現在的武器點好了，不喜歡的格子可以退"); });
+  on("trReset", () => { const m = trReset(); if (!m) trSel = null; res(m, TRM ? `武器組 ${TRM} 的專屬點全部退回了` : "全部退回了，重新選起點"); });
+  top.querySelectorAll(".trtab").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); sfx("click"); TRM = +b.dataset.trm; trSel = null; renderTree(); }));
   on("trPick", () => { const m = trPickStart(trSel); res(m, "起點選好了，往外點吧"); });
   on("trGo", () => { const N = TREE[trSel], m = trAlloc(trSel); res(m, `點亮：${trNodeName(N)}`); });
   on("trUndo", () => { const N = TREE[trSel], m = trUndo(trSel); res(m, `退掉：${trNodeName(N)}`); });
@@ -398,7 +489,7 @@ function trDraw() {
   const c = trCv; if (!c || !c.isConnected) return;
   const r = c.getBoundingClientRect(), d = trDpr();
   if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
-  const g = c.getContext("2d"), T = treeSt(), have = new Set(T.n), z = trView.z, W = r.width, H = r.height;
+  const g = c.getContext("2d"), T = treeSt(), have = new Set(trHave()), wsSet = new Set(TRM ? wsTree(TRM - 1).n : []), wsC = TRM ? TRWS_C[TRM - 1] : "", z = trView.z, W = r.width, H = r.height;
   g.setTransform(d, 0, 0, d, 0, 0);
   const bg = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7); bg.addColorStop(0, "#1a1712"); bg.addColorStop(1, "#08080a");
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
@@ -409,7 +500,7 @@ function trDraw() {
     gr.addColorStop(0, S.c + "18"); gr.addColorStop(1, S.c + "00"); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
   const path = trSel && !have.has(trSel) ? trPath(trSel) : null, pset = new Set(path || []);
-  const avail = new Set(); if (T.s) for (const id of T.n) for (const v of TREE[id].adj) if (!have.has(v)) avail.add(v);
+  const avail = new Set(); if (T.s) for (const id of have) for (const v of TREE[id].adj) if (!have.has(v) && !(TRM && wsNoNode(TREE[v]))) avail.add(v);
   // 連線
   g.lineCap = "round";
   for (const id of TR_IDS) {
@@ -420,7 +511,7 @@ function trDraw() {
       if (x1 === x2 && y1 === y2) continue;
       if (Math.max(x1, x2) < -40 || Math.min(x1, x2) > W + 40 || Math.max(y1, y2) < -40 || Math.min(y1, y2) > H + 40) continue;
       const both = have.has(id) && have.has(v), pth = (pset.has(id) || have.has(id)) && (pset.has(v) || have.has(v)) && (pset.has(id) || pset.has(v));
-      g.strokeStyle = both ? "#e8b84a" : pth ? "#fff3c0" : "rgba(160,130,70,0.32)"; g.lineWidth = Math.max(1.5, (both || pth ? 5 : 3.5) * z);
+      g.strokeStyle = both ? (wsSet.has(id) || wsSet.has(v) ? wsC : "#e8b84a") : pth ? "#fff3c0" : "rgba(160,130,70,0.32)"; g.lineWidth = Math.max(1.5, (both || pth ? 5 : 3.5) * z);
       g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
     }
   }
@@ -435,7 +526,7 @@ function trDraw() {
     const on = have.has(id), av = avail.has(id) || (!T.s && N.t === "start"), inP = pset.has(id), sel = trSel === id;
     const ac = N.at ? TR_ATTR[N.at].c : N.t === "start" ? TR_SEC[N.sec].c : null;
     g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2);
-    g.fillStyle = on ? (N.t === "ks" ? "#ff9ae0" : "#ffd25a") : inP ? "#6a5a30" : N.t === "ks" ? "#3a1c34" : N.t === "note" ? "#3a3220" : "#26241f";
+    g.fillStyle = on ? (wsSet.has(id) ? wsC : N.t === "ks" ? "#ff9ae0" : "#ffd25a") : inP ? "#6a5a30" : N.t === "ks" ? "#3a1c34" : N.t === "note" ? "#3a3220" : "#26241f";
     g.fill();
     if (ac && (N.t !== "start" || !on)) { g.beginPath(); g.arc(x, y, rr * (on ? 0.45 : 0.6), 0, Math.PI * 2); g.fillStyle = ac; g.globalAlpha = on ? 1 : 0.55; g.fill(); g.globalAlpha = 1; }
     g.lineWidth = Math.max(1.2, (sel ? 3.5 : 2) * Math.min(1.3, z));
@@ -496,4 +587,4 @@ window.addEventListener("keydown", (e) => {
 }, true);
 OV_KEYS.tree = ["escape", "p"];
 // 右上「天」：有點數就亮紅點
-setInterval(() => { const b = document.querySelector('#quick .qbtn[data-q="tree"]'); if (b && save.w && save.w.created) b.classList.toggle("dot", treeFree() > 0); }, 1000);
+setInterval(() => { const b = document.querySelector('#quick .qbtn[data-q="tree"]'); if (b && save.w && save.w.created) b.classList.toggle("dot", treeFree() > 0 || (!!wsWt(wsCur()) && wsFree(wsCur()) > 0)); }, 1000);

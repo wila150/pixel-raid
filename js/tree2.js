@@ -15,9 +15,10 @@ KEYSTONE.t2 = [
 let TR2_K = null, TR2_A = null, TR2_L = -1;
 function trNotes() {
   const T = treeSt(); if (!T) return {};
-  if (TR2_K && TR2_A === T.n && TR2_L === T.n.length) return TR2_K;
-  const o = {}; for (const id of T.n) { const N = TREE[id]; if (N && N.t === "note") o[N.th] = 1; }
-  TR2_K = o; TR2_A = T.n; TR2_L = T.n.length; return o;
+  const A = treeAll(); // 主樹＋目前武器組的專屬點（企劃 46）
+  if (TR2_K && TR2_A === A && TR2_L === A.length) return TR2_K;
+  const o = {}; for (const id of A) { const N = TREE[id]; if (N && N.t === "note") o[N.th] = 1; }
+  TR2_K = o; TR2_A = A; TR2_L = A.length; return o;
 }
 const trN = (k) => !!save.w && !!trNotes()[k];
 function trTagMul(sl) { // 這一招的標籤加成（加算）
