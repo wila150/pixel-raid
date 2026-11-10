@@ -1,13 +1,14 @@
 // 萬劍仙途 — 企劃 55 拳套「散打流」（總表第 43 項）：散手（普攻）、摔投（Q）、勢
-// 勢：只有普攻選「散手」時有。散手打完一套＋1、Q 打中＋1、閃身／身法＋1（每秒最多 1 次）；最多 5 層，3 秒沒打中掉 1 層
+// 勢：只有普攻選「散手」時有。散手打完一套＋1（每 2 秒最多 1 次）、Q 打中＋1、閃身／身法＋2（每秒最多 1 次）；最多 5 層，3 秒沒打中掉 1 層
 // 滿 5 層：下一個 Q 或 E 是終結技（傷害 ×1.6、範圍 ×1.3，world.js slotCast），飄「散打・終」，勢歸 0
 "use strict";
 const SHI_MAX = 5;
 // 散手 4 段：[距離, 半角, 傷害, 擊退]（world.js atkFx）
-const SS_SEG = [null, [22, 0.6, 4.2, 30], [24, 1.0, 4.6, 40], [26, Math.PI / 2, 4.0, 20], [30, 0.45, 9.5, 220]];
+const SS_SEG = [null, [22, 0.7, 4.2, 30], [26, 1.3, 4.6, 40], [30, Math.PI, 4.0, 20], [36, 0.6, 9.5, 220]]; // v9.9.1 企劃 55 §8：放大（掃腿整圈）
 const shiOn = () => !!(typeof W0 !== "undefined" && W0 && save.w && curWeapon() === "fist" && typeof triOf === "function" && triOf("fist", "a") === "sanshou");
-function shiAdd(n) {
+function shiAdd(n, why) {
   if (!shiOn()) return;
+  if (why === "set") { if (time - (W0.shiSetT || -99) < 2) return; W0.shiSetT = time; } // v9.9.1：打完一套 +1 每 2 秒最多 1 次
   const p = W0, was = p.shi || 0; p.shi = Math.min(SHI_MAX, was + n); p.shiIdle = 0;
   if (p.shi >= SHI_MAX && was < SHI_MAX) { floatText(p.x, p.y - 22, "勢滿", "#ffd84a"); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 18, c: "255,215,110" }); }
 }
@@ -73,7 +74,7 @@ hitMob = function (m, dmg) { // eslint-disable-line no-func-assign
 };
 const _skillUsedSs = skillUsed;
 skillUsed = function (k) { // eslint-disable-line no-func-assign
-  if (k === "roll" && shiOn() && time - (W0.shiRollT || -99) >= 1) { W0.shiRollT = time; shiAdd(1); }
+  if (k === "roll" && shiOn() && time - (W0.shiRollT || -99) >= 1) { W0.shiRollT = time; shiAdd(2); } // v9.9.1：閃身 +2
   return _skillUsedSs.apply(this, arguments);
 };
 const _updateWorldSs = updateWorld;
