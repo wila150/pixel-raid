@@ -3,6 +3,7 @@
 // 滿 5 層：下一個 Q 或 E 是終結技（傷害 ×1.6、範圍 ×1.3，world.js slotCast），飄「散打・終」，勢歸 0
 "use strict";
 const SHI_MAX = 5;
+const shiCap = () => (typeof B !== "undefined" && B && B.uq && B.uq.liuxing ? 7 : SHI_MAX); // 企劃 57 流星鐵臂：勢最多 7 層
 // 散手 4 段：[距離, 半角, 傷害, 擊退]（world.js atkFx）
 const SS_ROLL_K = 2; // v9.9.2 企劃 55 §10：閃身後下一拳直接側踹（×1.5 bot 沒到 1.05 → ×2）
 const SS_SEG = [null, [22, 0.7, 4.4, 30], [26, 1.3, 4.8, 40], [30, Math.PI, 4.2, 20], [36, 0.6, 9.9, 220]]; // v9.9.1 企劃 55 §8：放大（掃腿整圈）；v9.9.3 §12：傷害 ×1.04
@@ -10,22 +11,30 @@ const shiOn = () => !!(typeof W0 !== "undefined" && W0 && save.w && curWeapon() 
 function shiAdd(n, why) {
   if (!shiOn()) return;
   if (why === "set") { if (time - (W0.shiSetT || -99) < 2) return; W0.shiSetT = time; } // v9.9.1：打完一套 +1 每 2 秒最多 1 次
-  const p = W0, was = p.shi || 0; p.shi = Math.min(SHI_MAX, was + n); p.shiIdle = 0;
-  if (p.shi >= SHI_MAX && was < SHI_MAX) { floatText(p.x, p.y - 22, "勢滿", "#ffd84a"); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 18, c: "255,215,110" }); }
+  const p = W0, was = p.shi || 0; p.shi = Math.min(shiCap(), was + n); p.shiIdle = 0;
+  if (p.shi >= shiCap() && was < shiCap()) { floatText(p.x, p.y - 22, "勢滿", "#ffd84a"); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 18, c: "255,215,110" }); }
 }
 // slotCast 手動放 Q／E 時呼叫：勢滿＝終結技（回傳 true）；不是終結的 Q 先記著，打中時＋1
 function shiFin(sl) {
   if (!shiOn()) return false;
   const p = W0;
-  if ((p.shi || 0) >= SHI_MAX) {
+  if ((p.shi || 0) >= shiCap()) {
     p.shi = 0; p.shiQ = 0; p.shiFinN = (p.shiFinN || 0) + 1;
     floatText(p.x, p.y - 28, "散打・終", "#ffd84a", true);
     W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.45, r: 64, c: "255,215,110" });
     burst(p.x, p.y, "#ffd84a", 26, 150, 0.6); flashT = Math.max(flashT, 0.12); flashColor = "255,215,110"; shake = Math.max(shake, 6); sfx("crit");
+    if (B.uq.liuxing) wLater(0.25, ssAutoKick); // 企劃 57 流星鐵臂：終結後補一記側踹
     return true;
   }
   if (sl === "q") p.shiQ = 1.5; // 衝刺、摔落地比較晚才打到：1.5 秒內第一下打中算
   return false;
+}
+// 流星鐵臂：自動側踹（算普攻）
+function ssAutoKick() {
+  const p = W0; if (!p || !shiOn()) return;
+  const S = SS_SEG[4], s0 = CUR_SL, d0 = CUR_DM; CUR_SL = "a"; CUR_DM = 1;
+  try { const R = S[0] * areaMul("a"); for (const m of W0.mobs) { if (m.dead) continue; const diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (dist(m, p) < R + WMOBS[m.type].r && diff < S[1]) hitMob(m, wDmg(S[2] * 3), S[3], p); } } finally { CUR_SL = s0; CUR_DM = d0; }
+  p.ssK = 4; p.ssKT = time; p.swing = p.swingMax = 0.16; p.swingR = S[0]; sfx("break"); shake = Math.max(shake, 3);
 }
 // 摔投（world.js doSpin 呼叫；CUR_SL／CUR_DM 由 cast 設好）
 function ssThrow(p, AM, afterAt) {
@@ -112,7 +121,7 @@ comboGlow = function () { // eslint-disable-line no-func-assign
   const g = _comboGlowSs.apply(this, arguments);
   if (shiOn()) {
     if (W0.ssRollK || ((W0.ssN || 0) === 3 && time - (W0.ssT || -99) <= 2)) g.attack = true;
-    if ((W0.shi || 0) >= SHI_MAX) g.spin = true;
+    if ((W0.shi || 0) >= shiCap()) g.spin = true;
   }
   return g;
 };
@@ -120,7 +129,7 @@ comboGlow = function () { // eslint-disable-line no-func-assign
 const _drawSlashSs = drawSlash;
 drawSlash = function (p, wt) { // eslint-disable-line no-func-assign
   if (!(wt === "fist" && p === W0 && p.swing > 0 && p.ssK && time - (p.ssKT || -99) < (p.swingMax || 0.1) + 0.05)) return _drawSlashSs.apply(this, arguments);
-  const max = p.swingMax || 0.1, q = Math.min(1, 1 - p.swing / max), k = p.ssK, F = p.face, fin = (p.shi || 0) >= SHI_MAX;
+  const max = p.swingMax || 0.1, q = Math.min(1, 1 - p.swing / max), k = p.ssK, F = p.face, fin = (p.shi || 0) >= shiCap();
   const col = k === 4 || k === 5 || fin ? "255,215,110" : "255,200,150", A = 1 - q * 0.8;
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
   const arc = (cx, cy, R, a0, a1, w, sy) => { ctx.save(); ctx.translate(cx, cy); ctx.scale(1, sy || 1); for (let i = 0; i < 3; i++) { ctx.strokeStyle = `rgba(${col},${(i === 2 ? 1 : i === 1 ? 0.6 : 0.25) * A})`; ctx.lineWidth = i === 0 ? w : i === 1 ? w * 0.55 : 1.5; ctx.beginPath(); ctx.arc(0, 0, R, a0, a1); ctx.stroke(); } ctx.restore(); };
@@ -146,9 +155,9 @@ const _drawOrbsSs = drawOrbs;
 drawOrbs = function () { // eslint-disable-line no-func-assign
   _drawOrbsSs.apply(this, arguments);
   if (!shiOn()) return;
-  const R = clamp(Math.min(W, H) * 0.11, 34, 56), hx = SAFE.l + R + 14, hy = H - R - 18, y = hy - R - (B.maxEs > 0 ? 22 : 9) - (W0.brk > 0 ? 13 : 0) - 4, n = W0.shi || 0, full = n >= SHI_MAX;
-  for (let i = 0; i < SHI_MAX; i++) {
-    const x = hx - 20 + i * 10;
+  const R = clamp(Math.min(W, H) * 0.11, 34, 56), hx = SAFE.l + R + 14, hy = H - R - 18, y = hy - R - (B.maxEs > 0 ? 22 : 9) - (W0.brk > 0 ? 13 : 0) - 4, n = W0.shi || 0, full = n >= shiCap();
+  for (let i = 0; i < shiCap(); i++) {
+    const x = hx - (shiCap() - 1) * 5 + i * 10;
     ctx.fillStyle = "rgba(10,8,6,0.85)"; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
     if (i < n) { ctx.fillStyle = full ? `rgba(255,${200 + 40 * Math.sin(time * 10)},90,1)` : "#ffb347"; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.strokeStyle = "rgba(255,180,90,0.5)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.stroke(); }

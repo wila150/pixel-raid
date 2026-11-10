@@ -175,15 +175,25 @@ const UNIQUES = {
   orbitboots: { slot: "boots", n: "御劍步雲靴", mods: ["orbit"], d: "改寫招式：普攻每 3 下召喚一把環身飛劍（最多 6 把，8 秒），繞身砍殺" },
   wavecleaver: { slot: "sword", wt: "blade", n: "斬浪玄鐵劍", mods: ["wave"], d: "改寫招式：每一下重斬都放出一道穿透刀浪" },
   vajra: { slot: "crown", n: "不壞金冠", d: "生命低於 30% 時，受到的傷害減半" },
-  devour: { slot: "robe", n: "萬妖噬魂袍", d: "斬妖試煉每斬 30 隻妖，傷害 +3%；渡劫時吸血 +2%" },
-  cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半，斬妖試煉移動 +25%" },
-  heart: { slot: "charm", n: "劍心玉佩", d: "渡劫時飛劍數量 ×1.3" },
+  devour: { slot: "robe", n: "萬妖噬魂袍", d: "吸血 +2%；每殺 30 隻妖，8 秒內傷害 +3%（最多 5 層）" },
+  cloud: { slot: "boots", n: "踏雲靴", d: "閃身冷卻減半" },
+  heart: { slot: "charm", n: "劍心玉佩", d: "劍的 Q（劍氣斬、萬劍、回旋劍）多 2 道劍" },
   toadrobe: { slot: "robe", n: "萬毒蟾衣", mods: ["psnHit", "psnConv"], rb: true, d: "王專屬：攻擊有 20% 讓妖獸中毒 3 層；法杖、扇和元素轉化的傷害全部變成可疊 5 層的毒；站在毒池裡不扣血，反而回真氣；混沌抗性上限 +3%" },
   hourglass: { slot: "ring", n: "時之沙漏", mods: ["lbDouble"], d: "每次切換武器（1／2／3），下一招段數翻倍" },
   bloodjade: { slot: "ear", n: "血玉佩", mods: ["vamp"], d: "吸血 +3%，每斬一隻妖回 1% 生命" },
   tstep: { slot: "boots", n: "踏雷靴", mods: ["tstep"], rb: true, d: "王專屬（九雷鵬王）：閃身結束時在落點劈下落雷（攻擊 ×3）；閃身冷卻 −20%；閃電抗性上限 +3%" },
   fentian: { slot: "charm", n: "焚天石心", rb: true, anySlot: true, d: "王專屬（焚天石魔，部位隨機）：火焰抗性上限 +3%" },
   wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
+  // 企劃 57：每種武器至少 3 把（都是改打法的）
+  hanxu: { slot: "sword", wt: "staff", n: "寒髓玄冰杖", d: "法球打中冰凍的怪會碎冰：炸出 6 片冰刃（各 30% 傷害，20% 再冰凍一次）" },
+  xingyun: { slot: "sword", wt: "staff", n: "星隕天樞杖", d: "Q 火雨／流星群／天隕多落 2 顆（各 15% 傷害）；Q 冷卻 +30%" },
+  zhuifeng: { slot: "sword", wt: "bow", n: "追風逐影弓", d: "閃身後 1 秒內，普攻必定爆擊" },
+  jiuyao: { slot: "sword", wt: "bow", n: "九曜連珠弓", d: "每第 9 支箭變成穿透大箭（傷害 ×2.5）" },
+  xiuluo: { slot: "sword", wt: "blade", n: "修羅血飲刀", d: "旋風斬／颶風每打中一隻回 0.3% 生命（每秒最多 4%）；轉的時候傷害更多 40%、受到的傷害 −15%" },
+  liuxing: { slot: "sword", wt: "fist", n: "流星鐵臂", d: "散打用：勢最多 7 層；終結技之後自動補一記側踹（×3）" },
+  zhenyue: { slot: "sword", wt: "fist", n: "震岳碎山拳", d: "衝拳類的 Q 停下時地裂（範圍 45、Q 傷害 20%）；普攻每 3 拳震地一小圈" },
+  liuyun: { slot: "sword", wt: "fan", n: "流雲百花扇", d: "普攻多 1 道風刃（25% 傷害）；風刃回程打中每隻回 0.2% 真氣" },
+  taixu: { slot: "sword", wt: "fan", n: "太虛幻月扇", rb: true, tjOnly: true, d: "王專屬（天劫王、天劫秘境之主 8%）：旋風跟著你走，最多同時 3 個" },
 };
 // 企劃 44 §2-4：傳說完全寫死——固定基底（第 bt 階）＋固定詞綴（小範圍）；物品等級只決定精煉上限
 const UQ_FIX = {
@@ -209,6 +219,15 @@ const UQ_FIX = {
   tstep: { bt: 6, aff: { resT: [20, 25], spd: [10, 12] } },
   fentian: { bt: 3, aff: { resF: [15, 20], hp: [50, 70] } },
   wuxiang: { bt: 8, aff: { atkP: [30, 35], aspd: [10, 12] } },
+  hanxu: { bt: 4, aff: { atkP: [16, 20], resA: [6, 8] } },
+  xingyun: { bt: 7, aff: { atkP: [24, 28], ult: [15, 20] } },
+  zhuifeng: { bt: 4, aff: { aspd: [7, 9], crit: [6, 8] } },
+  jiuyao: { bt: 7, aff: { aspd: [9, 11], crit: [8, 10] } },
+  xiuluo: { bt: 7, aff: { hp: [110, 140], leech: [1.2, 1.6] } },
+  liuxing: { bt: 4, aff: { aspd: [8, 10], atkP: [14, 18] } },
+  zhenyue: { bt: 7, aff: { aspd: [10, 12], atkP: [24, 28] } },
+  liuyun: { bt: 4, aff: { atkP: [14, 18], magnet: [30, 40] } },
+  taixu: { bt: 8, aff: { atkP: [30, 35], magnet: [50, 60] } },
 };
 function uqApply(it) { // 設定傳說的固定基底＋詞綴（it.slot、it.u 要先設好）
   const F = UQ_FIX[it.u] || { bt: 1, aff: {} };
@@ -368,7 +387,7 @@ function shardItem(slot, q) {
   const il = Math.floor(save.w.lv / 3) + 1;
   let it;
   if (q === 3) {
-    const us = Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb && (slot !== "sword" || UNIQUES[u].wt === curWeapon()) && !["devour", "heart"].includes(u));
+    const us = Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb && (slot !== "sword" || UNIQUES[u].wt === curWeapon()));
     const pick = us.length ? us : Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb);
     const okLv = pick.filter((u) => BASE_REQ[((UQ_FIX[u] || {}).bt || 1) - 1] <= save.w.lv); if (okLv.length) pick.splice(0, pick.length, ...okLv);
     do { it = rollItem(1, il, slot === "sword" ? curWeapon() : null); } while (false);

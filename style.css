@@ -1173,9 +1173,9 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .b2, .b2tip { --dim: #b0a48e; }
 .ov .b2 button:not(.b2eqc) { background: #241d2e; border: 1px solid #5a4a38; color: #ece4d4; }
 .ov .b2 button:not(.b2eqc).on { background: #3a2f1a; border-color: #ffd84a; color: #ffd84a; }
-.ov .b2 button:not(.b2eqc):disabled { opacity: 1; color: #6f6878; border-color: #3a3442; background: #241d2e; }
+.ov .b2 button:not(.b2eqc):disabled { opacity: 1; color: #8a8394; border-color: #3a3442; background: #241d2e; }
 .ov .b2 button:not(.b2eqc) small { color: var(--dim); }
-.ov .b2 button:not(.b2eqc):disabled small { color: #6f6878; }
+.ov .b2 button:not(.b2eqc):disabled small { color: #8a8394; }
 .ov .b2row { background: #1b1622; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); border-left: 4px solid var(--c); }
 .ov .b2row.q2, .ov .b2row.q3 { animation: b2breath2 2.6s ease-in-out infinite; }
 @keyframes b2breath2 { 0%, 100% { border-color: color-mix(in srgb, var(--c) 55%, transparent); border-left-color: color-mix(in srgb, var(--c) 75%, transparent); } 50% { border-color: var(--c); border-left-color: var(--c); } }

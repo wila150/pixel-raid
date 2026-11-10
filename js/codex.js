@@ -186,7 +186,7 @@ function bookMobHtml() {
 }
 function bookUHtml() {
   const b = book();
-  const where = (k) => { const U = UNIQUES[k]; if (U.rb) { const bk = RB_KEYS.find((r) => (RBOSS[r].loot || "").includes(U.n)); return bk ? `${RBOSS[bk].n}掉落` : "區域王掉落"; } return `野外、秘境隨機掉落（精英、獵寶妖比較容易）${slotOpen(U.slot) ? "" : `，${slotLockTxt(U.slot)}後才會掉`}`; };
+  const where = (k) => { const U = UNIQUES[k]; if (U.tjOnly) return "天劫王、天劫秘境之主掉落（8%）"; if (U.rb) { const bk = RB_KEYS.find((r) => (RBOSS[r].loot || "").includes(U.n)); return bk ? `${RBOSS[bk].n}掉落` : "區域王掉落"; } return `野外、秘境隨機掉落（精英、獵寶妖比較容易）${slotOpen(U.slot) ? "" : `，${slotLockTxt(U.slot)}後才會掉`}`; };
   const list = BOOK_U.map((k) => {
     const U = UNIQUES[k], has = b.u.includes(k), ic = itemIcon({ slot: U.slot, wt: U.wt, u: k, q: 3 });
     return `<div class="bkcard u${has ? "" : " unseen"}">${ic}<div><b>${U.n}</b><small>${has ? U.d : where(k)}</small>${has ? "<em>已收錄　攻擊 +0.3%</em>" : ""}</div></div>`;
