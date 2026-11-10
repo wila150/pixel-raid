@@ -22,14 +22,22 @@ function startBoss(swords) {
 }
 // ───────── 主迴圈 ─────────
 let last = performance.now();
+// 企劃 48：每一幀先排下一幀，update／render 出錯也不會整個停住；錯誤記到 ERR_LOG（unstuck.js）
 function frame(now) {
+  requestAnimationFrame(frame);
+  const t0 = last;
+  try { frameStep(now); } catch (e) { errCatch(e, "update"); try { pressed.clear(); padAct.clear(); } catch { /* */ } safeRender(); }
+  errTick(Math.max(0, Math.min(0.05, (now - t0) / 1000)));
+}
+function safeRender() { try { render(); } catch (e) { errCatch(e, "render"); } }
+function frameStep(now) {
   let dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); // 換畫面時 last 可能比這幀還晚，不能變負的
   last = now;
   if (state === "paused" || state === "pick") {
     if (pausedFrom === "world" && liveWorld() && W0) { time += dt; updateWorld(dt); updateFx(dt); } // 連線中：開選單時仙界照常進行
-    render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return;
+    safeRender(); pressed.clear(); padAct.clear(); return;
   }
-  if (hitstop > 0) { hitstop -= dt; render(); pressed.clear(); padAct.clear(); requestAnimationFrame(frame); return; }
+  if (hitstop > 0) { hitstop -= dt; safeRender(); pressed.clear(); padAct.clear(); return; }
   if (state === "intro") {
     introT -= dt;
     if (introT < 1.6 && introT + dt >= 1.6) {
@@ -67,12 +75,11 @@ function frame(now) {
     dt *= 0.3;
   }
   updateFx(dt);
-  render();
+  safeRender();
   updateTopButtons();
   updateBgm();
   pressed.clear();
   padAct.clear();
-  requestAnimationFrame(frame);
 }
 
 // 標題畫面背景先放一場示範

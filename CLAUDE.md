@@ -389,4 +389,11 @@
   - 效果欄位：`st`（數值，jobStats）、`hit`＋`m`（條件更多，`ascHitMul`：mpHalf/slotA/Q/E/far/dot/roll/low/full/elite/dodge/selfLow/hurt/burn/shock/melee/kills/hpPer）、`dr/eleDr/lowDr/lowShield`（受傷）、`esFast/esMp/esSave`（護盾）、`cheat`（不屈：hurtW 先墊 1e6 血算完再看，冷卻 60 秒）、`killHeal`、`castHeal`（包 skillUsed，spin/ult）、`roll`、`cdQE`、`pen`（第一個 `B.pen` 來源）、`area`（tree3.js `trAreaX` 乘 `ascArea()`——trAreaX 是 const 不能包）。閃身／閃避／被打的時間記 `W0.ascRollT/ascDodgeT/ascHurtT`。
   - 畫面：天賦樹上排「昇華・X 剩 N 點」→ `.ascbox` 面板（HTML，不是 canvas）；轉職提示；天賦按鈕紅點也算昇華點。
   - 測試 scratchpad `t.js #asc`：點數／轉職門檻／別的起點擋／點滿擋、生命 ×1.12、不屈救一次（第二次照死）、天賦樹重置清昇華、6 種昇華各兩組實際打 3 秒沒錯誤、UI 8 格點選／重置；截圖橫直。**數值沒跑打王 bot**（自己估：三轉 3 格約 +15–25% 打王），交給企劃驗。
-- **下一項：37（企劃 48 解除卡死，企劃插隊）**，然後 36、35（企劃 46 武器組專屬天賦點：每 6 級 1 點、只在拿那組時生效、要連主樹已點格子、核心／玉槽只能用主樹點、天賦樹分頁 主樹｜組 1｜2｜3、營地免費重置；打王比 v8.6 超過 +10% 就改每 8 級；**跟昇華一起設計點數來源**），再 33、34（企劃 44 裝備基底，另有 41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留）。
+- **v8.8 解除卡死（總表第 37 項，企劃 48）＋昇華驗收調整（企劃 42 §8），11/10**：新檔 `js/unstuck.js`（**main.js 前**）。
+  - main.js `frame` 一開始就排下一幀，內容搬到 `frameStep`；update 出錯 `errCatch(e,"update")` 照樣 `safeRender()`；render 出錯不再讓整個迴圈停住（**以前任何一幀丟錯，rAF 就斷了，畫面停在畫到一半＝使用者截圖那樣**）。`renderWorld` 包 try，出錯改畫 `drawWorldHud`。`window` error／unhandledrejection 也收。
+  - `ERR_LOG`（最多 20 筆、同一個錯誤疊 `n`，存 localStorage `pr_errlog`）：訊息、檔名:行、版本、state、秘境層、位置。`errTick` 連續 1 秒每幀出錯 → `#stuckAsk` 小框（解除卡住／回報／關閉）。
+  - `unstuck(force)`：冷卻 30 秒 `unstuckCool`；正常狀態在野外＝回城符規則原地 3 秒到最近營地；異常（剛偵測卡住、秘境、`mapWrong()`、位置／血 NaN）直接做：關介面＋輸入、清特效、`riftLeave(true)`、地圖不是原本那張（`WMAP0`，包 `buildWorld` 記下）就重建地圖＋營地、取消怪潮、傳最近營地、`bankLoot`、數值夾回、存檔、劍靈說明。設定最上面「解除卡住」「回報問題」（`errReport` 複製文字；**RTDB 回報沒做，要先問使用者**）。
+  - rift.js `riftEnter`：`RIFT` 還在就擋下並記錯（重複進會把秘境圖存成「原本的地圖」）。
+  - 昇華（企劃 42 §8）：一劍光寒爆傷 15、天劍 1.08、天機算盡 −10%、萬法歸宗 1.2、箭聖 1.12、連珠／疾劍攻速 6、金剛怒目 1.5%／上限 15%；法王 聚焰／雷霆萬鈞改 `fireX`／`thunX`：那招元素（`slotEle`，沒有看 `wEle`）是火／雷就更多 8%，打燃燒／感電再 ×1.06。
+  - 測試 scratchpad `pr/t.js ?us`（手動呼叫 `frame` 時要把 requestAnimationFrame 換成空函式，不然每呼叫一次多一條迴圈）：重複進秘境被擋、秘境中解除＝撤離、壞地圖重建、冷卻、野外 3 秒、render 每幀丟錯 → 迴圈不停＋HUD＋小框、按鈕修好 NaN 血、update 丟錯不停、設定按鈕、回報文字，沒有 JS 錯誤。
+- **下一項：36**，然後、35（企劃 46 武器組專屬天賦點：每 6 級 1 點、只在拿那組時生效、要連主樹已點格子、核心／玉槽只能用主樹點、天賦樹分頁 主樹｜組 1｜2｜3、營地免費重置；打王比 v8.6 超過 +10% 就改每 8 級；**跟昇華一起設計點數來源**），再 33、34（企劃 44 裝備基底，另有 41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留）。

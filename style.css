@@ -1032,3 +1032,8 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov.k-tree .ascn.on { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac) inset, 0 0 12px color-mix(in srgb, var(--ac) 40%, transparent); background: rgba(50, 42, 26, 0.95); }
 .ov.k-tree .ascn.no:not(.on) { cursor: default; }
 @media (max-width: 520px) { .ov.k-tree .ascrow { grid-template-columns: 1fr; } .ov.k-tree .asct { justify-content: flex-start; } }
+/* 企劃 48 解除卡住小框 */
+#stuckAsk { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); }
+#stuckAsk .exbox { width: min(88vw, 340px); padding: 18px 18px 14px; border-radius: 12px; border: 1px solid rgba(159, 232, 255, 0.5); background: rgba(12, 16, 24, 0.96); color: var(--txt); text-align: center; }
+#stuckAsk h3 { margin: 0 0 6px; color: #cfeeff; font-size: 17px; } #stuckAsk p { margin: 0 0 12px; color: var(--dim); font-size: 13px; }
+#stuckAsk .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }

@@ -12,30 +12,30 @@ const ASC = {
      { k: "fawang", n: "法網", d: "範圍 +15%", area: 1.15 }],
     [{ k: "zhishui", n: "心如止水", d: "真氣高於 50% 時，傷害更多 10%", hit: "mpHalf", m: 1.1 },
      { k: "huaqi", n: "化氣", d: "能量護盾擋下的傷害，20% 變成真氣", esMp: 0.2 }],
-    [{ k: "tianji", n: "天機算盡", d: "Q、E 冷卻 −15%", cdQE: 0.85 },
+    [{ k: "tianji", n: "天機算盡", d: "Q、E 冷卻 −10%", cdQE: 0.9 },
      { k: "wuxingpo", n: "五行破", d: "元素傷害無視敵人 15% 元素抗性", pen: 0.15 }],
-    [{ k: "wanfa", n: "萬法歸宗", d: "大招（E）傷害更多 25%", hit: "slotE", m: 1.25 },
+    [{ k: "wanfa", n: "萬法歸宗", d: "大招（E）傷害更多 20%", hit: "slotE", m: 1.2 },
      { k: "daoxin", n: "不滅道心", d: "生命掉到 35% 以下時，能量護盾立刻回滿（每 45 秒一次）", esSave: 45 }],
   ] },
   s1: { n: "箭聖", c: "#6ad8c8", d: "遠距離、持續、普攻", rows: [
     [{ k: "yingyan", n: "鷹眼", d: "打離你 150 以外的敵人，傷害更多 12%", hit: "far", m: 1.12 },
      { k: "jibu", n: "疾步", d: "移動速度 +8%", st: { spd: 8 } }],
     [{ k: "shigu", n: "蝕骨", d: "持續招（火牆、旋風、黑洞…）每跳傷害更多 20%", hit: "dot", m: 1.2 },
-     { k: "lianzhu", n: "連珠", d: "攻擊速度 +8%", st: { aspd: 8 } }],
+     { k: "lianzhu", n: "連珠", d: "攻擊速度 +6%", st: { aspd: 6 } }],
     [{ k: "fengxing", n: "風行", d: "閃身後 3 秒內，傷害更多 15%", hit: "roll", m: 1.15 },
      { k: "liesha", n: "獵殺", d: "打血量低於 30% 的敵人，傷害更多 20%", hit: "low", m: 1.2 }],
-    [{ k: "jiansheng", n: "箭聖", d: "普攻傷害更多 15%", hit: "slotA", m: 1.15 },
+    [{ k: "jiansheng", n: "箭聖", d: "普攻傷害更多 12%", hit: "slotA", m: 1.12 },
      { k: "liuxing", n: "流星", d: "爆擊傷害 +30%", st: { cdmg: 30 } }],
   ] },
   s2: { n: "劍仙", c: "#6adf7a", d: "閃避、爆擊、先手", rows: [
     [{ k: "lingyun", n: "凌雲", d: "閃避 +5%", st: { dodge: 5 } },
      { k: "tongming", n: "劍心通明", d: "爆擊率 +3%", st: { crit: 3 } }],
     [{ k: "canying", n: "殘影", d: "閃避成功後 2 秒內，傷害更多 15%", hit: "dodge", m: 1.15 },
-     { k: "jijian", n: "疾劍", d: "攻擊速度 +8%", st: { aspd: 8 } }],
-    [{ k: "guanghan", n: "一劍光寒", d: "爆擊傷害 +25%", st: { cdmg: 25 } },
+     { k: "jijian", n: "疾劍", d: "攻擊速度 +6%", st: { aspd: 6 } }],
+    [{ k: "guanghan", n: "一劍光寒", d: "爆擊傷害 +15%", st: { cdmg: 15 } },
      { k: "jiandun", n: "劍遁", d: "閃身冷卻 −25%", roll: 0.75 }],
     [{ k: "xianren", n: "劍仙", d: "打滿血的敵人，傷害更多 40%（第一下最痛）", hit: "full", m: 1.4 },
-     { k: "tianjian", n: "天劍", d: "打精英和王，傷害更多 12%", hit: "elite", m: 1.12 }],
+     { k: "tianjian", n: "天劍", d: "打精英和王，傷害更多 8%", hit: "elite", m: 1.08 }],
   ] },
   s3: { n: "武聖", c: "#d8c85a", d: "吸血、殘血、連殺", rows: [
     [{ k: "shizhan", n: "嗜戰", d: "吸血 +1.5%", st: { leech: 1.5 } },
@@ -54,15 +54,15 @@ const ASC = {
      { k: "zhennu", n: "震怒", d: "被打後 3 秒內，傷害更多 12%", hit: "hurt", m: 1.12 }],
     [{ k: "buqu", n: "不屈", d: "受到致命傷害時留 1 滴血、2 秒無敵（每 60 秒一次）", cheat: 60 },
      { k: "juli", n: "巨力", d: "範圍 +15%", area: 1.15 }],
-    [{ k: "numu", n: "金剛怒目", d: "每 1000 生命上限，傷害更多 2%（最多 20%）", hit: "hpPer" },
+    [{ k: "numu", n: "金剛怒目", d: "每 1000 生命上限，傷害更多 1.5%（最多 15%）", hit: "hpPer" },
      { k: "fanzhen", n: "反震", d: "被近身打到時，反彈傷害（反震 +50%）", st: { thorns: 50 } }],
   ] },
   s5: { n: "法王", c: "#c87aff", d: "抗性、真氣、Q 招", rows: [
     [{ k: "hufa", n: "護法", d: "火、冰、雷抗性 +10%", st: { res: 10 } },
      { k: "fali", n: "法力", d: "真氣上限 +40；真氣回復 +25%", st: { mp: 40, mpr: 25 } }],
-    [{ k: "juyan", n: "聚焰", d: "打燃燒中的敵人，傷害更多 12%", hit: "burn", m: 1.12 },
+    [{ k: "juyan", n: "聚焰", d: "火焰傷害更多 8%，打燃燒中的敵人再更多 6%", hit: "fireX" },
      { k: "fati", n: "法體", d: "受到的元素傷害 −10%", eleDr: 0.9 }],
-    [{ k: "leiting", n: "雷霆萬鈞", d: "打感電的敵人，傷害更多 15%", hit: "shock", m: 1.15 },
+    [{ k: "leiting", n: "雷霆萬鈞", d: "雷電傷害更多 8%，打感電的敵人再更多 6%", hit: "thunX" },
      { k: "xuefa", n: "血法", d: "每放一次 Q 或 E，回 3% 生命", castHeal: 0.03 }],
     [{ k: "fawangq", n: "法王", d: "Q 招傷害更多 20%", hit: "slotQ", m: 1.2 },
      { k: "fashen", n: "不滅法身", d: "生命掉到 35% 以下時，5 秒內受到的傷害 −40%（每 30 秒一次）", lowShield: 30 }],
@@ -159,7 +159,9 @@ function ascHitMul(m) {
       case "shock": ok = m.shockT > time; break;
       case "melee": { let tg = ""; try { tg = sl && typeof slotTags === "function" ? slotTags(sl) : ""; } catch (x) { tg = ""; } ok = tg.includes("m"); break; }
       case "kills": { const K = (p.ascKills || []).filter((t) => t > time); p.ascKills = K; ok = K.length > 0; mul = 1 + 0.03 * Math.min(5, K.length); break; }
-      case "hpPer": ok = true; mul = 1 + Math.min(0.2, 0.02 * Math.floor((B.maxHp || 0) / 1000)); break;
+      case "fireX": case "thunX": { let e = null; try { e = sl && typeof slotEle === "function" ? slotEle(sl) : typeof wEle === "function" ? wEle() : null; } catch (x) { e = null; } // 企劃 42 §8：法王補強
+        const fx = N.hit === "fireX"; ok = e === (fx ? "F" : "T"); mul = 1.08 * ((fx ? m.burnT > 0 : m.shockT > time) ? 1.06 : 1); break; }
+      case "hpPer": ok = true; mul = 1 + Math.min(0.15, 0.015 * Math.floor((B.maxHp || 0) / 1000)); break;
     }
     if (ok) f *= mul;
   }

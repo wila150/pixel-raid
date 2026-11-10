@@ -96,6 +96,7 @@ function riftOpen(k) {
   return "";
 }
 function riftEnter(id) {
+  if (RIFT) { if (typeof errCatch === "function") errCatch(new Error("riftEnter 重複呼叫（RIFT 還在）"), "rift"); return; } // 企劃 48：再進一次會把秘境圖存成「原本的地圖」，回不去
   const key = save.keys.find((k) => k.id === id);
   if (!key) return;
   save.keys = save.keys.filter((k) => k !== key); // 鑰匙進門就用掉
