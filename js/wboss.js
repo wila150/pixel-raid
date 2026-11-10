@@ -7,7 +7,7 @@ WMOBS.rbswamp = { n: "腐骨蟾王", img: () => RC.rbswamp || (RC.rbswamp = reco
 WMOBS.rbthunder = { n: "九雷鵬王", img: () => RC.rbthunder || (RC.rbthunder = recolor(CROW, 210, 1.5, 1.2)), hp: 1, spd: 40, dmg: 30, r: 16, exp: 2600, ai: "boss", armor: 0.15, sz: "L", race: "B", ele: "T" };
 WMOBS.rbsky = { n: "無相劍尊", img: () => RC.rbsky || (RC.rbsky = recolor(ICEWISP, 45, 0.6, 1.9)), hp: 1, spd: 30, dmg: 30, r: 16, exp: 4200, ai: "boss", armor: 0.15, sz: "L" };
 WMOBS.jzpillar = { n: "劍柱", img: () => null, hp: 1, spd: 0, dmg: 0, r: 8, exp: 0, ai: "pillar", sz: "M", noTarget: false, draw: drawPillar };
-const WB_LV = 22, WB_ARENA = 170, WB_EDGE = WB_ARENA + 20, WB_OUT = 3;
+const WB_LV = 22, WB_ARENA = 170, WB_EDGE = WB_ARENA + 20, WB_OUT = 3, WB_NEAR = 170;
 // 打王中的場地（閃身／後跳／跳斬撞到圈邊會停）
 function wbArena() { const m = W0 && W0.mobs.find((x) => x.boss && !x.dead && x.rb); if (!m) return null; const R = rbOf(m); return { x: R.x, y: R.y, r: WB_EDGE, m }; }
 // 區域王資料表：等級、血量、掉落都看王，不看玩家
@@ -64,7 +64,8 @@ function updateWBoss(m, dt, p) {
   const dp = dist(m, p), home = Math.hypot(p.x - R.x, p.y - R.y);
   // 玩家跑出祭壇範圍太遠：王回去睡覺、回滿血
   // 出圈 3 秒內回來沒事，超過才離開（圈邊變紅倒數）；傳送走、死掉直接離開
-  if (home > WB_EDGE) { const s0 = Math.ceil(WB_OUT - (m.outT || 0)); m.outT = (m.outT || 0) + dt; const s1 = Math.ceil(WB_OUT - m.outT); if (s1 !== s0 || m.outT === dt) floatText(p.x, p.y - 30, `回到圈內！${Math.max(0, s1)} 秒後王會離開`, "#ff7a6a", true); }
+  const outNow = home > WB_EDGE && dp > WB_NEAR; // v9.6.2：遠程站在王旁邊（離王 ≤ WB_NEAR）就不算出圈——王會被擋在中心 130 內，人離王 110 時可能已經離中心 240
+  if (outNow) { const s0 = Math.ceil(WB_OUT - (m.outT || 0)); m.outT = (m.outT || 0) + dt; const s1 = Math.ceil(WB_OUT - m.outT); if (s1 !== s0 || m.outT === dt) floatText(p.x, p.y - 30, `回到圈內！${Math.max(0, s1)} 秒後王會離開`, "#ff7a6a", true); }
   else m.outT = 0;
   if (m.outT > WB_OUT || home > WB_EDGE + 250 || state === "worldDead") {
     m.dead = true; wbZones = [];
