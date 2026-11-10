@@ -625,6 +625,7 @@ const atkMpNow = () => Math.round(WSKILL.attack.mpS * Math.max(0.07, WSKILL.atta
 const mpCan = (p, c) => (B.bloodMagic ? !c || p.hp > (c * p.maxHp) / 100 : p.mp >= c);
 function mpPay(p, c) { if (!c) return; if (B.bloodMagic) { p.hp -= Math.round((c * p.maxHp) / 100); p.hurt = 0.1; } else { p.mp -= c; if (p.mp < 1) mpDry(p); } }
 // 企劃 70 A：真氣用到 <1 的那一刻乾涸 1.5 秒：移速 ×0.7、吸藍全部停（自然回復照常）
+let HURT_DOT = false; // 企劃 70 §9：地形／持續傷害（熔岩、電圈）不算「被打中」
 const DRY_T = 1.5;
 // 企劃 70 B：旋風斬類（大刀 Q 原本／颶風／大迴旋／斷空）按住才一直轉；超過原本秒數後每秒扣藍＝基礎每秒×(1＋已按住秒數)×CH_MUL
 let CH_MUL = 0.75; // bot：Lv.100 大刀沒寶石滿真氣按住約 6 秒乾涸（1＝5.0 秒、0.65＝6.5 秒）
@@ -751,7 +752,7 @@ function updateWorld(dt) {
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
-  if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
+  if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; HURT_DOT = true; try { hurtW(4 + w.lv * 0.6, null, "F"); } finally { HURT_DOT = false; } } } // 企劃 70 §9：地形持續傷害不打斷前搖
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
   const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; if (p.mistT > 0 && k !== "roll" && k !== "potion") { if (!(p.mistAtkT > time)) { p.mistAtkT = time + 1; popWord(p, "霧化中不能攻擊", "#cfe8e0"); } return false; } /* 企劃 68 化身霧氣 */ p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : WSKILL[k].cls === "a" ? 1 / ((B.aspd || 1) * eAspd()) : WSKILL[k].cls === "e" ? eCdMul() : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (WSKILL[k].cls === "a") p.cds[k] = Math.max(0.07, p.cds[k]); if (k === "attack") W0.justAtk = true; /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin" || k === "ult") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };

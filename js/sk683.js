@@ -37,7 +37,7 @@ hurtW = function (dmg, from, kind) { // eslint-disable-line no-func-assign
   const can = G && from && from.type && WMOBS[from.type] && !from.dead && from.hp !== undefined && (kind || "phys") === "phys" && !(p.iframe > 0) && !(p.invT > 0) && !(p.mistT > 0) && !(p.shield > 0);
   const hp0 = p ? p.hp : 0;
   const r = _hurtW683.apply(this, arguments);
-  if (p && p.wu && p.hp < hp0 && !(W0.titanT > 0) && !(W0.gbell && p.guardT2 > 0)) wuBreak(p); // 企劃 70 C：前搖被打中扣到血
+  if (p && p.wu && p.hp < hp0 && !HURT_DOT && !(W0.titanT > 0) && !(W0.gbell && p.guardT2 > 0)) wuBreak(p); // 企劃 70 C：前搖被打中扣到血
   if (can && !from.dead) {
     const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = G.sl || "e"; CUR_DM = G.dm || 1;
     try { hitMob(from, dmg, 60, p, true); } finally { CUR_SL = s0; CUR_DM = d0; }
