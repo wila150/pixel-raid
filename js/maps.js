@@ -48,7 +48,7 @@ function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時�
   const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
   const grp = {}; suf = suf.filter((m) => { const g = MAP_MODS[m].g; if (!g) return true; (grp[g] = grp[g] || []).push(m); return false; }); // 同一組（四種元素）只留一條，機率跟一般詞綴一樣
   for (const g in grp) suf.push(grp[g][Math.floor(Math.random() * grp[g].length)]);
-  const wOf = (m) => (m === "fate" && typeof talLv === "function" ? 1 + 0.5 * talLv("fate") : 1); // 輿圖天賦「天命」每點權重 +50%
+  const wOf = (m) => (m === "fate" ? 0.5 * (1 + 0.5 * (typeof talLv === "function" ? talLv("fate") : 0)) : 1); // 天命基礎權重 0.5（v9.6.4）、輿圖天賦每點 +50%
   const pick = (arr) => { let r = Math.random() * arr.reduce((s, m) => s + wOf(m), 0), i = arr.length - 1; for (let j = 0; j < arr.length; j++) if ((r -= wOf(arr[j])) < 0) { i = j; break; } return arr.splice(i, 1)[0]; };
   if (opt.keep) { // 只補新的（點金符／淬靈石）
     const has = (m) => k.mods.includes(m) || (MAP_MODS[m].g && k.mods.some((x) => MAP_MODS[x].g === MAP_MODS[m].g));
