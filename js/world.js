@@ -892,6 +892,7 @@ function updateWorld(dt) {
   const eAltFx = (k) => {
     const t = near(180), tx = t ? t.x : p.x + Math.cos(p.face) * 70, ty = t ? t.y : p.y + Math.sin(p.face) * 70; if (t) p.face = angTo(p, t);
     const F = p.face, cs = Math.cos(F), sn = Math.sin(F);
+    if (typeof eNewFx === "function" && eNewFx(k, { p, t, tx, ty, F, cs, sn, near, shoot, castLater, arcHit })) return true; // 企劃 43 新招（enew.js）
     if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 27, c: "#bfe6ff" }); sfx("volley"); }
     else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 57, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
     else if (k === "judg") { W0.fires.push({ x: tx, y: ty, t: 0.6, r: 40, dmg: 120, c: "#e8f4ff" }); W0.rings.push({ x: tx, y: ty, t: 0, max: 0.6, r: 40, c: "230,240,255" }); sfx("arrive"); }
@@ -1188,7 +1189,7 @@ function updateWorld(dt) {
     if (m.kb > 0) { moveBody(m, Math.cos(m.ka) * m.kb * dt * 3, Math.sin(m.ka) * m.kb * dt * 3, d.r); m.kb = Math.max(0, m.kb - dt * 400); continue; }
     const homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
     if (m.st === "idle") {
-      if (dp < 100 && !inTown) { m.st = "chase"; packAggro(m); }
+      if (dp < 100 && !inTown && !(W0.stealthT > 0)) { m.st = "chase"; packAggro(m); }
       m.wt -= dt;
       if (m.wt <= 0) { m.wt = rand(1.5, 4); m.wx = m.camp.x + rand(-50, 50); m.wy = m.camp.y + rand(-50, 50); }
       const a = Math.atan2(m.wy - m.y, m.wx - m.x);

@@ -52,7 +52,7 @@ jobStats = function (b) {
   if (b.bloodMagic) { b.maxMp = 0; b.mpRegen = 0; } // 血魔法：tree.js 的真氣格在後面加，這裡再歸零
   return b;
 };
-const trSpdMul = () => (W0 && W0.trDodgeT > time ? 1.3 : 1); // 凌波（world.js 移動那行）
+const trSpdMul = () => (W0 && W0.trDodgeT > time ? 1.3 : 1) * (W0 && W0.stealthT > 0 ? 1.3 : 1); // 風遁（enew.js） // 凌波（world.js 移動那行）
 function trResBuf(e) { return W0 && W0.trRes && W0.trRes[e] > time ? 0.15 : 0; } // 避劫
 function trResCapX(e) { return W0 && W0.trRes && W0.trRes[e] > time ? 0.8 : 0; }
 
