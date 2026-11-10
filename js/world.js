@@ -1435,7 +1435,8 @@ function startWorldBoss() {
 // ───────── 畫面 ─────────
 function renderWorld() {
   const p = W0;
-  cam.x += (p.x - cam.x) * 0.15; cam.y += (p.y - cam.y) * 0.15;
+  const [cox, coy] = typeof bagCamOff === "function" ? bagCamOff() : [0, 0]; // 企劃 54：開行囊時角色留在沒被面板蓋住的那一側
+  cam.x += (p.x + cox / (SCALE * 1.35) - cam.x) * 0.15; cam.y += (p.y + coy / (SCALE * 1.35) - cam.y) * 0.15;
   const Z = 1.35, k = SCALE * DPR * Z;
   const sx = shake > 0 ? rand(-shake, shake) * DPR : 0, sy = shake > 0 ? rand(-shake, shake) * DPR : 0;
   const ox = Math.round(W * DPR / 2 - cam.x * k + sx), oy = Math.round(H * DPR / 2 - cam.y * k + sy);
