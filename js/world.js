@@ -289,7 +289,9 @@ function eCost(sk) {
   const i = typeof TRI_E !== "undefined" && TRI_E[wt] ? TRI_E[wt].findIndex((x) => x.k === sk) : -1;
   return i >= 0 && i < 3 ? [9, 3] : [12, 4];
 }
-const eCdMul = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0.4, (b.eCd || 1) * Math.max(0.5, 2 - (b.ult || 1))); }; // 詞綴「E 冷卻 −4～10%」（舊的天罰充能）、天道
+const E_CD_CAP = 0.3; // 企劃 69 §8：裝備＋傳說的 E 冷卻縮短最多 30%
+const eCdGear = () => Math.min(E_CD_CAP, ((typeof B !== "undefined" && B && B.gUlt) || 0) / 100);
+const eCdMul = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0.5, (b.eCd || 1) * (1 - eCdGear())); }; // 詞綴「E 招冷卻縮短」×天道 0.7，最低 ×0.5
 function applyWeapon() {
   const ws = WSKILLS[curWeapon()];
   WSKILL = { roll: { cd: 2, mp: 0 }, potion: { cd: 1, mp: 0 } };

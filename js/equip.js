@@ -512,7 +512,7 @@ function applyBuild(b, daily) {
   b.thorns = g("thorns") / 100 + (sc === "ti" ? 0.6 : 0);
   b.startSwords += g("swords");
   b.swordsAff = g("swords");
-  b.ult *= 1 + g("ult") / 100;
+  b.ult *= 1 + g("ult") / 100; b.gUlt = g("ult"); // 企劃 69 §8：仙界 E 冷卻只看裝備＋傳說的詞綴（不算聚靈珠）
   b.magnet = g("magnet") / 100;
   b.regen = sc === "dao" ? 2 : 0;
   b.potionMul = sc === "dao" ? 1.5 : 1;
