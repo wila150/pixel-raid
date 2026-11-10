@@ -1,6 +1,7 @@
 // 萬劍仙途（pixel-raid）— 武器元素、破體、雷谷／仙域小怪機制（企劃 06、07 B 包）
 // build.js 後面載入：會換掉 elemHit，包住 updateWorld、hurtW、hitMob、drawWMob、drawWBZones、drawOrbs、drawHeldWeapon、showWorldDead、enterWorld
 "use strict";
+const dSeed = (d) => (typeof dotSeed === "function" ? dotSeed(d) : d); // dmg2.js 沒載入時（iPhone 回報）不要每下丟錯
 
 // ───────── 小工具 ─────────
 function segDist(px, py, ax, ay, bx, by) { // 點到線段的距離
@@ -41,7 +42,7 @@ elemHit = function (m, dmg) {
   const ef = gemLv("efocus"); // 元素集中：有元素的招傷害提高，但不會冰凍／燃燒／中毒、不觸發反應（雷的跳電保留）
   if (ef && (gi || gf || gv || gp)) { dmg *= 1.2 + ef * 0.05; m.expT = time + 4; /* 曝曬：受傷 +20%（dmg2.js） */ return gv && !chainLock && Math.random() < VOLT_P(gv) ? (chainZap(m, dmg * VOLT_D, gv >= 3 ? 2 : 1), dmg) : dmg; }
   if (B.uq.psnConv && (gi || gf || gv || gp || SPELL_WT[curWeapon()])) { // 萬毒蟾衣：屬性傷害全部變毒
-    m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotSeed(dmg) * 0.12 * (1 + (gi + gf + gv + gp) * 0.15));
+    m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dSeed(dmg) * 0.12 * (1 + (gi + gf + gv + gp) * 0.15));
     return dmg;
   }
   if (gf && m.frz > 0) { // 融化：冰凍的怪被火打到
@@ -54,7 +55,7 @@ elemHit = function (m, dmg) {
     for (const o of W0.mobs) if (!o.dead && dist(o, m) < 40) o.slowT = Math.max(o.slowT || 0, 2);
   }
   if (gi) { m.slowT = Math.max(m.slowT || 0, 1.5); if (Math.random() < (m.boss ? 0.03 : 0.1) * (1 + gi * 0.6)) { if (!(m.frz > 0)) floatText(m.x, m.y - 18, "冰凍", "#bfefff"); m.frz = m.boss ? 0.5 : 1.4; } }
-  if (gf) { m.burnT = 3; m.burnD = Math.max(m.burnD || 0, dotSeed(dmg) * 0.1 * (1 + gf * 0.2));
+  if (gf) { m.burnT = 3; m.burnD = Math.max(m.burnD || 0, dSeed(dmg) * 0.1 * (1 + gf * 0.2));
     const gs = gemLv("spread"); if (gs) { const r = 36 + gs * 4; for (const o of W0.mobs) if (o !== m && !o.dead && !(o.burnT > 0) && dist(o, m) < r + WMOBS[o.type].r) { o.burnT = 3; o.burnD = m.burnD * 0.7; } } } // 火勢蔓延
   if (gv && !chainLock) {
     if (m.psn > 0 && m.psnT > 0 && !((W0.pbT || 0) > 0)) { // 毒爆：毒層一次引爆（0.3 秒最多一次，炸到的不再連鎖）
@@ -63,7 +64,7 @@ elemHit = function (m, dmg) {
       chainLock = true; for (const o of W0.mobs) if (o !== m && !o.dead && dist(o, m) < 36 + WMOBS[o.type].r) hitMob(o, v * 0.6, 0, null, true); chainLock = false;
     } else if (Math.random() < VOLT_P(gv)) chainZap(m, dmg * VOLT_D, gv >= 3 ? 2 : 1);
   }
-  if (gp) { m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotSeed(dmg) * VENOM_D * (1 + gp * 0.15)); }
+  if (gp) { m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dSeed(dmg) * VENOM_D * (1 + gp * 0.15)); }
   if (gd && m.burnT > 0 && Math.random() < 0.12 + gd * 0.05) W0.fires.push({ x: m.x, y: m.y, t: 0.05, r: 28 + gd * 3, dmg: 8 + gd * 5, c: "#ff8a3d" });
   if (supOn("thunder") && !chainLock && Math.random() < 0.15) { // 雷霆萬鈞（原本用 setTimeout）
     bolts.push({ x: m.x, y: m.y, life: 0.25 });

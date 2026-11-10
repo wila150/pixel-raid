@@ -26,6 +26,33 @@ function errCatch(e, where) {
 window.addEventListener("error", (ev) => errCatch(ev.error || ev.message, "window"));
 window.addEventListener("unhandledrejection", (ev) => errCatch(ev.reason, "promise"));
 
+// ───────── 載入檢查（iPhone 回報 dotSeed 找不到＝dmg2.js 沒執行）─────────
+// index.html 開頭的 PR_BOOT 記下 <script> 載入失敗、unstuck.js 之前的解析錯誤；全部載完檢查關鍵函式，少了自動重新載入一次
+const BOOT_NEED = ["dotSeed", "hitFinal", "hitBase", "elemHit", "worldStats", "updateWorld", "renderWorld", "drawOrbs", "eNewFx", "sk68Draw", "treeSum", "applyWeapon", "frame"];
+function bootLog(m, at) { errCatch({ message: m, stack: at ? "js/" + at : "" }, "load"); errFrameBad = false; }
+function bootCheck() {
+  const B0 = window.PR_BOOT || { fail: [], err: [] };
+  for (const e of B0.err) bootLog(e.m, e.at);
+  const miss = BOOT_NEED.filter((k) => typeof window[k] !== "function" && (() => { try { return typeof eval(k) !== "function"; } catch { return true; } })());
+  for (const f of B0.fail) bootLog("script 載入失敗 " + f, f + ":0");
+  if (miss.length) bootLog("缺少函式 " + miss.join(","), "");
+  errSaveLog();
+  let tries = 0; try { tries = +(sessionStorage.getItem("pr_bootRl") || 0); } catch {}
+  if (!miss.length && !B0.fail.length) { try { sessionStorage.removeItem("pr_bootRl"); } catch {} return; }
+  if (tries < 1) { // 先把所有 js 強制重抓一次（壞掉的快取），再帶 ?r= 重新載入
+    try { sessionStorage.setItem("pr_bootRl", String(tries + 1)); } catch {}
+    const urls = [...document.querySelectorAll("script[src]")].map((x) => x.src).filter((u) => u.indexOf(location.origin) === 0);
+    Promise.all(urls.map((u) => fetch(u, { cache: "reload" }).catch(() => 0))).then(() => { const u = new URL(location.href); u.searchParams.set("r", Date.now()); location.replace(u.toString()); });
+    return;
+  }
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;background:#2a1418;color:#ffe0d0;border:1px solid #c05050;border-radius:8px;padding:10px 14px;font:14px sans-serif;max-width:90vw;text-align:center";
+  el.innerHTML = "遊戲檔案沒有完整載入（" + (B0.fail.concat(miss)).slice(0, 4).join("、") + "）。<br>請關掉分頁重新打開；還是不行請到設定清除這個網站的資料。<br><button style=\"margin-top:6px\">重新載入</button>";
+  el.querySelector("button").onclick = () => { try { sessionStorage.removeItem("pr_bootRl"); } catch {} location.reload(); };
+  document.body.appendChild(el);
+}
+window.addEventListener("load", () => { try { bootCheck(); } catch (e) { errCatch(e, "load"); } });
+
 // 每幀結尾：連續 1 秒每幀都出錯 → 跳小框
 function errTick(dt) {
   if (errFrameBad) errStreak += dt; else errStreak = 0;
