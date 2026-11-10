@@ -1012,7 +1012,7 @@ function updateWorld(dt) {
   if (W0.turret) { // 企劃 35 弩台：6 秒自動射
     const T = W0.turret; T.t -= dt; T.cd -= dt;
     if (T.cd <= 0) { let tg = null, bd = 170; for (const m of W0.mobs) if (!m.dead && !m.noTarget) { const d = dist(m, T); if (d < bd) { bd = d; tg = m; } }
-      if (tg) { T.cd = 0.3; const sx = p.x, sy = p.y; p.x = T.x; p.y = T.y + 3; W0.noAim = true; try { cast(T.sl || "e", () => shoot(angTo(p, tg), { v: 320, life: 0.6, dmg: 7.2, kind: "arrow", pierce: false, kb: 15 }), T.dm || 1); } finally { p.x = sx; p.y = sy; W0.noAim = false; } } }
+      if (tg) { T.cd = 0.3; const sx = p.x, sy = p.y; p.x = T.x; p.y = T.y + 3; W0.noAim = true; try { cast(T.sl || "e", () => shoot(angTo(p, tg), { v: 320, life: 0.6, dmg: 4, kind: "arrow", pierce: false, kb: 15 }), T.dm || 1); } finally { p.x = sx; p.y = sy; W0.noAim = false; } } }
     if (T.t <= 0) W0.turret = null;
   }
   if (W0.swDom) { const D = W0.swDom; D.t -= dt; D.tick -= dt; if (D.tick <= 0) { D.tick = 0.5; CUR_SL = D.sl || "e"; CUR_DM = D.dm || 1; for (const m of W0.mobs) if (!m.dead && dist(m, D) < D.r + WMOBS[m.type].r) hitMob(m, wDmg(4), 0, D, true); CUR_SL = null; CUR_DM = 1; } if (D.t <= 0) W0.swDom = null; }

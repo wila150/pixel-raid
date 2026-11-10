@@ -59,7 +59,7 @@ function eNewFx(k, c) {
     sfx("break"); shake = Math.max(shake, 5); return true;
   }
   if (k === "tthrow") {
-    c.shoot(F, { v: 300, life: 1.0, back: 0.5, dmg: 44, kind: "sword", pierce: true, kb: 30 });
+    c.shoot(F, { v: 300, life: 1.0, back: 0.5, dmg: 31, kind: "sword", pierce: true, kb: 30 });
     p.swing = p.swingMax = 0.18; p.swingR = 30; sfx("volley"); return true;
   }
   if (k === "curse") {
@@ -80,7 +80,7 @@ function eNewFx(k, c) {
     p.face = angTo(p, tg);
     if (!tg.boss) { const fx = p.x + Math.cos(p.face) * 16, fy = p.y + Math.sin(p.face) * 16; tg.x = fx; tg.y = fy; }
     tg.frz = Math.max(tg.frz || 0, tg.boss ? 0.5 : 1.5); tg.wind = 0; tg.mv = null;
-    hitMob(tg, wDmg(100), 0, p);
+    hitMob(tg, wDmg(75), 0, p);
     fxBoom(tg.x, tg.y + 4, 22, "230,200,150"); burst(tg.x, tg.y, "#e8c890", 18, 110, 0.45);
     sfx("break"); shake = Math.max(shake, 8); flashT = 0.05; flashColor = "255,230,190"; return true;
   }
@@ -151,7 +151,7 @@ updateWorld = function (dt) {
       if (d > v) { c.x += (dx / d) * v; c.y += (dy / d) * v; c.dir = Math.atan2(dy, dx); } else { c.x = gx; c.y = gy; }
       if (tg && c.cd <= 0 && Math.hypot(tg.x - c.x, tg.y - 10 - c.y) < 16 + WMOBS[tg.type].r) {
         c.cd = 0.45; const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = c.sl; CUR_DM = c.dm || 1;
-        try { hitMob(tg, wDmg(3.6), 10, c, true); } finally { CUR_SL = s0; CUR_DM = d0; }
+        try { hitMob(tg, wDmg(1.8), 10, c, true); } finally { CUR_SL = s0; CUR_DM = d0; }
         particles.push({ x: tg.x, y: tg.y - 6, vx: rand(-30, 30), vy: rand(-40, -10), life: 0.3, max: 0.3, color: "#ffffff", size: 2 });
       }
     }
