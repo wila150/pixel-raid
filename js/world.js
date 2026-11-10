@@ -788,10 +788,10 @@ function updateWorld(dt) {
       else if (ta === "qi") shoot(p.face, { v: 220, life: 0.25, dmg: 4.2, kind: "qi", pierce: false, kb: 20 });
       else if (ta === "sanshou") { // 企劃 55 散手：直拳、勾拳、掃腿、側踹 4 段循環（2 秒沒出手或換武器從第 1 段）
         if (W0.ssWt !== wt || time - (W0.ssT || -99) > 2) W0.ssN = 0; W0.ssWt = wt; W0.ssT = time;
-        const n = W0.ssN = ((W0.ssN || 0) % 4) + 1, S = SS_SEG[n];
+        const rk = W0.ssRollK; W0.ssRollK = 0; const n = rk ? 4 : (W0.ssN = ((W0.ssN || 0) % 4) + 1), S = SS_SEG[n]; if (rk) W0.ssN = 0; // v9.9.2：閃身後下一拳直接側踹（不算一套，之後從第 1 段）
         let hit = 0; p.ssK = n; p.ssKT = time; p.swing = p.swingMax = n >= 3 ? 0.16 : 0.09; p.swingR = n >= 3 ? S[0] : 14;
-        for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d < S[0] * AM() + WMOBS[m.type].r && diff < S[1]) { hitMob(m, wDmg(S[2]), S[3], p); hit++; if (n === 3) m.slowT = Math.max(m.slowT || 0, 1); } }
-        if (n === 4) { sfx("break"); shake = Math.max(shake, 2); if (hit && typeof shiAdd === "function") shiAdd(1, "set"); }
+        for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d < S[0] * AM() + WMOBS[m.type].r && diff < S[1]) { hitMob(m, wDmg(S[2] * (rk ? SS_ROLL_K : 1)), S[3], p); hit++; if (n === 3) m.slowT = Math.max(m.slowT || 0, 1); } }
+        if (n === 4) { sfx("break"); shake = Math.max(shake, 2); if (hit && !rk && typeof shiAdd === "function") shiAdd(1, "set"); }
       }
       else arcHit(22, 0.8, 5, 30);
     } else { // 風刃：飛出去再飛回來，穿透

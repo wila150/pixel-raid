@@ -4,6 +4,7 @@
 "use strict";
 const SHI_MAX = 5;
 // 散手 4 段：[距離, 半角, 傷害, 擊退]（world.js atkFx）
+const SS_ROLL_K = 2; // v9.9.2 企劃 55 §10：閃身後下一拳直接側踹（×1.5 bot 沒到 1.05 → ×2）
 const SS_SEG = [null, [22, 0.7, 4.2, 30], [26, 1.3, 4.6, 40], [30, Math.PI, 4.0, 20], [36, 0.6, 9.5, 220]]; // v9.9.1 企劃 55 §8：放大（掃腿整圈）
 const shiOn = () => !!(typeof W0 !== "undefined" && W0 && save.w && curWeapon() === "fist" && typeof triOf === "function" && triOf("fist", "a") === "sanshou");
 function shiAdd(n, why) {
@@ -74,7 +75,7 @@ hitMob = function (m, dmg) { // eslint-disable-line no-func-assign
 };
 const _skillUsedSs = skillUsed;
 skillUsed = function (k) { // eslint-disable-line no-func-assign
-  if (k === "roll" && shiOn() && time - (W0.shiRollT || -99) >= 1) { W0.shiRollT = time; shiAdd(2); } // v9.9.1：閃身 +2
+  if (k === "roll" && shiOn() && time - (W0.shiRollT || -99) >= 1) { W0.shiRollT = time; shiAdd(2); } if (k === "roll" && shiOn()) W0.ssRollK = 1; // v9.9.1：閃身 +2
   return _skillUsedSs.apply(this, arguments);
 };
 const _updateWorldSs = updateWorld;
@@ -110,7 +111,7 @@ const _comboGlowSs = comboGlow;
 comboGlow = function () { // eslint-disable-line no-func-assign
   const g = _comboGlowSs.apply(this, arguments);
   if (shiOn()) {
-    if ((W0.ssN || 0) === 3 && time - (W0.ssT || -99) <= 2) g.attack = true;
+    if (W0.ssRollK || ((W0.ssN || 0) === 3 && time - (W0.ssT || -99) <= 2)) g.attack = true;
     if ((W0.shi || 0) >= SHI_MAX) g.spin = true;
   }
   return g;
