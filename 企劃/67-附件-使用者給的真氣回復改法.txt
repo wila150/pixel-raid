@@ -1,0 +1,87 @@
+Hi 團隊，為了徹底解決目前遊戲中玩家可以「無限放招、無腦割草」而導致中後期數值崩壞的問題，我們將借鑑 Path of Exile (POE) 的經典資源限制邏輯。
+請協助在底層的 ManaManager（真氣管理模組）與 SkillSystem（技能系統）中同時實作以下兩個核心機制：【支出端的寶石乘算倍率】 與 【收入端的回復上限卡死】。
+
+核心機制一：支出端 —— 輔助寶石「真氣消耗倍率 (Mana Multiplier)」
+
+【邏輯說明】
+主動技能的基礎真氣消耗並不高，但每當玩家在背包中串連一顆輔助寶石，該技能的真氣消耗就會被「乘算放大」。技能串得越多、威力越強，消耗就越恐怖。
+【公式實作】
+\(\text{最終真氣消耗}=\text{主動技能基礎消耗}\times \prod (\text{各輔助寶石的真氣消耗倍率})\)
+(註：\(\prod \) 代表連續相乘)
+【資料庫結構變更 (JSON 範例)】
+請在輔助寶石的資料結構中，新增 "mana_multiplier" 欄位（以浮點數表示，1.3 代表 130%）：
+json
+{
+  "support_gem_id": "support_multi_projectiles",
+  "gem_name": "高階多重投射",
+  "mana_multiplier": 1.40, // 增加 40% 真氣消耗
+  "effects": { "extra_projectiles": 2 }
+}
+請謹慎使用程式碼。
+【實際運行案例】
+玩家手持法杖釋放 E 鍵「冰環」（基礎消耗：30 點真氣）：
+• 單放冰環 = 消耗 30
+• 串連【高階多重投射】(140%) = 30 × 1.4 = 42
+• 再串連【集中效應】(130%) = 32 × 1.4 × 1.3 = 54.6 → 55 點
+• 再串連【急凍輔助】(120%) = 30 × 1.4 × 1.3 × 1.2 = 65.5 → 66 點（直接翻倍！）
+
+核心機制二：收入端 —— 限制「每秒吸取與回復上限 (Mana Leech/Regen Cap)」
+
+【邏輯說明】
+目前無限放招的主因是攻速快的流派（如拳套、閃打）一秒能打十幾下，只要裝備帶有「擊中吸取真氣」，真氣瞬間就回滿。
+我們必須強制加上「每秒吸取上限」與「每秒自然回復上限」。無論玩家的輸出傷害有多誇張、每秒打幾下，他一秒之內能吸回來的真氣絕對不能超過他最大真氣總量的固定百分比。
+【數值設定規範（可調整參數）】
+1. 吸取上限 (Leech Cap)：玩家透過「攻擊吸藍/擊中回藍」所獲得的恢復，每秒最高只能回復「最大真氣值的 20%」。
+2. 自然秒回上限 (Regen Cap)：玩家面板上的「每秒真氣回復」屬性，基礎上限為「最大真氣值的 10%」（可透過特殊傳說裝備或天賦突破至 15%）。
+【底層代碼邏輯參考 (C# / Unity Style)】
+csharp
+public class ManaManager : MonoBehaviour 
+{
+    public float maxMana = 500f;
+    public float currentMana = 500f;
+    
+    // 限制參數
+    private float maxLeechRatePercent = 0.20f; // 每秒最多吸 20%
+    private float maxRegenRatePercent = 0.10f; // 每秒最多自然秒回 10%
+    
+    private float accumulatedLeechPool = 0f; // 玩家擊中怪物後產生的吸藍總量蓄水池
+
+    void Update() 
+    {
+        // 1. 計算當前幀的自然回復（限制上限）
+        float rawRegen = GetRawManaRegeneration(); // 取得裝備天賦加總的每秒回藍
+        float maxAllowedRegen = maxMana * maxRegenRatePercent;
+        float actualRegenPerSecond = Mathf.Min(rawRegen, maxAllowedRegen);
+        
+        // 2. 計算當前幀的吸取回復（限制上限）
+        float maxAllowedLeechPerSecond = maxMana * maxLeechRatePercent;
+        float actualLeechPerSecond = 0f;
+        
+        if (accumulatedLeechPool > 0) 
+        {
+            // 將蓄水池裡的藍，平準化地以「最大上限速率」釋放給玩家
+            actualLeechPerSecond = Mathf.Min(accumulatedLeechPool, maxAllowedLeechPerSecond);
+            accumulatedLeechPool -= actualLeechPerSecond * Time.deltaTime;
+        }
+
+        // 3. 最終當前幀回復
+        currentMana += (actualRegenPerSecond + actualLeechPerSecond) * Time.deltaTime;
+        currentMana = Mathf.Min(currentMana, maxMana); // 不得超過最大值
+    }
+
+    // 玩家擊中怪物時，由武器/技能觸發此方法
+    public void AddManaLeechPool(float damageDealt, float leechPercent) 
+    {
+        // 傷害 10000 x 吸藍 1% = 100 點進入蓄水池，交由 Update 依上限慢慢釋放
+        float leechAmount = damageDealt * leechPercent;
+        accumulatedLeechPool += leechAmount;
+    }
+}
+請謹慎使用程式碼。
+
+💎 這兩個機制改完後，對打寶遊戲有什麼好處？
+
+1. 裝備詞條變得極有價值：原本形同虛設的「＋50 最大真氣」、「真氣回復速度＋15%」、「減少技能真氣消耗 5%」等打寶詞條，會瞬間變成高速割草流派的神級核心詞條。
+2. 杜絕後期無腦永動：玩家在追求極致傷害（狂串輔助寶石）的同時，他必須挪出部分的裝備格子、天賦點去撐大藍條或點出資源減免，讓 Build（流派配置）的深度與 POE 一樣豐富好玩！
+這套將寶石乘算消耗與後台吸藍上限（蓄水池平準化釋放）結合的規格，是否完美解決了你的無限放招問題？
+如果工程師看過沒問題，接下來我們需要為你設計「真氣藥水（藥劑）」在滿藍時自動中斷的防作弊邏輯，還是要規劃「減少真氣消耗」這類詞條的稀有裝備如何投放？
