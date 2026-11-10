@@ -52,12 +52,12 @@ const AFFIX = {
   def: { n: "護甲", lo: 6, hi: 16, w: 2.5, t: "p" },
   leech: { n: "吸血", lo: 0.4, hi: 1, w: 40, pct: true, dec: 1, t: "p" },
   thorns: { n: "反震", lo: 5, hi: 12, w: 4, pct: true, t: "p" },
-  mp: { n: "最大真氣", lo: 8, hi: 12, w: 0.8, t: "p", rw: 0.5, sl: ["crown", "robe", "charm", "ring", "ear"] }, // 企劃 67：sl＝只出現在這些部位（武器寫武器種類）
+  mp: { n: "最大真氣", lo: 8, hi: 12, w: 0.8, t: "p", rw: 0.8, sl: ["crown", "robe", "charm", "ring", "ear"] }, // 企劃 67：sl＝只出現在這些部位（武器寫武器種類）
   // 後綴：速度與抗性
   spd: { n: "移動速度", lo: 2, hi: 5, w: 6, t: "s" },
   aspd: { n: "攻擊速度", lo: 2, hi: 5, w: 7, pct: true, t: "s" },
-  mpr: { n: "真氣回復", lo: 3, hi: 5, w: 1.5, pct: true, t: "s", rw: 0.5, sl: ["crown", "charm", "ring", "ear", "staff", "fan"] },
-  mpc: { n: "減少真氣消耗", lo: 2, hi: 3, w: 4, pct: true, t: "s", rw: 0.5, sl: ["crown", "charm", "ring", "ear"] },
+  mpr: { n: "真氣回復", lo: 2, hi: 4, w: 1.5, pct: true, t: "s", rw: 0.8, sl: ["crown", "charm", "ring", "ear", "staff", "fan"] },
+  mpc: { n: "減少真氣消耗", lo: 2, hi: 3, w: 4, pct: true, t: "s", rw: 0.8, sl: ["crown", "charm", "ring", "ear"] },
   // 抗性（企劃 22）：sc＝每級裝備只 +12%（不然高等一條就滿）；rw＝出現權重（全抗、混沌比較少見），飾品抗性 ×2.5
   resF: { n: "火焰抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
   resW: { n: "冰冷抗性", lo: 6, hi: 15, w: 3, pct: true, t: "s", sc: 0.12, rw: 0.5 },
@@ -152,7 +152,7 @@ const AFF_T = {
   resF: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resW: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resT: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]],
   resA: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 16]], resP: [[4, 7], [8, 12], [13, 17], [18, 23], [24, 28]],
   dodge: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]], supp: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]],
-  mp: [[8, 12], [15, 22], [25, 34], [38, 50], [55, 70]], mpr: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 18]], mpc: [[2, 3], [4, 4], [5, 6], [7, 7], [8, 9]], // 企劃 67
+  mp: [[8, 12], [15, 22], [25, 34], [38, 50], [55, 70]], mpr: [[2, 4], [5, 6], [7, 9], [10, 11], [12, 15]], mpc: [[2, 3], [4, 4], [5, 6], [7, 7], [8, 9]], // 企劃 67
   crit: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]], critD: tierCurve(8, CURVE_P), ult: tierCurve(4, CURVE_P), magnet: tierCurve(10, CURVE_P),
 };
 for (const k in AFF_T) { const t = AFF_T[k], st = AFFIX[k].dec ? 0.1 : 1; for (let i = 1; i < 5; i++) if (t[i][0] <= t[i - 1][1]) { t[i][0] = Math.round((t[i - 1][1] + st) * 10) / 10; if (t[i][1] < t[i][0]) t[i][1] = t[i][0]; } } // 各階不重疊（四捨五入後）
