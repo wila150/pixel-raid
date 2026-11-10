@@ -12,8 +12,8 @@ const E_NEW = {
   trap: ["連環雷陷阱", "往前丟 3 個雷陷阱，怪踩到就爆炸並感電；8 秒沒人踩自己爆（陷阱、範圍）"],
   roar: ["戰吼", "身邊 90 內的怪 5 秒受到傷害 +20%，而且會衝向你；打斷正在蓄力的招；你護甲 +50%（詛咒、增益）"],
   tthrow: ["飛刀迴旋", "把刀丟出去再飛回來，去回各打一次（大刀唯一的遠程招）"],
-  curse: ["詛咒・脆弱", "目標一帶的怪 6 秒受到傷害 +25%（王 +12%），頭上紫色印記（詛咒）"],
-  tslow: ["時緩", "放一個圈 4 秒：裡面的怪和敵方子彈都變得很慢（控場）"],
+  curse: ["詛咒・脆弱", "身邊擴散紫黑詛咒波，不造成傷害；被波及的怪 4 秒受到的物理與元素傷害加倍（王 ×1.5），頭上紫色印記（詛咒）"],
+  tslow: ["時緩", "目標一帶召喚巨大半透明時鐘領域 4 秒：裡面的怪動作、移動和敵方子彈慢 80%（王 40%）（控場）"],
   gbell: ["金鐘罩", "吸收 30% 生命的護罩 4 秒；被打破時炸開，震退四周（防禦）"],
   grab: ["擒拿", "抓住最近的怪拉到面前摔在地上：大傷害＋暈 1.5 秒（王 0.5 秒、不拉）（爆發單體）"],
   crane: ["紙鶴", "放出 3 隻紙鶴 8 秒，自己飛去找怪啄（召喚）"],
@@ -44,6 +44,7 @@ const _enterWorldEN = enterWorld;
 enterWorld = function () { const r = _enterWorldEN.apply(this, arguments); try { eSwapMig(); if (typeof applyWeapon === "function" && W0) applyWeapon(); } catch (e) {} return r; };
 
 // ───────── 3. 放招 ─────────
+const CURSE_R = 100, CURSE_T = 4;
 const eRing = (x, y, r, c, max = 0.35) => W0.rings.push({ x, y, t: 0, max, r, c });
 function eNewFx(k, c) {
   const { p, t, tx, ty, F, cs, sn } = c;
@@ -63,13 +64,14 @@ function eNewFx(k, c) {
     c.shoot(F, { v: 300, life: 1.0, back: 0.5, dmg: 31, kind: "sword", pierce: true, kb: 30 });
     p.swing = p.swingMax = 0.18; p.swingR = 30; sfx("volley"); return true;
   }
-  if (k === "curse") {
-    const r = 55 * AM(); let n = 0;
-    for (const m of W0.mobs) if (!m.dead && Math.hypot(m.x - tx, m.y - ty) < r + WMOBS[m.type].r) { m.curT = 6; hitMob(m, wDmg(8), 0, p, true); n++; }
-    eRing(tx, ty, r, "200,120,255", 0.5); for (let i = 0; i < 18; i++) { const a = rand(0, 6.28), v = rand(30, 90); particles.push({ x: tx, y: ty, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, life: 0.6, max: 0.6, color: "#c890ff", size: 2 }); }
+  if (k === "curse") { // 企劃 68：紫黑詛咒波，不造成傷害；被波及的怪受到的傷害加倍（王 ×1.5）
+    const r = CURSE_R * AM();
+    for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r) { m.curT = CURSE_T; if (!m.boss && (m.st === "idle" || m.st === "home")) m.st = "chase"; }
+    eRing(p.x, p.y, r, "150,60,200", 0.5); eRing(p.x, p.y, r * 0.7, "40,10,60", 0.4);
+    for (let i = 0; i < 30; i++) { const a = rand(0, 6.28), v = rand(60, 200); particles.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, life: 0.6, max: 0.6, color: i % 2 ? "#c890ff" : "#3a1050", size: 2.5 }); }
     sfx("arrive"); return true;
   }
-  if (k === "tslow") { W0.tslow = { x: tx, y: ty, r: 70 * AM(), t: 4, max: 4 }; sfx("arrive"); return true; }
+  if (k === "tslow") { W0.tslow = { x: tx, y: ty, r: 110 * AM(), t: 4, max: 4 }; sfx("arrive"); return true; } // 企劃 68：巨大時鐘領域
   if (k === "gbell") {
     p.guardSh = Math.round(p.maxHp * 0.3); p.guardT2 = 4; W0.gbell = { sl: CUR_SL, dm: CUR_DM };
     eRing(p.x, p.y, 24, "255,215,120", 0.4); floatText(p.x, p.y - 22, "金鐘罩", "#ffd878"); sfx("arrive"); return true;
@@ -132,8 +134,8 @@ updateWorld = function (dt) {
   if (Z) {
     Z.t -= dt; if (Z.t <= 0) W0.tslow = null;
     else {
-      for (const m of W0.mobs) if (!m.dead && Math.hypot(m.x - Z.x, m.y - Z.y) < Z.r + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, 0.2); if (m.wind > 0) m.wind += dt * 0.5; }
-      for (const s of W0.eshots) if (Math.hypot(s.x - Z.x, s.y - Z.y) < Z.r && s.vx !== undefined) { s.x -= s.vx * dt * 0.7; s.y -= s.vy * dt * 0.7; s.life += dt * 0.7; }
+      for (const m of W0.mobs) if (!m.dead && Math.hypot(m.x - Z.x, m.y - Z.y) < Z.r + WMOBS[m.type].r) { const f = m.boss ? 0.4 : 0.8; m.tslT = 0.1; m.tslF = f; if (m.wind > 0) m.wind += dt * f; if (m.boss && m.actT !== undefined) m.actT += dt * f; if (m.mv && m.mv.t !== undefined) m.mv.t += dt * f; } // 企劃 68：動作慢 80%（王 40%）
+      for (const s of W0.eshots) if (Math.hypot(s.x - Z.x, s.y - Z.y) < Z.r && s.vx !== undefined) { s.x -= s.vx * dt * 0.8; s.y -= s.vy * dt * 0.8; s.life += dt * 0.8; }
     }
   }
   // 金鐘罩：護罩被打破就炸開
@@ -184,7 +186,7 @@ const _hitMobEN = hitMob;
 hitMob = function (m, dmg) { // eslint-disable-line no-func-assign
   if (m && dmg > 0) {
     let f = 1;
-    if (m.curT > 0) f *= m.boss ? 1.12 : 1.25;
+    if (m.curT > 0) f *= m.boss ? 1.5 : 2; // 企劃 68：詛咒受傷加倍（王 ×1.5）
     if (m.roarT > 0) f *= 1.2;
     if (W0 && W0.ambushT > 0) f *= 2;
     if (f !== 1) { arguments[1] = dmg * f; }
@@ -201,8 +203,10 @@ drawFxOver = function () { // eslint-disable-line no-func-assign
 function eNewDraw() {
   const g = ctx, T = typeof time !== "undefined" ? time : 0;
   const Z = W0.tslow;
-  if (Z) { const a = Math.min(1, Z.t * 2) * 0.8; g.save(); g.strokeStyle = `rgba(170,200,255,${a})`; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.lineDashOffset = -T * 10; g.beginPath(); g.ellipse(Z.x, Z.y, Z.r, Z.r * 0.6, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); g.fillStyle = `rgba(120,150,255,${0.12 * a})`; g.fill();
-    g.strokeStyle = `rgba(220,230,255,${a})`; g.lineWidth = 1.2; const q = 1 - Z.t / Z.max; g.beginPath(); g.moveTo(Z.x, Z.y - 4); g.lineTo(Z.x + Math.cos(-Math.PI / 2 + q * Math.PI * 2) * 10, Z.y - 4 + Math.sin(-Math.PI / 2 + q * Math.PI * 2) * 10); g.stroke(); g.beginPath(); g.arc(Z.x, Z.y - 4, 10, 0, Math.PI * 2); g.stroke(); g.restore(); }
+  if (Z) { const a = Math.min(1, Z.t * 2) * 0.8, q = 1 - Z.t / Z.max, cr = Z.r * 0.55; g.save(); g.strokeStyle = `rgba(170,200,255,${a})`; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.lineDashOffset = -T * 4; g.beginPath(); g.ellipse(Z.x, Z.y, Z.r, Z.r * 0.6, 0, 0, Math.PI * 2); g.stroke(); g.setLineDash([]); g.fillStyle = `rgba(120,150,255,${0.12 * a})`; g.fill(); // 企劃 68：半透明大時鐘
+    g.strokeStyle = `rgba(220,230,255,${0.6 * a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(Z.x, Z.y, cr, cr * 0.6, 0, 0, Math.PI * 2); g.stroke();
+    for (let i = 0; i < 12; i++) { const b = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(Z.x + Math.cos(b) * cr * 0.85, Z.y + Math.sin(b) * cr * 0.51); g.lineTo(Z.x + Math.cos(b) * cr, Z.y + Math.sin(b) * cr * 0.6); g.stroke(); }
+    const h1 = -Math.PI / 2 + q * Math.PI * 2, h2 = -Math.PI / 2 + q * Math.PI * 2 * 12; g.lineWidth = 2.5; g.beginPath(); g.moveTo(Z.x, Z.y); g.lineTo(Z.x + Math.cos(h1) * cr * 0.5, Z.y + Math.sin(h1) * cr * 0.3); g.stroke(); g.lineWidth = 1.2; g.beginPath(); g.moveTo(Z.x, Z.y); g.lineTo(Z.x + Math.cos(h2) * cr * 0.85, Z.y + Math.sin(h2) * cr * 0.51); g.stroke(); g.restore(); }
   for (const o of W0.traps || []) { const on = o.arm <= 0, bl = 0.5 + 0.5 * Math.sin(T * (on ? 10 : 4)); g.fillStyle = "#3a3450"; g.beginPath(); g.ellipse(o.x, o.y, 6, 3.5, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = `rgba(200,220,255,${0.5 + 0.5 * bl})`; g.lineWidth = 1; g.stroke(); g.fillStyle = `rgba(220,235,255,${on ? bl : 0.3})`; g.fillRect(o.x - 1, o.y - 2, 2, 2); }
   for (const m of W0.mobs) {
     if (m.dead) continue;

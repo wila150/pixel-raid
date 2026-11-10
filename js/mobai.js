@@ -95,7 +95,7 @@ function mobAiTick(m, dt) { if (m.mvCd > 0) m.mvCd -= dt; if (m.tired > 0 && WMO
 // ───────── 遠程：保持距離＋射法 ─────────
 const volsAlive = (m) => { const s = new Set(); for (const e of W0.eshots) if (e.src === m) s.add(e.vol); return s.size; };
 function rangedAI(m, d, p, dp, a, dt) {
-  let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1) * (m.spdMul || 1) * (m.slowT > 0 ? 0.45 : 1);
+  let spd = d.spd * B.slow * (m.elite ? 1.1 : 1) * (m.mod === "狂暴" ? 1.4 : 1) * (m.spdMul || 1) * (m.slowT > 0 ? 0.45 : 1) * (m.tslT > 0 ? 1 - m.tslF : 1); // 企劃 68 時緩
   const R = mobRange(m, d), homeD = Math.hypot(m.x - m.camp.x, m.y - m.camp.y);
   if (dp < 80) m.flee = true; else if (dp > 150) m.flee = false; // 你靠近 80 內：往後退到 150
   let dir = m.flee && homeD < 230 ? -0.9 : dp > R * 0.8 ? 1 : dp < R * 0.55 ? -0.5 : 0;
