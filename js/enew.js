@@ -15,8 +15,8 @@ const E_NEW = {
   curse: ["詛咒・脆弱", "身邊擴散紫黑詛咒波，不造成傷害；被波及的怪 4 秒受到的物理與元素傷害加倍（王 ×1.5），頭上紫色印記（詛咒）"],
   tslow: ["時緩", "目標一帶召喚巨大半透明時鐘領域 4 秒：裡面的怪動作、移動和敵方子彈慢 80%（王 40%）（控場）"],
   gbell: ["金鐘罩", "身邊升起金黃大鐘虛影 4 秒：吸收 30% 生命的護盾，期間受到的近戰傷害 100% 反彈給打你的怪；護盾被打破時炸開震退四周（防禦、反彈）"],
-  grab: ["擒拿", "抓住最近的怪拉到面前摔在地上：大傷害＋暈 1.5 秒（王 0.5 秒、不拉）（爆發單體）"],
-  crane: ["紙鶴", "揮扇散出 8 隻發光的靈力紙鶴，在畫面上自動尋敵，撞到怪就爆裂（召喚、自動追蹤）"],
+  grab: ["擒拿", "兩手強行擒拿前方範圍內所有精英怪（含王）：破除霸體（打斷蓄力）、拉到身前、大傷害＋暈 1.5 秒（王 0.5 秒、不拉）；抓 2 隻以上時總傷害最多是抓 1 隻的 2 倍；前方沒有精英才抓最近一隻一般怪（控制、破霸體）"],
+  crane: ["紙鶴", "揮扇散出 8 隻發光的靈力紙鶴，在畫面上各自找不同的怪，撞到就爆裂（召喚、自動追蹤）"],
   stealth: ["風遁", "化成一陣疾風：無敵 2 秒、移速 +50% 可任意移動；消散點和現身點各引爆一次大風壓，炸飛周圍的怪（位移、無敵）"],
 };
 const E_NEW_TAG = { trap: "pa", roar: "ab", tthrow: "pm", curse: "ab", tslow: "ab", gbell: "ab", grab: "m", crane: "pd", stealth: "vb" };
@@ -44,7 +44,7 @@ const _enterWorldEN = enterWorld;
 enterWorld = function () { const r = _enterWorldEN.apply(this, arguments); try { eSwapMig(); if (typeof applyWeapon === "function" && W0) applyWeapon(); } catch (e) {} return r; };
 
 // ───────── 3. 放招 ─────────
-const CURSE_R = 100, CURSE_T = 4, TRAP_NET = 80;
+const CURSE_R = 100, CURSE_T = 4, TRAP_NET = 80, GRAB_K = 2; // GRAB_K：抓 n 隻精英時總傷最多原本的 2 倍
 const eRing = (x, y, r, c, max = 0.35) => W0.rings.push({ x, y, t: 0, max, r, c });
 function eNewFx(k, c) {
   const { p, t, tx, ty, F, cs, sn } = c;
@@ -77,15 +77,21 @@ function eNewFx(k, c) {
     p.guardSh = Math.round(p.maxHp * 0.3); p.guardT2 = 4; W0.gbell = { sl: CUR_SL, dm: CUR_DM };
     eRing(p.x, p.y, 24, "255,215,120", 0.4); floatText(p.x, p.y - 22, "金鐘罩", "#ffd878"); sfx("arrive"); return true;
   }
-  if (k === "grab") {
-    let tg = null, bd = 80; for (const m of W0.mobs) if (!m.dead && m.ai !== "pillar") { const d = dist(m, p) - WMOBS[m.type].r; if (d < bd) { bd = d; tg = m; } }
+  if (k === "grab") { // 企劃 68 §10：擒拿前方（100、±60°）所有精英（含王），破霸體＋拉到身前；沒有精英才抓最近一隻一般怪
     p.swing = p.swingMax = 0.2; p.swingR = 18;
-    if (!tg) { floatText(p.x, p.y - 20, "沒抓到", "#cfc4dc"); sfx("dash"); return true; }
-    p.face = angTo(p, tg);
-    if (!tg.boss) { const fx = p.x + Math.cos(p.face) * 20, fy = p.y + Math.sin(p.face) * 20; tg.x = fx; tg.y = fy; } // 企劃 66 D：拉到面前 20
-    tg.frz = Math.max(tg.frz || 0, tg.boss ? 0.5 : 1.5); tg.wind = 0; tg.mv = null;
-    hitMob(tg, wDmg(75), 0, p);
-    fxBoom(tg.x, tg.y + 4, 22, "230,200,150"); burst(tg.x, tg.y, "#e8c890", 18, 110, 0.45);
+    const inFront = (m) => dist(m, p) - WMOBS[m.type].r < 100 && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < Math.PI / 3;
+    let tgs = W0.mobs.filter((m) => !m.dead && m.ai !== "pillar" && !m.noTarget && (m.elite || m.boss) && inFront(m));
+    if (!tgs.length) { let tg = null, bd = 80; for (const m of W0.mobs) if (!m.dead && m.ai !== "pillar") { const d = dist(m, p) - WMOBS[m.type].r; if (d < bd) { bd = d; tg = m; } } if (tg) tgs = [tg]; }
+    if (!tgs.length) { floatText(p.x, p.y - 20, "沒抓到", "#cfc4dc"); sfx("dash"); return true; }
+    if (tgs.length === 1) p.face = angTo(p, tgs[0]);
+    const n = tgs.length, k2 = n > 1 ? Math.min(1, GRAB_K / n) : 1;
+    tgs.forEach((tg, i) => {
+      if (!tg.boss) { const a = p.face + (n > 1 ? (i - (n - 1) / 2) * 0.5 : 0), fx = p.x + Math.cos(a) * 20, fy = p.y + Math.sin(a) * 20; tg.x = fx; tg.y = fy; } // 拉到面前 20（多隻排成一排）
+      if (typeof sk68Break === "function") sk68Break(tg);
+      tg.frz = Math.max(tg.frz || 0, tg.boss ? 0.5 : 1.5); tg.wind = 0; tg.mv = null;
+      hitMob(tg, wDmg(75) * k2, 0, p);
+      fxBoom(tg.x, tg.y + 4, 22, "230,200,150"); burst(tg.x, tg.y, "#e8c890", 18, 110, 0.45);
+    });
     sfx("break"); shake = Math.max(shake, 8); flashT = 0.05; flashColor = "255,230,190"; return true;
   }
   if (k === "crane") {
@@ -159,7 +165,7 @@ updateWorld = function (dt) {
       const dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), v = (c.boom ? 210 : 170) * dt;
       if (d > v) { c.x += (dx / d) * v; c.y += (dy / d) * v; c.dir = Math.atan2(dy, dx); } else { c.x = gx; c.y = gy; }
       if (tg && c.cd <= 0 && Math.hypot(tg.x - c.x, tg.y - 10 - c.y) < 16 + WMOBS[tg.type].r) {
-        if (c.boom) { c.t = 0; eNewHitAt(tg.x, tg.y, 20, CRANE_D, 40, c.sl, c.dm); fxBoom(tg.x, tg.y - 4, 18, "230,240,255"); burst(tg.x, tg.y - 6, "#ffffff", 10, 90, 0.35); sfx("hit"); continue; } // 企劃 68：撞到就爆裂
+        if (c.boom) { c.t = 0; { const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = c.sl; CUR_DM = c.dm || 1; try { hitMob(tg, wDmg(CRANE_D), 40, c, true); } finally { CUR_SL = s0; CUR_DM = d0; } } /* 企劃 68 §10：只打撞到的那隻 */ fxBoom(tg.x, tg.y - 4, 18, "230,240,255"); burst(tg.x, tg.y - 6, "#ffffff", 10, 90, 0.35); sfx("hit"); continue; } // 企劃 68：撞到就爆裂
         c.cd = 0.45; const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = c.sl; CUR_DM = c.dm || 1;
         try { hitMob(tg, wDmg(1.8), 10, c, true); } finally { CUR_SL = s0; CUR_DM = d0; }
         particles.push({ x: tg.x, y: tg.y - 6, vx: rand(-30, 30), vy: rand(-40, -10), life: 0.3, max: 0.3, color: "#ffffff", size: 2 });
