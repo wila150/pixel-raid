@@ -147,7 +147,7 @@ function drawOrbs() {
       if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
       const cdm = (id === "roll" ? B.rollCd : id === "ult" ? eCdMul() : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = !mpCan(p, ((id === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[id].mp) || 0) * ((B.skMp && B.skMp[id]) || 1) * (1 - (B.mpCut || 0)));
       { const sl = { attack: "a", spin: "q", ult: "e", roll: "r" }[id], sk = typeof slotSkill === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
-        if (sk && sk !== "over" && typeof icoHas === "function") { const key = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${curWeapon()}:${sl}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = f > 0 || lack ? 0.45 : 1; icoDrawS(ctx, "skill", key, x + 7, H - 84, 32, 32); ctx.globalAlpha = 1; } }
+        if (sk && sk !== "over" && sk !== "origin" && sk !== "uq" && typeof icoHas === "function") { const key = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${curWeapon()}:${slotCls(sl)}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = f > 0 || lack ? 0.45 : 1; icoDrawS(ctx, "skill", key, x + 7, H - 84, 32, 32); ctx.globalAlpha = 1; } }
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
       ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
@@ -213,6 +213,7 @@ function ovSub() {
   if (ovKind === "map" && mapSel) { mapSel = null; openStarMap(); return true; }
   if (ovKind === "tree" && trSel) { trSel = null; renderTree(); return true; }
   if (ovKind === "char" && typeof chHelp !== "undefined" && chHelp) { chHelp = null; renderChar(); return true; }
+  if (ovKind === "skill" && typeof triPool !== "undefined" && triPool && typeof triPoolClose === "function") return triPoolClose(); // 企劃 69 B：招式池
   if (ovKind === "skill" && typeof triPick !== "undefined" && triPick && typeof gemPopClose === "function") return gemPopClose(); // 企劃 63：寶石彈窗
   return false;
 }

@@ -120,13 +120,48 @@ function triOpen(wt, l, k) {
   if (!save.w) return false; triMig();
   return wLv() >= triNeed(wt, l, k) || (save.w.triOwn || []).includes(triOwnKey(wt, l, k));
 }
+// 企劃 69 B：左鍵／Q／E 三格可以放這把武器任何一招。存檔 w.tri[wt][格] ＝ 同類的代碼（舊格式）或「類:代碼」（a／q／e 類，代碼空＝那類原本的招）
+let TRI_OVR = null; // 放某一格時＝那格的 {c 類, k 代碼}，招式程式裡的 triOf／slotSkill 看它
+const triRaw = (wt, sl) => { const w = save.w; return (w && w.tri && w.tri[wt] && w.tri[wt][sl]) || ""; };
+const eDefault = () => (jobLv() >= 4 ? "origin" : curUq() ? "uq" : "base");
+function pickOk(wt, c, k) {
+  if (!k || k === "base") return true;
+  if (c === "e" && k === "origin") return jobLv() >= 4;
+  if (c === "e" && k === "uq") return !!curUq();
+  const L = triList(wt, c); return !!(L && L.some((o) => o.k === k) && triOpen(wt, c, k));
+}
+function slotPick(wt, sl) {
+  wt = wt || curWeapon(); const v = triRaw(wt, sl);
+  if (v.includes(":")) { const [c, k0] = v.split(":"), k = c === "e" ? k0 || "base" : k0 === "base" ? "" : k0; if ((c === "a" || c === "q" || c === "e") && pickOk(wt, c, k)) return { c, k }; }
+  else if (v && pickOk(wt, sl, v)) return { c: sl, k: sl !== "e" && v === "base" ? "" : v };
+  return { c: sl, k: sl === "e" ? eDefault() : "" };
+}
+const slotCls = (sl, wt = curWeapon()) => (sl === "r" ? "r" : slotPick(wt, sl).c);
 function triOf(wt, l) {
   const w = save.w; if (!w || !w.tri) return null;
-  const v = l === "r" ? w.tri.r : w.tri[wt] && w.tri[wt][l];
-  const L = triList(wt, l);
-  return v && L && L.some((o) => o.k === v) && triOpen(wt, l, v) ? v : null;
+  if (l === "r") { const v = w.tri.r, L = TRI.r; return v && L.some((o) => o.k === v) && triOpen(wt, l, v) ? v : null; }
+  const alt = (pk) => (pk.k && !E_SPEC.includes(pk.k) ? pk.k : null);
+  if (TRI_OVR && TRI_OVR.c === l) return alt(TRI_OVR);
+  const own = slotPick(wt, l); if (own.c === l) return alt(own);
+  for (const s of ["a", "q", "e"]) { const pk = slotPick(wt, s); if (pk.c === l) return alt(pk); }
+  return null;
+}
+// 一招的名字（類＋代碼）
+function pickName(wt, c, k) {
+  const ws = WSKILLS[wt];
+  if (c === "e") { if (k === "origin") return curUq() ? "起源・" + WUQ[curUq()][0] : "起源覺醒"; if (k === "uq") return curUq() ? WUQ[curUq()][0] : "傳說 E"; if (!k || k === "base") return ws.ult[0]; }
+  if (!k) return c === "a" ? ws.attack[0] : ws.spin[0];
+  const o = (triList(wt, c) || []).find((x) => x.k === k); return o ? o.n : k;
 }
 const triName = (wt, l) => { const v = triOf(wt, l), L = triList(wt, l); return v ? L.find((o) => o.k === v).n : null; };
+// 把一招放進某格；別格已經有這招就對調
+function triSetPick(wt, sl, c, k) {
+  const w = save.w; if (!w.tri) w.tri = {}; if (!w.tri[wt]) w.tri[wt] = {};
+  const T = w.tri[wt], norm = (cc, kk) => cc + ":" + (cc === "e" ? kk || "base" : kk || ""), cur = slotPick(wt, sl), want = norm(c, k);
+  for (const s of ["a", "q", "e"]) if (s !== sl) { const pk = slotPick(wt, s); if (norm(pk.c, pk.k) === want) T[s] = norm(cur.c, cur.k); }
+  T[sl] = c === sl && c !== "e" && !k ? "" : want; if (!T[sl]) delete T[sl];
+  writeSave(); applyWeapon(); setPadLabels(true);
+}
 // 上次看技能鏈之後新開的技能（目前武器＋身法）
 function triNew() {
   const w = save.w; if (!w) return [];
@@ -169,20 +204,18 @@ const GEM_TAGS = { haste: "*", thrift: "*", multi: "pma", chain: "pma", burst: "
 const eRaw = (wt) => { const w = save.w; return (w && w.tri && w.tri[wt] && w.tri[wt].e) || ""; };
 const E_SPEC = ["base", "origin", "uq"];
 const slotsN = () => Math.min(5, 1 + jobLv()); // 0 轉 1 格 → 四轉 5 格
-function slotSkill(sl, wt = curWeapon()) {
-  if (sl === "e") { // 企劃 35 §2-2：原本的 E、起源、傳說專屬都是各自一格（eRaw＝"base"／"origin"／"uq"）
-    const v = triOf(wt, "e"); if (v) return v;
-    const r = eRaw(wt); if (r === "base") return "base"; if (r === "origin" && jobLv() >= 4) return "origin"; if (r === "uq" && curUq()) return "uq";
-    return jobLv() >= 4 ? "origin" : curUq() ? "uq" : "base";
-  }
-  if (sl === "q" && ((B.uq && B.uq.voidQ) || (typeof supOn === "function" && (supOn("meteor") || supOn("swordrain"))))) return "over";
-  return triOf(wt, sl) || "base";
+function slotSkill(sl, wt = curWeapon()) { // 這一格放的招的代碼（"base"＝那類原本的招；類看 slotCls）
+  if (sl === "r") return triOf(wt, "r") || "base";
+  if (TRI_OVR && TRI_OVR.c === sl && wt === curWeapon()) return TRI_OVR.k || "base"; // 放招中：招式程式問「E 類現在是哪招」
+  const pk = slotPick(wt, sl);
+  if (pk.c === "q" && typeof B !== "undefined" && B && ((B.uq && B.uq.voidQ) || (typeof supOn === "function" && (supOn("meteor") || supOn("swordrain"))))) return "over";
+  return pk.k || "base";
 }
 function slotTags(sl, wt = curWeapon()) {
   const k = slotSkill(sl, wt);
   if (sl === "r") return R_TAG[k] || "v";
   if (k === "uq") return "pa"; if (k === "origin" || k === "over") return "a";
-  return (SK_TAG[wt] && SK_TAG[wt][sl] && SK_TAG[wt][sl][k]) || "m";
+  const c = slotCls(sl, wt); return (SK_TAG[wt] && SK_TAG[wt][c] && SK_TAG[wt][c][k]) || "m";
 }
 function chainRaw(sl, wt = curWeapon()) {
   const w = save.w; if (!w.chain) w.chain = {};
@@ -216,8 +249,8 @@ const gemFits = (g, sl) => { const k = g.split(":")[0]; if (k === "spread") retu
 // 同一種輔助寶石還串在哪裡（這把武器的普攻／Q／E＋全武器共用的身法；在身法列找的時候看每把武器）
 const SL_ORD = ["a", "q", "e", "r"];
 function slLabel(sl, wt) {
-  const k = triOf(wt, sl), L = sl === "r" ? TRI.r : sl === "e" ? (TRI_E[wt] || []) : ((TRI[wt] || {})[sl] || []), o = k && L.find((x) => x.k === k);
-  return `${sl === "r" ? "身法" : sl.toUpperCase() === "A" ? "普攻" : sl.toUpperCase()}${o ? `（${o.n}）` : ""}`;
+  if (sl === "r") { const k = triOf(wt, "r"), o = k && TRI.r.find((x) => x.k === k); return `身法${o ? `（${o.n}）` : ""}`; }
+  const pk = slotPick(wt, sl); return `${{ a: "左鍵", q: "Q", e: "E" }[sl]}（${pickName(wt, pk.c, pk.k)}）`; // 企劃 69 B
 }
 function gemElse(k, sl, wt = curWeapon()) {
   const w = save.w; if (!w || !w.chain) return null;
@@ -264,7 +297,7 @@ const SK_ELE = {
   fan: { q: { storm: "T" } },
 };
 function skEleOf(wt, sl, k) { const T = SK_ELE[wt] && SK_ELE[wt][sl]; return (T && T[k || "base"]) || null; }
-function skEle(sl, wt = curWeapon()) { if (!sl || sl === "r") return null; return skEleOf(wt, sl, slotSkill(sl, wt)); }
+function skEle(sl, wt = curWeapon()) { if (!sl || sl === "r") return null; return skEleOf(wt, slotCls(sl, wt), slotSkill(sl, wt)); }
 function slotEle(sl) { return slotGemEle(sl) || skEle(sl); }
 function slotGemEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
 // 企劃 61 §A-2：同一招串的第 3 顆起，每多一顆這招傷害 ×0.92（更多，相乘；省元不算）
@@ -349,7 +382,7 @@ function gemPopHtml() {
 }
 function gemPopClose() { if (!triPick) return false; triPick = null; gemOpenK = gemOpenG = null; renderSkills(); return true; }
 function gemPopBind(again) {
-  const pop = ov.querySelector(".gpop"); if (!pop) return;
+  const pop = ov.querySelector(".gpop:not(.tpop)"); if (!pop) return;
   const relist = () => { pop.querySelector(".gplist").innerHTML = gpListHtml(); };
   const q = pop.querySelector(".gpq");
   q.addEventListener("input", () => { gemQ = q.value; gemOpenK = null; relist(); });
@@ -391,38 +424,75 @@ function eleTag(l, k, on) {
   if (g && g !== e) return t(g, `（${e ? ELE_N[e] + "→" : ""}轉成${ELE_N[g]}）`);
   return e ? t(e, ELE_N[e]) : "";
 }
-function renderTri(msg = "") {
-  const wt = curWeapon(), lv = wLv(), why = triSwapWhy(), ws = WSKILLS[wt];
-  if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
-  const card = (l, k, n, d, need) => {
-    const cur = (triOf(wt, l) || "") === k, open = !k || triOpen(wt, l, k), key = skgKey(wt, l, k), buy = k && !open && !skgHas(key);
-    const lockTxt = buy ? `${lv >= need ? "" : `Lv.${need} `}可在營地技能商人購買・${(need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${need} 開放`;
-    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${l}" data-tk="${k}" ${buy ? `data-shop="${l === "r" ? "r" : wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${l === "e" && !k && (jobLv() >= 4 || curUq()) ? "" : skIco(wt, l, k, "tico")}${n}${eleTag(l, k, cur)}</b><small>${open ? d : lockTxt}</small>${open ? skgBar(key) : ""}</button>`;
-  };
-  const row = (l) => {
-    const L = triList(wt, l);
-    let base = l === "a" ? ws.attack[0] : l === "q" ? ws.spin[0] : l === "e" ? ws.ult[0] : "閃身", bd = TRI_BASE_D[l] || "原本的 E 招";
-    const over = l === "q" && slotSkill("q") === "over" ? `<p class="sub">目前被傳說／超技能改寫的 Q 取代，選了也不會生效</p>` : "";
-    const idx = (L || []).map((o, i) => [o, triLvAt(wt, l, i)]).sort((a, b) => a[1] - b[1]);
-    let first = [card(l, "", base, bd, 1)];
-    if (l === "e") { // 企劃 35：原本的 E 永遠一格；起源（四轉）、傳說專屬各自另一格
-      const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small>${k === "base" && lv >= E_LV ? skgBar(skgKey(wt, "e", "base")) : ""}</button>`;
-      first = [ec("base", ws.ult[0] + eleTag("e", "base", cur === "base"), "原本的 E 招", skIco(wt, "e", "", "tico"))];
-      if (curUq()) first.push(ec("uq", WUQ[curUq()][0], "傳說武器的專屬 E 招", ""));
-      if (jobLv() >= 4) first.push(ec("origin", "起源覺醒", "四轉：全螢幕時停的起源大招（不能串輔助）", ""));
-    }
-    const cards = first.concat(idx.map(([o, need]) => card(l, o.k, o.n, o.d, need))).join("");
-    const tags = [...slotTags(l)].map((t) => TAG_N[t]).join("・"), mm = chainMpMul(l);
-    const se = l === "r" ? null : slotEle(l);
-    const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${se ? `・元素：<b style="color:${ELE_C[se]}">${ELE_N[se]}</b>` : ""}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
-    return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
-  };
-  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>${gemPopHtml()}`;
+let triPool = null, poolTab = "all"; // 企劃 69 B：正在換哪一格的招、招式池分頁
+const CLS_N = { a: "普攻類", q: "Q 類", e: "E 類" };
+// 這把武器的招式池（全部類）：[{c, k, n, d, need, spec}]
+function triPoolList(wt) {
+  const ws = WSKILLS[wt], out = [];
+  for (const c of ["a", "q", "e"]) {
+    out.push({ c, k: c === "e" ? "base" : "", n: c === "a" ? ws.attack[0] : c === "q" ? ws.spin[0] : ws.ult[0], d: c === "a" ? "原本的普攻" : c === "q" ? "原本的 Q 招" : "原本的 E 招", need: c === "e" ? E_LV : 1 });
+    if (c === "e" && curUq()) out.push({ c, k: "uq", n: WUQ[curUq()][0], d: "傳說武器的專屬 E 招", need: 1, spec: 1 });
+    if (c === "e" && jobLv() >= 4) out.push({ c, k: "origin", n: "起源覺醒", d: "四轉：全螢幕時停的起源大招（不能串輔助）", need: 1, spec: 1 });
+    (triList(wt, c) || []).map((o, i) => ({ c, k: o.k, n: o.n, d: o.d, need: triLvAt(wt, c, i) })).sort((a, b) => a.need - b.need).forEach((x) => out.push(x));
+  }
+  return out;
 }
+const pickEq = (a, b) => a.c === b.c && (a.k || (a.c === "e" ? "base" : "")) === (b.k || (b.c === "e" ? "base" : ""));
+const costTxt = (wt, c, k) => { if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`; };
+function renderTri(msg = "") {
+  const wt = curWeapon(), lv = wLv(), why = triSwapWhy();
+  if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
+  const cardOf = (x, sl, where, cur) => { // 一張招式卡；sl＝要放進哪格（r 列沿用）
+    const k = x.spec ? x.k : x.k === "base" ? "" : x.k, open = x.c === "e" && (k === "" || x.spec) ? lv >= E_LV : !k || triOpen(wt, x.c, k), key = skgKey(wt, x.c, k), buy = k && !x.spec && !open && !skgHas(key);
+    const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}可在營地技能商人購買・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
+    const ic = x.spec ? "" : skIco(wt, x.c, k, "tico");
+    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${ic}${x.n}${eleTag(x.c, k, cur)}</b><small>${open ? `${where ? `<i class="tin">在${TRI_LAYER_N[where]}</i>` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k)}</i> ${x.d}` : lockTxt}</small>${open && !x.spec ? skgBar(key) : ""}</button>`;
+  };
+  const rowR = () => { // 身法照舊
+    const L = triList(wt, "r"), cur = triOf(wt, "r") || "";
+    const card = (k, n, d, need) => { const open = !k || triOpen(wt, "r", k), key = skgKey(wt, "r", k), buy = k && !open && !skgHas(key), on = cur === k;
+      const lockTxt = buy ? `${lv >= need ? "" : `Lv.${need} `}可在營地技能商人購買・${(need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${need} 開放`;
+      return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="r" data-tc="r" data-tk="${k}" ${buy ? `data-shop="r"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${skIco(wt, "r", k, "tico")}${n}</b><small>${open ? d : lockTxt}</small>${open ? skgBar(key) : ""}</button>`; };
+    const idx = L.map((o, i) => [o, triLvAt(wt, "r", i)]).sort((a, b) => a[1] - b[1]);
+    const tags = [...slotTags("r")].map((t) => TAG_N[t]).join("・");
+    return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N.r}</b><small>全部武器共用・標籤：${tags}</small></div><div class="tricards c4">${[card("", "閃身", TRI_BASE_D.r, 1)].concat(idx.map(([o, n]) => card(o.k, o.n, o.d, n))).join("")}</div>${chainCells("r")}</div>`;
+  };
+  const row = (l) => { // 左鍵／Q／E：放什麼招自己選（企劃 69 B）
+    const pk = slotPick(wt, l), x = triPoolList(wt).find((y) => pickEq(y, pk)) || { c: pk.c, k: pk.k, n: pickName(wt, pk.c, pk.k), d: "", need: 1 };
+    const locked = l === "e" && lv < E_LV;
+    const over = slotSkill(l) === "over" ? `<p class="sub">這格的 Q 類招被傳說／超技能改寫了</p>` : "";
+    const tags = [...slotTags(l)].map((t) => TAG_N[t]).join("・"), mm = chainMpMul(l), se = slotEle(l);
+    const sub = `標籤：${tags}${se ? `・元素：<b style="color:${ELE_C[se]}">${ELE_N[se]}</b>` : ""}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
+    return `<div class="trirow"><div class="trihead"><b>${{ a: "左鍵", q: "Q", e: "E" }[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${locked ? `<button class="tricard lock" disabled><b>${WSKILLS[wt].ult[0]}</b><small>🔒 Lv.${E_LV} 開放</small></button>` : cardOf(x, l, null, true).replace(" disabled>", ">").replace('class="tricard on', 'class="tricard on cur').replace(`data-tl="${l}"`, `data-tl="${l}" data-pool="${l}"`)}<button class="tricard tpool" data-pool="${l}" ${locked ? "disabled" : ""}><b>換招…</b><small>這把武器的普攻、Q、E 類招都能放這格</small></button></div>${chainCells(l)}</div>`;
+  };
+  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">左鍵、Q、E 三格可以放這把武器<b>任何一招</b>（普攻類吃攻速、Q／E 類照自己的冷卻和真氣，放哪格都一樣）。技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買）${why ? `：<b style="color:#ff9a7a">${why}</b>` : "，換招營地隨時、野外脫戰 3 秒"}。招式下面的格子串<b>輔助寶石</b>，跟著格子走。</p>${row("a")}${row("q")}${row("e")}${rowR()}</div>${triPoolHtml()}${gemPopHtml()}`;
+}
+function triPoolHtml() {
+  if (!triPool) return "";
+  const wt = curWeapon(), sl = triPool, all = triPoolList(wt), cur = slotPick(wt, sl);
+  const where = (x) => ["a", "q", "e"].find((s) => s !== sl && pickEq(slotPick(wt, s), x)) || null;
+  const list = all.filter((x) => poolTab === "all" || x.c === poolTab);
+  const cardOf = (x) => { const lv = wLv(), k = x.spec ? x.k : x.k === "base" ? "" : x.k, open = x.c === "e" && (k === "" || x.spec) ? lv >= E_LV : !k || triOpen(wt, x.c, k), key = skgKey(wt, x.c, k), buy = k && !x.spec && !open && !skgHas(key), on = pickEq(x, cur), w = where(x);
+    const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}技能商人・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
+    return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${x.spec ? "" : skIco(wt, x.c, k, "tico")}${x.n}</b><small>${open ? `${w ? `<i class="tin">在${{ a: "左鍵", q: "Q", e: "E" }[w]}・點了對調</i> ` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k)}</i> ${x.d}` : lockTxt}</small></button>`; };
+  const tabs = [["all", "全部"], ["a", "普攻類"], ["q", "Q 類"], ["e", "E 類"]].map(([k, n]) => `<button data-ptab="${k}" class="${poolTab === k ? "on" : ""}">${n}</button>`).join("");
+  return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${{ a: "左鍵", q: "Q", e: "E" }[sl]} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
+}
+function triPoolClose() { if (!triPool) return false; triPool = null; renderSkills(); return true; }
 function bindTri() {
   const again = (m) => { writeSave(); setPadLabels(true); renderSkills(m); };
-  ov.querySelectorAll("[data-tk]").forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.shop) { sfx("click"); shopWt = b.dataset.shop; skTab = "shop"; renderSkills(); return; }
+  ov.querySelectorAll("[data-pool]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); sfx("click"); triPool = b.dataset.pool; poolTab = "all"; renderSkills(); }));
+  ov.querySelectorAll("[data-ptab]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); poolTab = b.dataset.ptab; sfx("click"); renderSkills(); }));
+  ov.querySelectorAll("[data-tpx]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); triPoolClose(); }));
+  { const tp = ov.querySelector("[data-tpop]"); if (tp) tp.addEventListener("click", (e) => { if (e.target === tp) triPoolClose(); }); }
+  ov.querySelectorAll("[data-tk]").forEach((b) => !b.dataset.pool && b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (b.dataset.shop) { sfx("click"); shopWt = b.dataset.shop; skTab = "shop"; triPool = null; renderSkills(); return; }
+    if (b.dataset.tc && b.dataset.tc !== "r") { // 企劃 69 B：三格自由放
+      const wt = curWeapon(), sl = b.dataset.tl, c = b.dataset.tc, k = b.dataset.tk, why = triSwapWhy();
+      if (why) { sfx("bad"); triPool = null; renderSkills(why); return; }
+      triSetPick(wt, sl, c, k); triPool = null; sfx("good"); renderSkills(`${{ a: "左鍵", q: "Q", e: "E" }[sl]} 換成「${pickName(wt, c, c === "e" ? k || "base" : k)}」`); return;
+    }
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
     if (why) { sfx("bad"); renderSkills(why); return; }
     const sp = l === "e" && E_SPEC.includes(k);

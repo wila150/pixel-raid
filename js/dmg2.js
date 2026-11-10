@@ -25,7 +25,7 @@ const SK_EFF = {
 };
 function skEff(sl, wt = curWeapon()) {
   if (!sl || typeof slotSkill !== "function") return 1;
-  try { const k = slotSkill(sl, wt), t = sl === "r" ? SK_EFF.r : SK_EFF[wt] && SK_EFF[wt][sl]; return (t && t[k]) || 1; } catch (e) { return 1; }
+  try { const k = slotSkill(sl, wt), t = sl === "r" ? SK_EFF.r : SK_EFF[wt] && SK_EFF[wt][slotCls(sl, wt)]; return (t && t[k]) || 1; } catch (e) { return 1; }
 }
 const isSpellW = (wt = curWeapon()) => !!SPELL_W[wt];
 function spellLv(sl) { // 法術招看這一格的技能寶石（起源、傳說 E、改寫的 Q 不是寶石 → 看普攻那顆）

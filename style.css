@@ -1290,3 +1290,10 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 /* 企劃 66 C：凌波剩幾次 */
 #pad .btn-roll[data-ch]:not([data-ch=""])::after { content: "×" attr(data-ch); position: absolute; right: -2px; top: -4px; font-size: 11px; font-weight: bold; color: #9fe8ff; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; }
 #pad .btn-roll[data-ch="0"]::after { color: #8a8094; }
+/* v9.25 企劃 69 B：招式池 */
+.ov .tricard .tcls { font-style: normal; color: #c8b890; }
+.ov .tricard .tin { font-style: normal; color: #7ab0ff; }
+.ov .tricard.tpool { border-style: dashed; }
+.ov .tricard.cur { cursor: pointer; }
+.ov .tplist { grid-template-columns: 1fr 1fr 1fr; }
+@media (orientation: portrait) { .ov .tplist { grid-template-columns: 1fr 1fr; } }

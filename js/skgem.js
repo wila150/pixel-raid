@@ -18,8 +18,8 @@ const skgPrice = (wt, l, k) => triNeed(wt, l, k) * SKG_PRICE;
 // 這一格現在用的是哪顆技能寶石（起源、傳說專屬、被改寫的 Q 不是寶石）
 function skgOfSlot(sl, wt = curWeapon()) {
   if (!sl || !save.w || typeof slotSkill !== "function") return null;
-  const k = sl === "q" && !B ? triOf(wt, "q") || "base" : slotSkill(sl, wt); if (k === "origin" || k === "uq" || k === "over") return null;
-  return skgKey(wt, sl, k);
+  const k = sl === "q" && !B ? slotPick(wt, "q").k || "base" : slotSkill(sl, wt); if (k === "origin" || k === "uq" || k === "over") return null;
+  return skgKey(wt, sl === "r" ? "r" : slotCls(sl, wt), k); // 企劃 69 B：技能寶石看招式的類
 }
 const skgDmg = (sl) => { const k = skgOfSlot(sl); return typeof SPELL_W !== "undefined" && SPELL_W[curWeapon()] ? 1 : k ? 1 + SKG_DMG * (skgLv(k) - 1) : 1; };
 const skgCdMul = (sl) => { const k = skgOfSlot(sl); return k ? 1 - SKG_CD * Math.floor(skgLv(k) / 5) : 1; };
