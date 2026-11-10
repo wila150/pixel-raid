@@ -10,11 +10,11 @@ const FATE_TGT = { mob: { n: "小怪", c: "#9fdcff" }, you: { n: "你", c: "#ffb
 const FATE_PEN = {
   m_dmg: { t: "mob", n: "小怪傷害 +25%", v: 0.25 },
   m_spd: { t: "mob", n: "小怪移速 +20%", v: 0.2 },
-  m_ele: { t: "mob", n: (o) => `小怪攻擊附帶 +30% ${RES_S[o.e]}傷害`, v: 0.3, e: 1 },
+  m_ele: { t: "mob", n: (o) => `小怪攻擊附帶 +20% ${RES_S[o.e]}傷害`, v: 0.2, e: 1 }, // v9.5.1 企劃 51 §7：30%→20%
   m_pool: { t: "mob", n: "小怪死掉留下小毒池", v: 1 },
   m_elite: { t: "mob", n: "精英多 1 個詞綴", v: 1 },
   y_res: { t: "you", n: "你的四抗 −20%", v: 0.2 },
-  y_arm: { t: "you", n: "你的護甲 −30%", v: 0.3 },
+  y_arm: { t: "you", n: "你的護甲 −50%", v: 0.5 }, // v9.5.1：−30% 幾乎沒感覺
   y_cast: { t: "you", n: "你每放一招扣 1% 生命", v: 0.01 },
   y_noreg: { t: "you", n: "你不能自然回血", v: 1 },
   y_pot: { t: "you", n: "丹藥冷卻 +4 秒", v: 4 },
@@ -152,7 +152,7 @@ skillUsed = function (k) {
   }
   return r;
 };
-// 小怪附帶元素：打中了（生命或護盾真的有少）才再扣 30% 該元素傷害，照你的抗性（effRes）算
+// 小怪附帶元素：打中了（生命或護盾真的有少）才再扣 20% 該元素傷害，照你的抗性（effRes）算
 const _hurtWFate = hurtW;
 hurtW = function (dmg, from, kind) {
   const p = W0, F = fateOn(), es = fateEles();

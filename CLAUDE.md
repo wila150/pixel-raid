@@ -425,4 +425,5 @@
   - 懲罰接法：小怪／王傷害移速 `fateMobs`（記 `m.dm0/sp0`、王改 `m.R.dmgMul`；wboss.js 王移動多乘 `m.spdMul`）；精英多 `m.mod2`；附帶元素＝包 `hurtW`，真的扣到血才再扣 30%×(1−effRes)；四抗＝包 `resPen`（effRes 一起扣、先扣再封頂）；護甲／不回血／閃身＝包 `worldStats`（護甲沒有獨立增加池，就乘這一層）；每招 1%＝包 `skillUsed`；丹藥 +4 秒＝`W0.fatePot` 旗標下一幀加；王血 +50%、天劫詞綴＝`m.fateTj` 借 `tjTick`（暫時換 `m.tj`，不設 m.tj 免得被當天劫王）、iron 包 `hitMob` ×0.7；半血叫 4 隻精英（`evSpawn`）。獎勵包 `killMob`／`gainExp`／`riftBossKilled`。`riftLeave` 後重算 B。畫面：石台、小地圖粉點、事件列下面效果清單、`STATUS` 「命N」（畫布上，點了不會開清單）。
   - 順便修：天劫秘境的秘境之主 `m.tj = true`（布林），mind.js `tjTick`／iron／名字都當陣列用 → 改 `Array.isArray`。
   - 測試 scratchpad `t.js ?fate`：出現率、每條懲罰數值、疊 1.5、附帶元素、扣血、丹藥、王選項前後、王血／傷／移速／天劫詞綴、半血 4 精英、王掉落、離開還原、天劫秘境沒錯誤、對話框截圖。**清圖 ≤1.4、王 ≤1.6、站樁死亡率交給企劃 bot**。
+- **v9.5.1（企劃 51 §7 bot）**：`y_arm` −30%→**−50%**（每下扣血只 ×1.01）、`m_ele` 30%→**20%**（吃原始傷害不吃護甲，比 m_dmg 兇）。
 - **下一項**：41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留。
