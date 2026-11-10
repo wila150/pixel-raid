@@ -412,7 +412,7 @@ function lvGap(m) { if (!m || !save.w || m.tj || (typeof RIFT !== "undefined" &&
 const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
 const DEEP_DMG = { forest: 1.3, waste: 1.3, volcano: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林、荒原、火山 ×1.3（企劃 41 §8 複驗：有 ES 時荒原火山小怪只掉 0–4%）
-const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1 + 0.12 * (RIFT.tier || 0); return DEEP_DMG[zoneAt(m.x, m.y)] || 1; }; // 企劃 52：秘境 1–10 層也有 ×(1＋0.12×層數)
+const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1 + 0.09 * (RIFT.tier || 0); return DEEP_DMG[zoneAt(m.x, m.y)] || 1; }; // 企劃 52：秘境 1–10 層也有 ×(1＋0.09×層數)（v9.6.1，原本 0.12 太痛）
 const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1) * gearDmgK(m.lv); // dmgMul：秘境詞綴；gearDmgK：企劃 44
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
