@@ -68,7 +68,7 @@ function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時�
   if (k.mods.includes("physw") && k.mods.includes("spellw")) k.mods = k.mods.filter((m) => m !== "spellw"); // 兩個護體不會同時出現
 }
 const keyMv = (k, m) => (k.mv && k.mv[m]) || 1; // 造化玉重骰的數值倍率（0.7–1.3；沒骰過＝1）
-const keyQuant = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].q || 0) * keyMv(k, m)), 0) + k.q * 10 + 8 * keyModN(k); // 物品數量 %；企劃 52：每條詞綴再 +8%
+const keyQuant = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].q || 0) * keyMv(k, m)), 0) + k.q * 10 + 8 * keyModN(k) + 3 * Math.max(0, k.tier - 10); // 物品數量 %；企劃 52：每條詞綴再 +8%；企劃 65：第 11 層起每層 +3%
 const keyRar = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].r || 0) * keyMv(k, m)), 0) + 5 * keyModN(k); // 物品品質 %；企劃 52：每條 +5%
 function keyModN(k) { return k.mods.filter((m) => MAP_MODS[m] && !MAP_MODS[m].x).length; } // 塔加成（x）不算
 const keyGod = (k) => keyModN(k) >= 7; // 7、8 條＝「極」

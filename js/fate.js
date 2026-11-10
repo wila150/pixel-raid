@@ -174,7 +174,7 @@ riftSpawnBoss = function () {
   F.boss = true;
   const m = W0.mobs.find((x) => x.boss && x.R && !x.dead); if (!m) return;
   if (fateHas("b_hp")) { const k = 1 + fateV("b_hp"); m.hp *= k; m.max *= k; } // hv2（dmg2.js）之後還會再乘一次 DMG_REF，比例不變
-  const tjs = fateTjs().slice(), nT = (RIFT.tier >= 15 ? 2 : RIFT.tier >= 8 ? 1 : 0); // 企劃 52：第 8 層以上秘境之主多 1 個天劫詞綴、15 層以上 2 個
+  const tjs = fateTjs().slice(), nT = (RIFT.tier >= 20 ? 3 : RIFT.tier >= 15 ? 2 : RIFT.tier >= 8 ? 1 : 0); // 企劃 65：20 層以上 3 個 // 企劃 52：第 8 層以上秘境之主多 1 個天劫詞綴、15 層以上 2 個
   for (let i = 0; i < nT; i++) { const left = FATE_TJ.filter((x) => !tjs.includes(x)); if (left.length) tjs.push(left[Math.floor(Math.random() * left.length)]); }
   if (tjs.length) { m.fateTj = tjs; m.fateTjT = { call: 20, pool: 3.5, zap: 4 }; m.R.n = `${m.R.n}（${tjs.map((x) => TJ_MODS[x].n).join("・")}）`; }
   fateMobs(true);

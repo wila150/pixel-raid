@@ -423,7 +423,7 @@ function lvGap(m) { if (!m || !save.w || m.tj || (typeof RIFT !== "undefined" &&
 const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
 const DEEP_DMG = { forest: 1.3, waste: 1.3, volcano: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林、荒原、火山 ×1.3（企劃 41 §8 複驗：有 ES 時荒原火山小怪只掉 0–4%）
-const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1 + 0.09 * (RIFT.tier || 0); return DEEP_DMG[zoneAt(m.x, m.y)] || 1; }; // 企劃 52：秘境 1–10 層也有 ×(1＋0.09×層數)（v9.6.1，原本 0.12 太痛）
+const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 * riftTierK(RIFT.tier).dmg : 1 + 0.09 * (RIFT.tier || 0); return DEEP_DMG[zoneAt(m.x, m.y)] || 1; }; // 企劃 52：秘境 1–10 層也有 ×(1＋0.09×層數)（v9.6.1，原本 0.12 太痛）
 const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1) * gearDmgK(m.lv); // dmgMul：秘境詞綴；gearDmgK：企劃 44
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
@@ -713,7 +713,7 @@ function updateWorld(dt) {
     if (p.iceN > 0 && (p.iceT -= dt) <= 0) { p.iceT = 0.035; p.iceN--; W0.walls.push({ x: p.x, y: p.y, t: p.iceL || 2, tick: 0, ice: 1 }); } // 冰徑
     if (p.roll <= 0) {
       if (p.dashHit && p.dashSl === "q" && B.uq.zhenyue && curWeapon() === "fist" && typeof zyCrack === "function") zyCrack(p, p.dashDmg, p.dashDm); // 企劃 57 震岳碎山拳：衝拳停下地裂
-      p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
+      p.dodge = false; p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
       if (p.rshPend) { W0.rshT = p.rshPend; p.rshPend = 0; }
       if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * AFTER_DM(l), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
     }
@@ -1078,7 +1078,11 @@ function updateWorld(dt) {
   if (W0.bellT > 0) W0.bellT -= dt;
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y, typeof triOf === "function" ? triOf(wt, "a") : null); }
   if (B.noRoll && act("roll", " ", "l", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
-  if (!B.noRoll && act("roll", " ", "l", "shift") && useSkill("roll")) cast("r", () => {
+  // 身法取消動作：按空白鍵時，收招（揮砍減速）直接中斷；正在放衝刺類招式（御劍突、衝拳、斷空…）時先記住，衝完那一刻馬上閃身
+  const rollPress = !B.noRoll && act("roll", " ", "l", "shift");
+  if (rollPress && p.roll > 0 && !p.dodge) p.rollBuf = 0.3;
+  if (p.rollBuf > 0) p.rollBuf -= dt;
+  if (!B.noRoll && (rollPress || (p.rollBuf > 0 && p.roll <= 0)) && useSkill("roll") && ((p.rollBuf = 0), (p.swing = 0), true)) cast("r", () => {
     const tr = typeof triOf === "function" ? triOf(wt, "r") : null; // 身法
     if (tr === "blink") { // 縮地：瞬間移到前面 70
       const a = ml > 0.1 ? Math.atan2(my, mx) : p.face, ar = typeof wbArena === "function" ? wbArena() : null, gt = gemLv("trail"), gi = gemLv("icepath");
@@ -1099,7 +1103,7 @@ function updateWorld(dt) {
       W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r, c: "200,150,255" }); afterAt(p.x, p.y, 40, 5); sfx("volley"); return;
     }
     if (tr === "guard") { p.guardSh = Math.round(p.maxHp * 0.2); p.guardT2 = 3; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r: 20, c: "255,230,150" }); floatText(p.x, p.y - 20, "護體", "#ffe08a"); sfx("arrive"); return; }
-    p.roll = 0.22; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash");
+    p.roll = 0.22; p.dodge = true; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash");
     if (tr === "ghost") { p.ghostT = 0; p.ghostN = Math.max(p.ghostN || 0, 5); p.ghostSl = "r"; }
     else if (tr === "surge") { W0.sureT = 1.5; }
     else if (tr === "wave") { p.cds.roll *= 0.7; p.mp = Math.min(B.maxMp, p.mp + 8); }
@@ -1701,7 +1705,7 @@ function drawWMob(m) {
   const gap = m.lv - save.w.lv;
   ctx.fillStyle = m.elite ? "#6fb8ff" : gap >= 4 ? "#ff6b6b" : gap <= -5 ? "#a99bb8" : "#f3eada";
   ctx.fillStyle = m.hunter ? "#ff6b6b" : ctx.fillStyle;
-  const lab = `${m.elite && !m.hunter ? (m.mod2 ? m.mod + "、" + m.mod2 : m.mod || "") + "精英 " : ""}${d.n}${d.sz ? `（${SZ_N[d.sz]}）` : ""} Lv.${m.lv}`, fc = ctx.fillStyle;
+  const lab = `${m.elite && !m.hunter ? (m.mod2 ? m.mod + "、" + m.mod2 + (m.mod3 ? "、" + m.mod3 : "") : m.mod || "") + "精英 " : ""}${d.n}${d.sz ? `（${SZ_N[d.sz]}）` : ""} Lv.${m.lv}`, fc = ctx.fillStyle;
   ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.strokeStyle = "rgba(20,14,30,0.85)"; ctx.strokeText(lab, m.x, m.y - d.r * sc - 9);
   ctx.fillStyle = fc; ctx.fillText(lab, m.x, m.y - d.r * sc - 9);
   if (d.ele) drawEleTag(m.x + ctx.measureText(lab).width / 2 + 4, m.y - d.r * sc - 10.5, d.ele);

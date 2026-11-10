@@ -57,7 +57,7 @@ renderSkills = function (msg) {
 // ───────── 2. 精英詞綴 8 種：深區（沼澤、雷谷、仙域，秘境 Lv.50 以上）從 8 種抽，30% 雙詞綴 ─────────
 const ELITE_NEW = ["毒池", "雷擊", "護主", "瞬影", "不死", "急襲"];
 const ELITE_ALL = ELITE_MODS.concat(ELITE_NEW);
-const eHas = (m, k) => m.mod === k || m.mod2 === k;
+const eHas = (m, k) => m.mod === k || m.mod2 === k || m.mod3 === k;
 const deepMob = (m) => (typeof RIFT !== "undefined" && RIFT ? m.lv >= 50 : ["swamp", "thunder", "sky"].includes(m.camp && m.camp.z));
 function eliteRoll(m) {
   m.emk = 1;

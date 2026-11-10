@@ -9,6 +9,8 @@ const RIFT_LIVES = 3;
 const riftLives = (tier) => (tier <= 10 ? 3 : tier <= 15 ? 2 : 1); // 企劃 52
 const riftMobLv = (tier) => Math.max(riftLv(tier), ((save.w && save.w.lv) || 1) - 5); // 企劃 52：怪等級跟著你（最低是這層的等級）
 const riftHpK = (tier) => 1 + 0.03 * tier; // 企劃 52：小怪血量小加
+const RIFT_TK_HP = 1.12, RIFT_TK_DMG = 1.1; // 企劃 65：第 11 層起每層（複利）怪血 ×1.12、傷害 ×1.1（bot 量過：企劃原本 ×1.05 太小）
+const riftTierK = (tier) => { const n = Math.max(0, (tier || 0) - 10); return { hp: Math.pow(RIFT_TK_HP, n), dmg: Math.pow(RIFT_TK_DMG, n) }; };
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
 const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : tier <= 15 ? (tier % 2 ? "swamp" : "thunder") : "sky"); // 11–15 沼澤／雷谷、16 以上仙域（企劃 16 §3-2）
 const riftUnlocked = () => !!save.w && ((save.w.wp || []).includes("swamp") || save.w.lv >= 30);
@@ -85,7 +87,8 @@ function riftSpawn(R) {
       if (!m.elite && mods.includes("elites") && Math.random() < 0.16) { m.elite = true; m.hp *= 4; m.max *= 4; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; }
       if (!m.elite && Math.random() < 0.04) { m.elite = true; m.hp *= 4; m.max *= 4; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; } // 企劃 52：精英 ×1.5（8% → 約 12%）
       if (m.elite && R.tier >= 8 && !m.mod2 && typeof ELITE_NEW !== "undefined") { const q = ELITE_NEW.filter((x) => x !== m.mod); m.mod2 = q[Math.floor(Math.random() * q.length)]; } // 第 8 層以上精英必帶 2 個詞綴
-      { const k = riftHpK(R.tier); m.hp *= k; m.max *= k; }
+      if (m.elite && R.tier >= 16 && m.mod2 && !m.mod3 && Math.random() < 0.2) { const q = ELITE_NEW.filter((x) => x !== m.mod && x !== m.mod2); m.mod3 = q[Math.floor(Math.random() * q.length)]; } // 企劃 65：16 層以上 20% 精英帶 3 個詞綴
+      { const k = riftHpK(R.tier) * riftTierK(R.tier).hp; m.hp *= k; m.max *= k; } // 企劃 65：層數難度
       if (mods.includes("hp")) { m.hp *= 1.4; m.max *= 1.4; }
       if (mods.includes("fast")) m.spdMul = 1.25;
       if (mods.includes("dmg")) m.dmgMul = 1.3;
@@ -136,8 +139,8 @@ function riftLeave(ok) {
 // 秘境之主：從區域王裡抽一隻，血量縮小、等級＝鑰匙等級
 function riftSpawnBoss() {
   const R = RIFT, k = RB_KEYS[Math.floor(Math.random() * RB_KEYS.length)], base = RBOSS[k], lv = R.lv, mods = R.key.mods;
-  const hp = Math.round(122000 * Math.pow(lv / 50, 1.65) * 0.9 * (mods.includes("lordhp") ? 1.6 : 1)); // 企劃 52：×0.5 → ×0.9 // 企劃 41：照區域王新血量內插（12.2 萬@Lv.50、23 萬@Lv.75、42 萬@Lv.110）×0.5
-  const BR = Object.assign({}, base, { x: R.boss.x, y: R.boss.y, lv, hp, cool: 0, n: `秘境之主・${base.n}`, dmgMul: (base.dmgMul || 1) * (mods.includes("dmg") ? 1.3 : 1),
+  const hp = Math.round(122000 * Math.pow(lv / 50, 1.65) * 0.9 * riftTierK(R.tier).hp * (mods.includes("lordhp") ? 1.6 : 1)); // 企劃 65：層數難度 // 企劃 52：×0.5 → ×0.9 // 企劃 41：照區域王新血量內插（12.2 萬@Lv.50、23 萬@Lv.75、42 萬@Lv.110）×0.5
+  const BR = Object.assign({}, base, { x: R.boss.x, y: R.boss.y, lv, hp, cool: 0, n: `秘境之主・${base.n}`, dmgMul: (base.dmgMul || 1) * riftTierK(R.tier).dmg * (mods.includes("dmg") ? 1.3 : 1),
     wake: `${base.n}從裂隙中現身！`, sleep: `${base.n}退回裂隙深處（走進王門可以再挑戰）` });
   W0.mobs.push({ type: base.type, rb: k, R: BR, rift: true, boss: true, lv, elite: false, camp: { x: BR.x, y: BR.y, z: R.theme, lv, respawn: [] }, x: BR.x, y: BR.y - 6, hp, max: hp,
     st: "chase", wt: 0, wx: 0, wy: 0, atkT: 2, flash: 0, kb: 0, ka: 0, fuse: 0, phase: 1, act: null, actT: 0, adds: 0, dash: null, seq: [] });
@@ -376,6 +379,7 @@ function renderRift(msg = "") {
       <div class="dim">怪物 Lv.${riftMobLv(sel.tier)}・${ZONES[riftTheme(sel.tier)].n}・危險 <span class="rstar">${"★".repeat(keyStars(sel))}${"☆".repeat(5 - keyStars(sel))}</span></div>
       <div class="rmods">${pre.map((m) => riftModRow(m, sel)).join("")}${suf.map((m) => riftModRow(m, sel)).join("")}${!sel.mods.length ? `<div class="dim">（凡品鑰匙沒有詞綴：點金可以加詞綴）</div>` : ""}</div>
       <div class="rsum"><span>詞綴 <b>${keyModN(sel)}／${KEY_MODS_MAX}</b></span><span>物品數量 <b>+${keyQuant(sel)}%</b></span><span>物品品質 <b>+${keyRar(sel)}%</b></span></div>
+      ${sel.tier > 10 ? `<div class="dim rilv">層數難度：怪血 ×${riftTierK(sel.tier).hp.toFixed(1)}・傷害 ×${riftTierK(sel.tier).dmg.toFixed(1)}（第 11 層起每層變硬，物品數量也每層 +3%）</div>` : ""}
       <div class="dim rilv">${keyIlTxt(sel)}</div>
       ${warn.length ? `<p class="warn">⚠ 這把鑰匙有對你現在的武器（${WEAPONS[curWeapon()].n}）不利的詞綴：換一組武器再進，或先打別把</p>` : ""}
       <div class="acts">

@@ -38,7 +38,7 @@ function drawTarget() {
   ctx.textAlign = "left"; ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = m.hunter ? "#ffd84a" : "#7ab8ff";
   ctx.fillText(`${m.hunter ? "獵寶妖" : "精英"}・${d.n}`, x, y - 3);
   ctx.textAlign = "right"; ctx.fillStyle = "#cfc4dc"; ctx.font = "9px 'Noto Sans TC', sans-serif";
-  ctx.fillText(`Lv.${m.lv}${m.mod ? "・" + m.mod + (m.mod2 ? "、" + m.mod2 : "") : ""}${d.ele ? "・" + ({ F: "火", W: "冰", T: "雷", P: "毒" }[d.ele] || "") : ""}`, x + w, y - 3);
+  ctx.fillText(`Lv.${m.lv}${m.mod ? "・" + m.mod + (m.mod2 ? "、" + m.mod2 : "") + (m.mod3 ? "、" + m.mod3 : "") : ""}${d.ele ? "・" + ({ F: "火", W: "冰", T: "雷", P: "毒" }[d.ele] || "") : ""}`, x + w, y - 3);
   ctx.fillStyle = "#2a1a1a"; ctx.fillRect(x, y + 2, w, 8);
   ctx.fillStyle = m.hunter ? "#e0b030" : "#d84a3a"; ctx.fillRect(x, y + 2, w * clamp(m.hp / m.max, 0, 1), 8);
   ctx.textAlign = "center"; ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff"; ctx.fillText(`${Math.ceil(Math.max(0, m.hp))} / ${Math.round(m.max)}`, W / 2, y + 9);
