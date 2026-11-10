@@ -308,7 +308,7 @@ function applyWeapon() {
     if (se === "base" && WSKILL.ult.uq) { WSKILL.ult.n = ws.ult[0]; delete WSKILL.ult.uq; }
     if (se === "uq" && WSKILL.ult.uq) WSKILL.ult.n = WUQ[WSKILL.ult.uq][0];
     if (se === "origin") WSKILL.ult.n = WSKILL.ult.uq ? "起源・" + WUQ[WSKILL.ult.uq][0] : "起源覺醒"; // 按鈕名字要跟放出來的招一樣
-    const tr = triOf(wt, "r"), RM = { blink: ["縮地", 1.3], pull: ["聚妖", 2.5], guard: ["護體", 4.5] }; // 身法通用招
+    const tr = triOf(wt, "r"), RM = { blink: ["縮地", 1.3], pull: ["聚妖", 1.8], guard: ["護體", 2.5] }; // 企劃 66 C：聚妖、護體也會閃身，冷卻縮短 // 身法通用招
     if (RM[tr]) { WSKILL.roll.n = RM[tr][0]; WSKILL.roll.cd *= RM[tr][1]; }
   }
 }
@@ -1076,9 +1076,19 @@ function updateWorld(dt) {
   if (p.guardT2 > 0 && (p.guardT2 -= dt) <= 0) p.guardSh = 0;
   if (W0.rshT > 0) W0.rshT -= dt;
   if (W0.bellT > 0) W0.bellT -= dt;
+  if (W0.decoy && (W0.decoy.t -= dt) <= 0) W0.decoy = null; // 殘影
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y, typeof triOf === "function" ? triOf(wt, "a") : null); }
   if (B.noRoll && act("roll", " ", "l", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
   // 身法取消動作：按空白鍵時，收招（揮砍減速）直接中斷；正在放衝刺類招式（御劍突、衝拳、斷空…）時先記住，衝完那一刻馬上閃身
+  { // 企劃 66 C：凌波＝閃身可以存 2 次（每次都要等冷卻充好）
+    const trw = typeof triOf === "function" ? triOf(wt, "r") : null;
+    if (trw === "wave") {
+      const cdw = WSKILL.roll.cd * B.rollCd * ((B.skCd && B.skCd.roll) || 1);
+      if (p.wCh === undefined) { p.wCh = 2; p.wT = 0; }
+      if (p.wCh < 2) { p.wT -= dt; if (p.wT <= 0) { p.wCh++; p.wT = p.wCh < 2 ? cdw : 0; } }
+      p.cds.roll = p.wCh > 0 ? 0 : Math.max(0.001, p.wT);
+    } else if (p.wCh !== undefined) { delete p.wCh; delete p.wT; }
+  }
   const rollPress = !B.noRoll && act("roll", " ", "l", "shift");
   if (rollPress && p.roll > 0 && !p.dodge) p.rollBuf = 0.3;
   if (p.rollBuf > 0) p.rollBuf -= dt;
@@ -1097,16 +1107,25 @@ function updateWorld(dt) {
       const gs = gemLv("rshield"); if (gs) W0.rshT = 1.5 + gs * 0.25;
       p.iframe = Math.max(p.iframe, 0.2); burst(p.x, p.y, "#bfe6ff", 14, 80, 0.3); sfx("dash"); return;
     }
-    if (tr === "pull") { // 聚妖：把附近的怪吸過來、變慢
-      const r = 110 * AM();
-      for (const m of W0.mobs) if (!m.dead && !m.noTarget && dist(m, p) < r + WMOBS[m.type].r) { if (!m.boss) { const a = angTo(m, p), d = dist(m, p) * 0.7; moveBody(m, Math.cos(a) * d, Math.sin(a) * d, WMOBS[m.type].r); } m.slowT = Math.max(m.slowT || 0, 1.5); hitMob(m, wDmg(5), 0, p, true); }
-      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r, c: "200,150,255" }); afterAt(p.x, p.y, 40, 5); sfx("volley"); return;
-    }
-    if (tr === "guard") { p.guardSh = Math.round(p.maxHp * 0.2); p.guardT2 = 3; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r: 20, c: "255,230,150" }); floatText(p.x, p.y - 20, "護體", "#ffe08a"); sfx("arrive"); return; }
     p.roll = 0.22; p.dodge = true; p.rollDir = ml > 0.1 ? Math.atan2(my, mx) : p.face; p.iframe = Math.max(p.iframe, 0.3); sfx("dash");
-    if (tr === "ghost") { p.ghostT = 0; p.ghostN = Math.max(p.ghostN || 0, 5); p.ghostSl = "r"; }
+    if (tr === "pull") { // 企劃 66 C 聚妖：照常閃出去，起點→終點這條線兩側 60 內的怪往線上拉、變慢 1.5 秒
+      const L = 250 * 0.22, ax = p.x, ay = p.y, ux = Math.cos(p.rollDir), uy = Math.sin(p.rollDir), w = 60 * AM();
+      for (const m of W0.mobs) {
+        if (m.dead || m.noTarget) continue;
+        const t = clamp((m.x - ax) * ux + (m.y - ay) * uy, 0, L), cx = ax + ux * t, cy = ay + uy * t, dd = Math.hypot(m.x - cx, m.y - cy);
+        if (dd > w + WMOBS[m.type].r) continue;
+        if (!m.boss) { const k = m.elite ? 0.35 : 0.7; moveBody(m, (cx - m.x) * k, (cy - m.y) * k, WMOBS[m.type].r); }
+        m.slowT = Math.max(m.slowT || 0, 1.5); hitMob(m, wDmg(5), 0, p, true);
+      }
+      W0.rings.push({ x: ax + ux * L / 2, y: ay + uy * L / 2, t: 0, max: 0.35, r: w, c: "200,150,255" }); afterAt(ax + ux * L / 2, ay + uy * L / 2, 40, 5); sfx("volley");
+    }
+    if (tr === "guard") { p.guardSh = Math.round(p.maxHp * 0.15); p.guardT2 = 2 + 0.22; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r: 20, c: "255,230,150" }); floatText(p.x, p.y - 20, "護體", "#ffe08a"); } // 企劃 66 C：閃出去＋護盾 15% 生命 2 秒
+    if (tr === "ghost") { p.ghostT = 0; p.ghostN = Math.max(p.ghostN || 0, 5); p.ghostSl = "r"; // 企劃 66 C：起點留殘影 1.5 秒，120 內正在追你的小怪改去追殘影（精英、王不吃）
+      W0.decoy = { x: p.x, y: p.y, t: 1.5, flip: p.flip };
+      for (const m of W0.mobs) if (!m.dead && !m.boss && !m.elite && !m.hunter && m.st === "chase" && dist(m, p) < 120) { m.dcy = 1; m.wind = 0; m.mv = null; m.dv = null; }
+    }
     else if (tr === "surge") { W0.sureT = 1.5; }
-    else if (tr === "wave") { p.cds.roll *= 0.7; p.mp = Math.min(B.maxMp, p.mp + 8); }
+    else if (tr === "wave") { if (p.wCh !== undefined) { if (p.wCh === 2) p.wT = p.cds.roll; p.wCh = Math.max(0, p.wCh - 1); p.cds.roll = p.wCh > 0 ? 0 : Math.max(0.001, p.wT); } p.mp = Math.min(B.maxMp, p.mp + 5); }
     moveRunes("r");
   });
   W0.sureCast = false; if (W0.sureT > 0) W0.sureT -= dt;
@@ -1260,6 +1279,11 @@ function updateWorld(dt) {
       aggro = true;
       if (m.hunter && inTown) { m.dead = true; floatText(m.x, m.y - 12, "獵寶妖跑掉了", "#cfc4dc"); continue; }
       if (!m.hunter && (homeD > 280 || inTown)) { m.st = "home"; continue; }
+      if (m.dcy) { // 企劃 66 C 殘影：走去打殘影（不出招、不打到你）
+        const D = W0.decoy;
+        if (D && D.t > 0) { const dd = dist(m, D); if (dd > d.r + 6) { const aa = angTo(m, D); moveBody(m, Math.cos(aa) * spd * dt, Math.sin(aa) * spd * dt, d.r); } m.wind = 0; continue; }
+        m.dcy = 0;
+      }
       const a = angTo(m, p);
       if (m.mv) { mvTick(m, d, p, dt); continue; } // 企劃 28：撲擊／衝撞／瞬步／急襲
       if (d.shield) m.fa = turnTo(m.fa == null ? a : m.fa, a, 2.2 * dt);
@@ -1582,6 +1606,7 @@ function renderWorld() {
       ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
       ctx.fillStyle = "#1b1424"; ctx.fillText(n.n, n.x + 0.5, n.y - 11.5); ctx.fillStyle = "#ffe066"; ctx.fillText(n.n, n.x, n.y - 12);
     } else if (o.me && state !== "worldDead") {
+      if (W0.decoy) { const D = W0.decoy; ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(time * 14); ctx.translate(Math.round(D.x), Math.round(D.y)); if (D.flip) ctx.scale(-1, 1); ctx.drawImage(heroImg(0), -6, -9); ctx.restore(); }
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
         const wt = curWeapon(), behind = Math.sin(p.face) < -0.3, rd = typeof mountRide === "function" ? mountRide() : null;
@@ -1865,6 +1890,7 @@ function drawWorldHud() {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
     if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
+    if (btn && k === "roll") { const ch = p.wCh !== undefined ? String(p.wCh) : ""; if (btn.dataset.ch !== ch) btn.dataset.ch = ch; } // 凌波：剩幾次
     if (btn) { const lack = !mpCan(p, WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1)); btn.style.opacity = lack ? 0.45 : 1; btn.classList.toggle("nomp", lack); } // 企劃 61：真氣不足變暗
   }
   const cnt = pad.querySelector(".count"); if (cnt) cnt.textContent = w.potions;

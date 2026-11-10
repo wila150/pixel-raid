@@ -154,6 +154,7 @@ function drawOrbs() {
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
       ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
       ctx.fillStyle = lack ? "#6a6070" : "#e8dcc0"; ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillText(n, x + 23, H - 36);
+      if (id === "roll" && p.wCh !== undefined) { ctx.fillStyle = p.wCh ? "#9fe8ff" : "#6a6070"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText("×" + p.wCh, x + 39, H - 43); } // 凌波剩幾次
       ctx.fillStyle = "#9a8e78"; ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillText(k, x + 23, H - 25);
       x += 50;
     }

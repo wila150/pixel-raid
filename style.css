@@ -1287,3 +1287,6 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .gmg { justify-content: flex-start; } .ov .gmg span { color: #ffe9a0; } .ov .gmg i { margin-left: auto; font-style: normal; color: #9a90a8; font-size: 11px; }
 /* 企劃 66 A：技能卡元素小字 */
 .tricard .eletag { font-style: normal; font-size: 11px; font-weight: bold; margin-left: 2px; }
+/* 企劃 66 C：凌波剩幾次 */
+#pad .btn-roll[data-ch]:not([data-ch=""])::after { content: "×" attr(data-ch); position: absolute; right: -2px; top: -4px; font-size: 11px; font-weight: bold; color: #9fe8ff; text-shadow: 0 0 3px #000, 0 0 2px #000; pointer-events: none; }
+#pad .btn-roll[data-ch="0"]::after { color: #8a8094; }
