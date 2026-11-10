@@ -278,6 +278,18 @@ const MP_LV = [[1, 0.3], [20, 0.38], [35, 0.48], [50, 0.62], [75, 1.5], [100, 2.
 const mpLvMul = () => lerpTbl(MP_LV, ((save.w && save.w.lv) || 1));
 const ATK_MP_K = 14, MELEE_MP = 0.7, MELEE_HEAL = 0.003, MELEE_HEAL_CD = 0.1, GRP_MOB = 0.5; // 企劃 61 C：近戰招耗氣 ×0.7、打中回 0.3% 生命（王 0.1%）；投射多道打同一隻一般怪第 2 道起 ×0.5（企劃寫 0.7，B 的 bot 量完再降）
 const meleeMpMul = (sl) => (typeof slotTags === "function" && save.w && slotTags(sl).includes("m") ? MELEE_MP : 1);
+// 企劃 69 A：E 類招式的冷卻（秒）和真氣（原本 Q 真氣的倍數）
+const E_BUFF = new Set(["titan", "domain", "curse", "tslow", "gbell", "roar", "wwall", "stealth"]);
+function eCost(sk) {
+  const wt = curWeapon(); sk = sk || (typeof slotSkill === "function" && save.w ? slotSkill("e") : "base");
+  if (sk === "origin") return [40, 6];
+  if (sk === "uq") return [12, 4];
+  if (!sk || sk === "base") return [6, 2];
+  if (E_BUFF.has(sk)) return [15, 3];
+  const i = typeof TRI_E !== "undefined" && TRI_E[wt] ? TRI_E[wt].findIndex((x) => x.k === sk) : -1;
+  return i >= 0 && i < 3 ? [9, 3] : [12, 4];
+}
+const eCdMul = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0.4, (b.eCd || 1) * Math.max(0.5, 2 - (b.ult || 1))); }; // 詞綴「E 冷卻 −4～10%」（舊的天罰充能）、天道
 function applyWeapon() {
   const ws = WSKILLS[curWeapon()];
   WSKILL = { roll: { cd: 2, mp: 0 }, potion: { cd: 1, mp: 0 } };
@@ -291,7 +303,7 @@ function applyWeapon() {
     else if (WSKILL[k].mp) WSKILL[k].mp = Math.max(1, Math.round(WSKILL[k].mp * mpLvMul() * (k === "roll" ? 1 : meleeMpMul(sl)))); // 企劃 61 A-2／C：Q、E、身法耗氣跟等級長；近戰招 ×0.7
   }
   CHAIN_DMS = typeof chainDmMul === "function" && save.w ? { a: chainDmMul("a"), q: chainDmMul("q"), e: chainDmMul("e"), r: chainDmMul("r") } : {}; // 企劃 61 §A-2
-  WSKILL.ult.mp = 0; WSKILL.ult.cd = 1; // 天罰：不吃真氣，改成集滿天罰能量才能放
+  { const [ecd, emx] = eCost(); WSKILL.ult.cd = ecd; WSKILL.ult.mp = Math.max(1, Math.round(ws.spin[2] * emx * mpLvMul() * (typeof chainMpMul === "function" ? chainMpMul("e") : 1) * meleeMpMul("e") * ((typeof B !== "undefined" && B && B.eMp) || 1))); } // 企劃 69 A：E 改花真氣（Q 的倍數）＋冷卻
   if (typeof triOf === "function" && save.w) { // 改招三選一：按鈕名字、冷卻
     const wt = curWeapon(), na = triName(wt, "a"), nq = triName(wt, "q");
     if (na) WSKILL.attack.n = na; if (nq) WSKILL.spin.n = nq;
@@ -441,6 +453,7 @@ const AM = () => areaMul(CUR_SL);
 const DANCE_D = 3.9, BREAK_CD = 1.25, BREAK_D = 62, BREAK_SIDE = 0.2, BOOM_D = 22, COLD_D = 90, RAIN_R = 50, RAIN_D = 6, SPLIT_D = 12, SPLIT_K = 0.35, BURST_D = 10, DOOM_R = 110, DOOM_D = 100, DOOM_IGN = 4, TST_R = 100, TST_D = 72, CHAINL_D = 80, INF_D = 40, INF_B = 3, INF_N = 10, INF_WALL = 1.0; // 企劃 68 係數
 const TRI3_D = 3.2, TRI3_A = 0.1, SWAL_N = 3, SNIPE_D = 14, REFR_N = 2, REFR_D = 8, SWAL_D = 15, SWAL_L = 120, SWAL_W = 80, SWAL_T = 0.9, STAR_N = 24, STAR_D = 20, STAR_R = 26, STAR_W = 1.5, CRACK_D = 12.5, CRACK_K = 1.4, WHIRL_T = 1.2, WHIRL_R = 80, WHIRL_D = 11.6, LEAP_T = 0.9, LEAP_D = 10, LEAP_V = 7, ROAR_SH = 0.15; // 企劃 68 第二包（弓＋大刀）係數
 const LEAN_D = 11, INCH_D = 2, CHAIN_D = 17, TIGER_D = 54, TIGER_R = 32, THROW_R = 40, GUST_D = 6.5, STORM_D = 5.5, STORM_B = 20, WARD_D = 0.8, WARD_R = 28, DRAGF_D = 250, DRAGF_R = 70, DRAGF_IGN = 3, UPPER_D = 70, GONG_D = 70, GONG_W = 60, BLOOM_D = 2.2, BLOOM_T = 5, CRANE_D = 7, CYC_R2 = 220, CYC_K2 = 0.25; // 企劃 68 第三包（拳＋扇）係數
+const STAFF_E_D = 20, BOW_E_D = 43, BLADE_E_D = 26, FAN_E_D = 20; // 企劃 69 A：E 改冷卻後原本的 E 係數（冰環 27、穿雲箭 51、裂地斬 33、清風 12）
 let IGN_DEF = false; // 企劃 68 寸勁：無視防禦（護甲、鐵壁、抗性）
 const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
 let HIT_CRIT = false, DOT_HIT = false; const dotBase = (d) => d / (HIT_CRIT ? B.critDmg || 2 : 1); // DOT_HIT：這一下是持續傷害（火牆、旋風、黑洞每跳）
@@ -514,8 +527,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
 function killMob(m) {
   if (WMOBS[m.type].ai === "pillar") { m.dead = true; fxBoom(m.x, m.y, 24, "255,220,140"); burst(m.x, m.y, "#ffe08a", 20, 100, 0.5); sfx("break"); return; } // 劍柱：不給經驗、不掉寶
   m.dead = true; tutEvent("kill");
-  W0.en = Math.min(EN_FULL, (W0.en || 0) + (m.boss ? 100 : m.elite || m.hunter ? 25 : 6) * (B.enMul || 1)); // 吸取魂屑
-  if (W0.en >= EN_FULL && !W0.enFullFx) { W0.enFullFx = true; floatText(W0.x, W0.y - 36, "天罰能量已滿！按 E", "#ffd84a", true); sfx("arrive"); }
+  // 企劃 69 A：E 不用天罰能量（殺怪不再加能量）
   W0.kc = (W0.kcT > 0 ? W0.kc || 0 : 0) + 1; W0.kcT = kcWin(); W0.kcPop = 0.25;
   if (W0.kc > (W0.kcBest || 0)) W0.kcBest = W0.kc;
   if (W0.kc % 25 === 0) { floatText(W0.x, W0.y - 34, `${W0.kc} 連斬！`, "#ff8a3d", true); sfx("crit"); }
@@ -731,7 +743,7 @@ function updateWorld(dt) {
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; hurtW(4 + w.lv * 0.6, null, "F"); } }
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; if (p.mistT > 0 && k !== "roll" && k !== "potion") { if (!(p.mistAtkT > time)) { p.mistAtkT = time + 1; popWord(p, "霧化中不能攻擊", "#cfe8e0"); } return false; } /* 企劃 68 化身霧氣 */ p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / ((B.aspd || 1) * eAspd()) : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin" || k === "ult") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; if (p.mistT > 0 && k !== "roll" && k !== "potion") { if (!(p.mistAtkT > time)) { p.mistAtkT = time + 1; popWord(p, "霧化中不能攻擊", "#cfe8e0"); } return false; } /* 企劃 68 化身霧氣 */ p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "attack" ? 1 / ((B.aspd || 1) * eAspd()) : k === "ult" ? eCdMul() : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (k === "attack") { p.cds.attack = Math.max(0.07, p.cds.attack); W0.justAtk = true; } /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin" || k === "ult") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -933,16 +945,16 @@ function updateWorld(dt) {
       burst(t.x, t.y, "#cfe0ff", 26, 120, 0.6);
     } else if (wt === "staff") { // 冰環：身邊一圈傷害＋減速
       const r = 60 * AM();
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(27), 70, p, true); m.slowT = 3; if (!m.dead && Math.random() < 0.25) { m.frz = Math.max(m.frz || 0, m.boss ? 0.3 : 1); floatText(m.x, m.y - 18, "冰凍", "#bfefff"); } } // 企劃 68：25% 凍結
-      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r }); afterAt(p.x, p.y, r, 27);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) { hitMob(m, wDmg(STAFF_E_D), 70, p, true); m.slowT = 3; if (!m.dead && Math.random() < 0.25) { m.frz = Math.max(m.frz || 0, m.boss ? 0.3 : 1); floatText(m.x, m.y - 18, "冰凍", "#bfefff"); } } // 企劃 68：25% 凍結
+      W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r }); afterAt(p.x, p.y, r, STAFF_E_D);
       sfx("crit"); shake = Math.max(shake, 5); burst(p.x, p.y, "#bfefff", 30, 140, 0.5);
     } else if (wt === "bow") { // 穿雲箭：一支大箭穿透一整排
       const t = near(220); if (t) p.face = angTo(p, t);
-      shoot(p.face, { v: 380, life: 0.8, dmg: 51, kind: "big", pierce: true, kb: 90 });
+      shoot(p.face, { v: 380, life: 0.8, dmg: BOW_E_D, kind: "big", pierce: true, kb: 90 });
       sfx("crit"); shake = Math.max(shake, 4);
     } else if (wt === "blade") { // 裂地斬：往前一路炸開
       const t = near(120); if (t) p.face = angTo(p, t);
-      for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + Math.cos(p.face) * i * 22, y: p.y + Math.sin(p.face) * i * 22, t: 0.05 + i * 0.07, r: 18, dmg: 33, c: "#d8c8a0" });
+      for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + Math.cos(p.face) * i * 22, y: p.y + Math.sin(p.face) * i * 22, t: 0.05 + i * 0.07, r: 18, dmg: BLADE_E_D, c: "#d8c8a0" });
       sfx("crit"); shake = Math.max(shake, 6);
     } else if (wt === "fist") { // 震地
       const r = 50 * AM();
@@ -953,7 +965,7 @@ function updateWorld(dt) {
       const heal = Math.min(Math.round(p.maxHp * 0.25 * (trig ? 0.4 : 1)), p.maxHp - p.hp); p.hp += heal;
       if (heal) floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a");
       const r = 55 * AM();
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) hitMob(m, wDmg(12), 160, p, true);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) hitMob(m, wDmg(FAN_E_D), 160, p, true);
       W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r, c: "160,255,190" });
       sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6); fxPlay("heal", 0, 0, 32, 0.45, { follow: 1 });
       if (!trig) { W0.breezeT = 4; floatText(p.x, p.y - 26, "移速 +50%", "#a0ffbe"); } // 企劃 68 清風：和風包圍你，移動速度 +50% 4 秒
@@ -1078,15 +1090,13 @@ function updateWorld(dt) {
     slotCast("q", true); fxCast(WPN_FX[wt]);
   }
   const ultCd0 = p.cds.ult;
-  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) < EN_FULL) { if (!p.enMsgT) { floatText(p.x, p.y - 20, `${WSKILL.ult.uq ? WSKILL.ult.n + "：" : ""}天罰能量 ${Math.floor(p.en || 0)}%（斬妖集滿）`, "#b8a0ff"); p.enMsgT = 1; } }
-  if (p.enMsgT > 0) p.enMsgT = Math.max(0, p.enMsgT - dt) || 0;
-  if (act("ult", "u", "e") && p.cds.ult <= 0 && (p.en || 0) >= EN_FULL) {
+  if (act("ult", "u", "e") && p.cds.ult <= 0 && wLv() >= E_LV) { // 企劃 69 A：冷卻好、真氣夠就放
     W0.originCast = 0;
     if (wt === "sword" && slotSkill("e") === "base" && !near(150)) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc");
-    else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) { p.en = 0; eNameShow("起源覺醒"); } }
+    else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) eNameShow("起源覺醒"); }
   }
-  if (p.cds.ult > ultCd0 && !W0.originCast) { p.en = 0; W0.enFullFx = false; eNameShow(WSKILL.ult.n); netCast("e", p.face, p.x, p.y); } // 企劃 35 §5：拿掉附帶的天罰（全畫面落雷），改成上方小字顯示招式名
-  // 觸發寶石（只能串 E）：暴擊／受傷時自動放 E，不用天罰能量
+  if (p.cds.ult > ultCd0 && !W0.originCast) { eNameShow(WSKILL.ult.n); netCast("e", p.face, p.x, p.y); } // 企劃 35 §5：拿掉附帶的天罰（全畫面落雷），改成上方小字顯示招式名
+  // 觸發寶石（只能串 E）：暴擊／受傷時自動放 E，不吃 E 的冷卻
   if (p.trigCd > 0) p.trigCd -= dt;
   if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && wLv() >= E_LV) {
     const gc = p.critEv ? gemLv("trigc", "e") : 0, gh = p.hurtEv ? gemLv("trigh", "e") : 0, l = Math.max(gc, gh);
@@ -1971,7 +1981,7 @@ function drawWorldHud() {
   // 按鈕冷卻
   for (const k of ["spin", "ult", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
-    if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
+    if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "ult" ? eCdMul() : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
     if (btn && k === "roll") { const ch = p.wCh !== undefined ? String(p.wCh) : ""; if (btn.dataset.ch !== ch) btn.dataset.ch = ch; } // 凌波：剩幾次
     if (btn) { const lack = !mpCan(p, WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1)); btn.style.opacity = lack ? 0.45 : 1; btn.classList.toggle("nomp", lack); } // 企劃 61：真氣不足變暗

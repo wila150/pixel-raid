@@ -25,7 +25,7 @@ canvas { display: block; width: 100vw; height: 100vh; height: 100dvh; image-rend
 .btn-atk { right: 0; bottom: 0; width: 96px; height: 96px; font-size: 18px; border-color: #ffcf6b; background: rgba(140, 60, 20, 0.6); }
 .btn-skill { right: 104px; bottom: 6px; width: 66px; height: 66px; }
 .btn-roll { right: 18px; bottom: 106px; width: 66px; height: 66px; }
-.btn-ult { right: 178px; bottom: 60px; width: 60px; height: 60px; font-size: 13px; border-color: #c9a2ff; background: linear-gradient(to top, rgba(160,110,255,0.7) calc(var(--ult, 0) * 100%), rgba(30,22,44,0.55) calc(var(--ult, 0) * 100%)); }
+.btn-ult { right: 178px; bottom: 60px; width: 60px; height: 60px; font-size: 13px; border-color: #c9a2ff; background: rgba(90,60,170,0.5); }
 .btn-ult.ready { border-color: #ffe066; background: rgba(255,200,60,0.75); color: #241307; animation: ultReady 0.6s ease-in-out infinite alternate; }
 @keyframes ultReady { to { box-shadow: 0 0 18px 4px rgba(255,220,90,0.8); } }
 .btn-pot { right: 104px; bottom: 82px; width: 58px; height: 58px; font-size: 12px; }

@@ -121,6 +121,6 @@ setInterval(() => {
   if (!W0 || !inWorld || state !== "world") return;
   if (!evEnEl) { const b = pad.querySelector('[data-act="ult"]'); if (!b) return; evEnEl = b; }
   let s = evEnEl.querySelector(".enp"); if (!s) { s = document.createElement("i"); s.className = "enp"; evEnEl.appendChild(s); evEnTxt = ""; }
-  const t = (save.w.lv || 1) < E_LV ? "" : (W0.en || 0) >= EN_FULL ? "滿" : Math.floor(W0.en || 0) + "%";
+  const t = ""; // 企劃 69 A：E 不用天罰能量，按鈕改冷卻轉圈
   if (t !== evEnTxt) { evEnTxt = t; s.textContent = t; s.classList.toggle("full", t === "滿"); }
 }, 200);

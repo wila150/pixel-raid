@@ -114,13 +114,13 @@ function drawOrbs() {
   }
   ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#f2dede";
   ctx.fillText(`${Math.ceil(p.hp)}`, hx, hy + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#c8a8a8"; ctx.fillText(`/ ${p.maxHp}`, hx, hy + 12);
-  // 右下：天罰能量球（外圈細藍弧＝真氣）
+  // 右下：真氣球（企劃 69 A：天罰能量拿掉）
   let ex = W - SAFE.r - R - 14, ey = H - R - 18;
   if (padOn) {
     if (!atkRect || time - atkRectT > 1) { const b = pad.querySelector(".btn-atk"); atkRect = b && b.getBoundingClientRect(); atkRectT = time; }
     if (atkRect && atkRect.width) { ex = atkRect.left + atkRect.width / 2; ey = atkRect.top + atkRect.height / 2; R = atkRect.width / 2; }
   }
-  const ef = (p.en || 0) / EN_FULL, full = ef >= 1;
+  const ef = clamp((p.mp || 0) / (B.maxMp || 1), 0, 1), full = false;
   if (full) { // 集滿：金色火焰＋電光
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < 18; i++) {
@@ -136,18 +136,17 @@ function drawOrbs() {
     }
     ctx.restore();
   }
-  drawOrb(ex, ey, R, ef, full ? "#b090ff" : "#7a5ae0", "#1e1060", full ? "#ffd84a" : "rgba(150,140,220,0.6)");
-  ctx.strokeStyle = "rgba(90,160,255,0.85)"; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(ex, ey, R + 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(p.mp / B.maxMp, 0, 1)); ctx.stroke();
+  drawOrb(ex, ey, R, ef, "#3a78e8", "#0a1848", "rgba(140,180,255,0.6)");
   if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
-    ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = full ? "#ffe9a0" : "#d8d0ff";
-    ctx.fillText(full ? "E 天罰" : `${Math.floor(ef * 100)}%`, ex, ey + 4);
-    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["空白", WSKILL.roll.n || "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
+    ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#d8e4ff";
+    ctx.fillText(`${Math.floor(p.mp || 0)}`, ex, ey + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a8b8d8"; ctx.fillText(`/ ${B.maxMp}`, ex, ey + 12);
+    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["E", WSKILL.ult.n, "ult"], ["空白", WSKILL.roll.n || "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
     let x = ex - R - 16 - sk.length * 50;
     const cg = comboGlow();
     for (const [k, n, id] of sk) {
       if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
-      const cdm = (id === "roll" ? B.rollCd : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = !mpCan(p, ((id === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[id].mp) || 0) * ((B.skMp && B.skMp[id]) || 1) * (1 - (B.mpCut || 0)));
-      { const sl = { attack: "a", spin: "q", roll: "r" }[id], sk = typeof slotSkill === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
+      const cdm = (id === "roll" ? B.rollCd : id === "ult" ? eCdMul() : 1) * ((B.skCd && B.skCd[id]) || 1), f = p.cds[id] / (WSKILL[id].cd * cdm), lack = !mpCan(p, ((id === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[id].mp) || 0) * ((B.skMp && B.skMp[id]) || 1) * (1 - (B.mpCut || 0)));
+      { const sl = { attack: "a", spin: "q", ult: "e", roll: "r" }[id], sk = typeof slotSkill === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
         if (sk && sk !== "over" && typeof icoHas === "function") { const key = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${curWeapon()}:${sl}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = f > 0 || lack ? 0.45 : 1; icoDrawS(ctx, "skill", key, x + 7, H - 84, 32, 32); ctx.globalAlpha = 1; } }
       ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
       if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
@@ -160,7 +159,7 @@ function drawOrbs() {
   }
   if (padOn) { const cg = comboGlow(), key = (cg.attack ? "a" : "") + (cg.spin ? "s" : ""); if (key !== comboLast) { comboLast = key; pad.querySelector('[data-act="attack"]').classList.toggle("combo", cg.attack); pad.querySelector('[data-act="spin"]').classList.toggle("combo", cg.spin); } }
   const ub = pad.querySelector('[data-act="ult"]');
-  if (ub) { ub.style.setProperty("--ult", ef); ub.classList.toggle("ready", full); ub.style.opacity = 1; }
+  if (ub && ub.classList.contains("ready")) ub.classList.remove("ready"); // 企劃 69 A：E 改成冷卻轉圈（world.js 按鈕冷卻那段）
 }
 
 // ───────── 覆蓋層 #ov ─────────
