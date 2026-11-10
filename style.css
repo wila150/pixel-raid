@@ -1162,3 +1162,10 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 /* v9.8.2：行囊面板不靠 .show 動畫（截圖／rAF 沒跑時會停在半透明、往右偏 30px）；開著時遊戲按鈕藏起來 */
 .ov.k-bag, .ov.k-stash { opacity: 1 !important; transform: none !important; transition: none !important; }
 body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
+/* 企劃 56 鑰匙合成 */
+.ov .kfall { margin-top: 8px; } .ov .kfall button { width: 100%; }
+.ov .kflk .lksvg { width: 11px; height: 11px; vertical-align: -1px; }
+.ov .kfbox { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.6); padding: 16px; box-sizing: border-box; }
+.ov .kfin { width: min(440px, 100%); max-height: 80vh; overflow-y: auto; background: #1a1520; border: 1px solid #8a6a46; border-radius: 10px; padding: 12px 14px; box-sizing: border-box; }
+.ov .kfsteps { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.ov .kfstep { padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); } .ov .kfstep b { display: block; color: #f0e2c4; font-size: 13px; } .ov .kfstep small { font-size: 11px; }
