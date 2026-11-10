@@ -1,4 +1,4 @@
-// 萬劍仙途 — 企劃 68：技能照使用者的敘述改（第一包：劍＋法杖）
+// 萬劍仙途 — 企劃 68：技能照使用者的敘述改（第一包：劍＋法杖；第二包：弓＋大刀）
 // world.js 直接改招式本身；這裡放共用小工具、每幀狀態（劍雨、焚天火浪、電磁球、時緩）、畫面。
 // enew.js 後載入（包 updateWorld／drawFxOver 最外層）。
 "use strict";
@@ -39,6 +39,13 @@ function crossFire(x, y, a, L) {
   for (let k = 0; k < 4; k++) { const b = a + (k * Math.PI) / 2; for (let i = 0; i < 6; i++) { const v = rand(60, 160); particles.push({ x, y, vx: Math.cos(b) * v, vy: Math.sin(b) * v, life: 0.3, max: 0.3, color: i % 2 ? "#ff8a2e" : "#ffd84a", size: 2 }); } }
   sfx("hit");
 }
+// 暈眩（麻痺）：一般怪 t 秒，王 0.3 秒（王只停出招）
+function sk68Stun(m, t) {
+  if (!m || m.dead) return;
+  if (!m.boss) m.ssStun = Math.max(m.ssStun || 0, t);
+  else { m.atkT = Math.max(m.atkT || 0, 0.3); if (m.actT !== undefined) m.actT = Math.max(m.actT, 0.3); }
+  if (!(m.stunTxt > time)) { m.stunTxt = time + 0.8; floatText(m.x, m.y - 24, "麻痺", "#dfe8ff"); }
+}
 function zapLine(x1, y1, x2, y2) { W0.zaps.push({ x1, y1, x2, y2, t: 0.22 }); bolts.push({ x: x2, y: y2, life: 0.15 }); }
 
 // ───────── 每幀 ─────────
@@ -70,6 +77,7 @@ updateWorld = function (dt) {
     if (I.t >= I.max + 0.2) W0.infW = null;
   }
   if (W0.emBall && (W0.emBall.t -= dt) <= 0) W0.emBall = null;
+  if (W0.starUp && (W0.starUp.t -= dt) <= 0) W0.starUp = null;
   if (W0.bkFx && W0.bkFx.length) { for (const o of W0.bkFx) o.t -= dt; W0.bkFx = W0.bkFx.filter((o) => o.t > 0); }
   if (W0.zaps && W0.zaps.length) { for (const o of W0.zaps) o.t -= dt; W0.zaps = W0.zaps.filter((o) => o.t > 0); }
   return r;
@@ -87,6 +95,14 @@ function drawSpinSword(s) { // 回旋劍：一把旋轉的大飛劍
   g.fillStyle = "#3a4a6a"; g.fillRect(-6.5 * sc, -0.8 * sc, 3 * sc, 1.6 * sc);
   g.restore();
 }
+function drawSwal(s) { // 燕返：迴力鏢狀弧形氣刃
+  const g = ctx; drawTrail(s, "170,255,220", 5);
+  g.save(); g.globalCompositeOperation = "lighter"; g.translate(s.x, s.y); g.rotate(s.a);
+  glow(0, 0, 10, "150,255,210", 0.4);
+  g.strokeStyle = "rgba(150,255,210,0.55)"; g.lineWidth = 5; g.beginPath(); g.arc(-6, 0, 10, -1.3, 1.3); g.stroke();
+  g.strokeStyle = "#f2fff8"; g.lineWidth = 1.6; g.beginPath(); g.arc(-6, 0, 10, -1.2, 1.2); g.stroke();
+  g.restore();
+}
 function sk68Draw() {
   const g = ctx, T = typeof time !== "undefined" ? time : 0;
   for (const o of W0.swRains || []) { // 劍雨：地上的範圍
@@ -97,6 +113,12 @@ function sk68Draw() {
   if (I) { const rr = I.R * Math.min(1, I.t / I.max), a = Math.max(0, 1 - Math.max(0, I.t - I.max) / 0.2);
     g.save(); g.globalCompositeOperation = "lighter";
     for (let k = 0; k < 3; k++) { g.strokeStyle = k === 0 ? `rgba(255,110,40,${0.55 * a})` : k === 1 ? `rgba(255,190,80,${0.6 * a})` : `rgba(255,245,200,${0.7 * a})`; g.lineWidth = [14, 7, 2][k]; g.beginPath(); g.ellipse(I.x, I.y, Math.max(1, rr - k * 3), Math.max(1, (rr - k * 3) * 0.6), 0, 0, Math.PI * 2); g.stroke(); }
+    g.restore(); }
+  const S = W0.starUp;
+  if (S) { const q = 1 - S.t / S.max; g.save(); // 墜星箭：天色變暗、天上聚星
+    g.globalAlpha = 0.3 * q; g.fillStyle = "#0a1030"; g.fillRect(cam.x - 700, cam.y - 450, 1400, 900); g.globalAlpha = 1; g.globalCompositeOperation = "lighter";
+    const cx = W0.x, cy = W0.y - 90; glow(cx, cy, 20 + q * 40, "150,190,255", 0.25 + q * 0.35);
+    for (let i = 0; i < 8; i++) { const a = T * 2 + i * 0.785, r = 30 * (1 - q) + 6; g.fillStyle = "rgba(220,235,255,0.9)"; g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.5, 2, 2); }
     g.restore(); }
   const E = W0.emBall;
   if (E) { const q = 1 - E.t / E.max, rr = 8 + q * E.r * 0.35; g.save(); g.globalCompositeOperation = "lighter"; glow(W0.x, W0.y - 6, rr * 1.6, "150,180,255", 0.6);

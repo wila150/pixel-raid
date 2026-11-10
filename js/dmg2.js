@@ -16,9 +16,9 @@ const ADD_K = 0.15; // 附加傷害：「攻擊 +N」詞綴 × 0.15 點底材（
 // 傷害效用（附加傷害乘這個）：沒寫的＝100%；割草、多段招 30–60%
 const SK_EFF = {
   sword: { q: { wan: 0.5, boom: 0.6 }, e: { array: 0.4, storm: 0.4, domain: 0.4 } },
-  bow: { q: { rain: 0.4, refr: 0.6 }, e: { turret: 0.5, barr: 0.4, seekr: 0.5 } },
+  bow: { a: { tri3: 0.6 }, q: { rain: 0.4, refr: 0.6, swal: 0.6 }, e: { turret: 0.5, barr: 0.4, seekr: 0.5, star: 0.4 } },
   staff: { a: { split: 0.6 }, q: { shower: 0.5, wall: 0.4 }, e: { tstorm: 0.4, blizz: 0.4, inferno: 0.4 } },
-  blade: { q: { base: 0.4, gale: 0.3 }, e: { blades: 0.6, cyclone: 0.3 } },
+  blade: { q: { base: 0.4, gale: 0.3, whirl: 0.4, leap: 0.3 }, e: { blades: 0.6, cyclone: 0.3 } },
   fist: { a: { lean: 0.6 }, e: { thous: 0.4, hund: 0.3 } },
   fan: { a: { twin: 0.6 }, q: { base: 0.4, suck: 0.4, storm: 0.4, ward: 0.4 }, e: { petal: 0.4, typh: 0.4, bloom: 0.5, zephyr: 0.4 } },
   r: { ghost: 0.5 },

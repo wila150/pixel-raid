@@ -9,9 +9,9 @@ const E_SWAP = { // 舊 → 新
   fist: { palm: "gbell", hund: "grab" }, fan: { healz: "crane", zephyr: "stealth" },
 };
 const E_NEW = {
-  trap: ["連環雷陷阱", "往前丟 3 個雷陷阱，怪踩到就爆炸並感電；8 秒沒人踩自己爆（陷阱、範圍）"],
-  roar: ["戰吼", "身邊 90 內的怪 5 秒受到傷害 +20%，而且會衝向你；打斷正在蓄力的招；你護甲 +50%（詛咒、增益）"],
-  tthrow: ["飛刀迴旋", "把刀丟出去再飛回來，去回各打一次（大刀唯一的遠程招）"],
+  trap: ["連環雷陷阱", "在地上扔出 3 個隱形陷阱，怪踩到觸發連鎖閃電網：踩到的和附近 80 內最多 5 隻怪受傷、感電並麻痺 1 秒（王 0.3 秒）；8 秒沒人踩自己爆（陷阱、範圍）"],
+  roar: ["戰吼", "立定咆哮，大刀敲地擴散血氣音浪：身邊 90 內的怪 5 秒受到傷害 +20% 並被嘲諷衝向你，打斷正在蓄力的招；你護甲 +50%，並得到最大生命 15% 的護盾 5 秒（戰吼、防禦）"],
+  tthrow: ["飛刀迴旋", "把大刀當成巨型迴旋鏢扔出，在前方旋轉切割後飛回，去回各打一次（大刀唯一的遠程招）"],
   curse: ["詛咒・脆弱", "身邊擴散紫黑詛咒波，不造成傷害；被波及的怪 4 秒受到的物理與元素傷害加倍（王 ×1.5），頭上紫色印記（詛咒）"],
   tslow: ["時緩", "目標一帶召喚巨大半透明時鐘領域 4 秒：裡面的怪動作、移動和敵方子彈慢 80%（王 40%）（控場）"],
   gbell: ["金鐘罩", "吸收 30% 生命的護罩 4 秒；被打破時炸開，震退四周（防禦）"],
@@ -44,7 +44,7 @@ const _enterWorldEN = enterWorld;
 enterWorld = function () { const r = _enterWorldEN.apply(this, arguments); try { eSwapMig(); if (typeof applyWeapon === "function" && W0) applyWeapon(); } catch (e) {} return r; };
 
 // ───────── 3. 放招 ─────────
-const CURSE_R = 100, CURSE_T = 4;
+const CURSE_R = 100, CURSE_T = 4, TRAP_NET = 80;
 const eRing = (x, y, r, c, max = 0.35) => W0.rings.push({ x, y, t: 0, max, r, c });
 function eNewFx(k, c) {
   const { p, t, tx, ty, F, cs, sn } = c;
@@ -58,6 +58,7 @@ function eNewFx(k, c) {
     for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r) { m.roarT = 5; hitMob(m, wDmg(14), 0, p, true); if (!m.boss && (m.st === "idle" || m.st === "home")) m.st = "chase"; }
     for (const m of W0.mobs) if (!m.dead && m.wind > 0 && dist(m, p) < 100 + WMOBS[m.type].r) { m.wind = 0; m.atkT = Math.max(m.atkT || 0, 0.6); if (m.dv && m.dv.ph === "aim") m.dv = null; floatText(m.x, m.y - 16, "打斷", "#ffb070"); } // 企劃 66 D：打斷出招蓄力
     W0.roarT = 5; B = worldStats(); eRing(p.x, p.y, r, "255,170,90", 0.45); floatText(p.x, p.y - 22, "戰吼", "#ffb070");
+    { const sh = Math.round(p.maxHp * ROAR_SH); if (!(p.guardT2 > 0 && p.guardSh >= sh)) { p.guardSh = Math.max(p.guardSh || 0, sh); p.guardT2 = Math.max(p.guardT2 || 0, 5); } floatText(p.x, p.y - 32, `護盾 ${sh}`, "#ffd0a0"); } // 企劃 68：自身護盾 15% 生命 5 秒
     sfx("break"); shake = Math.max(shake, 5); return true;
   }
   if (k === "tthrow") {
@@ -121,7 +122,11 @@ updateWorld = function (dt) {
       const step = !o.ghost && W0.mobs.some((m) => !m.dead && Math.hypot(m.x - o.x, m.y - o.y) < 12 + WMOBS[m.type].r);
       if (step || o.t <= 0) {
         o.t = -1; bolts.push({ x: o.x, y: o.y, life: 0.25 }); fxBoom(o.x, o.y, 26, "190,220,255"); sfx("crit"); shake = Math.max(shake, 3);
-        if (!o.ghost) for (const m of eNewHitAt(o.x, o.y, 32, 24, 40, o.sl, o.dm)) m.shockT = Math.max(m.shockT || 0, 3);
+        if (!o.ghost) { // 企劃 68：連鎖閃電網，踩到的和網裡的怪麻痺（暈 1 秒，王 0.3 秒）
+          const hit = eNewHitAt(o.x, o.y, 32, 24, 40, o.sl, o.dm); for (const m of hit) { m.shockT = Math.max(m.shockT || 0, 3); if (typeof sk68Stun === "function") sk68Stun(m, 1); }
+          const net = W0.mobs.filter((m) => !m.dead && !hit.includes(m) && Math.hypot(m.x - o.x, m.y - o.y) < TRAP_NET + WMOBS[m.type].r).sort((a, b) => Math.hypot(a.x - o.x, a.y - o.y) - Math.hypot(b.x - o.x, b.y - o.y)).slice(0, 5);
+          let px = o.x, py = o.y; for (const m of net) { if (typeof zapLine === "function") zapLine(px, py, m.x, m.y); px = m.x; py = m.y; for (const n of eNewHitAt(m.x, m.y, 1, 24 * 0.6, 0, o.sl, o.dm)) if (n === m) { m.shockT = Math.max(m.shockT || 0, 3); if (typeof sk68Stun === "function") sk68Stun(m, 1); } }
+        }
       }
     }
     W0.traps = W0.traps.filter((o) => o.t > 0);
@@ -207,7 +212,7 @@ function eNewDraw() {
     g.strokeStyle = `rgba(220,230,255,${0.6 * a})`; g.lineWidth = 2; g.beginPath(); g.ellipse(Z.x, Z.y, cr, cr * 0.6, 0, 0, Math.PI * 2); g.stroke();
     for (let i = 0; i < 12; i++) { const b = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(Z.x + Math.cos(b) * cr * 0.85, Z.y + Math.sin(b) * cr * 0.51); g.lineTo(Z.x + Math.cos(b) * cr, Z.y + Math.sin(b) * cr * 0.6); g.stroke(); }
     const h1 = -Math.PI / 2 + q * Math.PI * 2, h2 = -Math.PI / 2 + q * Math.PI * 2 * 12; g.lineWidth = 2.5; g.beginPath(); g.moveTo(Z.x, Z.y); g.lineTo(Z.x + Math.cos(h1) * cr * 0.5, Z.y + Math.sin(h1) * cr * 0.3); g.stroke(); g.lineWidth = 1.2; g.beginPath(); g.moveTo(Z.x, Z.y); g.lineTo(Z.x + Math.cos(h2) * cr * 0.85, Z.y + Math.sin(h2) * cr * 0.51); g.stroke(); g.restore(); }
-  for (const o of W0.traps || []) { const on = o.arm <= 0, bl = 0.5 + 0.5 * Math.sin(T * (on ? 10 : 4)); g.fillStyle = "#3a3450"; g.beginPath(); g.ellipse(o.x, o.y, 6, 3.5, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = `rgba(200,220,255,${0.5 + 0.5 * bl})`; g.lineWidth = 1; g.stroke(); g.fillStyle = `rgba(220,235,255,${on ? bl : 0.3})`; g.fillRect(o.x - 1, o.y - 2, 2, 2); }
+  for (const o of W0.traps || []) { const on = o.arm <= 0, bl = 0.5 + 0.5 * Math.sin(T * (on ? 10 : 4)); g.globalAlpha = on ? 0.28 : 1; g.fillStyle = "#3a3450"; g.beginPath(); g.ellipse(o.x, o.y, 6, 3.5, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = `rgba(200,220,255,${0.5 + 0.5 * bl})`; g.lineWidth = 1; g.stroke(); g.fillStyle = `rgba(220,235,255,${on ? bl : 0.3})`; g.fillRect(o.x - 1, o.y - 2, 2, 2); g.globalAlpha = 1; }
   for (const m of W0.mobs) {
     if (m.dead) continue;
     if (m.curT > 0) { const y = m.y - WMOBS[m.type].r * 2 - 10 + Math.sin(T * 4) * 1.5; g.save(); g.globalAlpha = Math.min(1, m.curT); g.strokeStyle = "#c890ff"; g.lineWidth = 1.3; g.beginPath(); g.arc(m.x, y, 3.5, 0, Math.PI * 2); g.moveTo(m.x - 5, y); g.lineTo(m.x + 5, y); g.moveTo(m.x, y - 5); g.lineTo(m.x, y + 5); g.stroke(); g.restore(); }

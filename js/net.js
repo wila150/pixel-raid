@@ -145,8 +145,8 @@ function ghostCast(o, wt, c) {
     else if (c.o === "suck" || c.o === "storm") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
     else if (c.o === "ward") W0.tornados.push({ x: sx, y: sy, vx: 0, vy: 0, t: 3, tick: 0, orbit: 0, own: o, ghost: true });
     else if (c.o === "throw") { const bx = sx - Math.cos(c.a) * 24, by = sy - Math.sin(c.a) * 24; W0.rings.push({ x: bx, y: by, t: 0, max: 0.3, r: 35, c: "230,200,150" }); burst(bx, by, "#d8c0a0", 10, 90, 0.4); } // 企劃 55 摔投
-    else if (c.o === "whirl") W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 55, c: "255,220,170" });
-    else if (c.o === "swal") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.15, 300), { life: 0.6, kind: "arrow" }));
+    else if (c.o === "whirl") W0.rings.push({ x: sx, y: sy, t: 0, max: 0.6, r: 80, c: "255,70,50" });
+    else if (c.o === "swal") W0.pshots.push(Object.assign(P(c.a, 260), { life: 0.45, kind: "swal" }));
     else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 30, c: "190,225,255" });
   } else if (c.k === "q") {
     if (wt === "sword") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.22, 230), { life: 0.6, kind: "sword" }));

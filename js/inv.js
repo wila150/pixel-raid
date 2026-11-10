@@ -91,7 +91,6 @@ function comboGlow() {
   const wt = curWeapon(), ta = triOf(wt, "a");
   if (ta === "dance" && p.danceWt === wt && (p.danceN || 0) === 2) g.attack = true; // 劍舞第 3 下
   if (ta === "inch" && p.inchWt === wt && (p.inchN || 0) === 4) g.attack = true; // 寸勁第 5 拳
-  if (ta === "tri3" && (p.triN || 0) === 2) g.attack = true; // 三連珠第 3 箭
   if (p.sureT > 0 || p.lbReady) { g.attack = true; g.spin = true; } // 乘勢必爆、時之沙漏切武器加倍
   if (p.dash2T > 0 && wt === "fist") g.spin = true; // 連環衝可以再衝
   return g;
