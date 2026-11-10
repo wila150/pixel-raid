@@ -422,7 +422,7 @@ const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
 const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
 const eAspd = () => (W0 && W0.swDom && dist(W0, W0.swDom) < W0.swDom.r ? 1.2 : 1) * (W0 && W0.dragT > 0 ? 1.4 : 1); // 企劃 35：劍域、化龍
 const wDmg = (base) => { const fc = gemLv("focus"); return (typeof hitBase === "function" ? hitBase(base) : base) * B.atk * (W0.titanT > 0 ? 1.2 : 1) * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus()) * (CUR_DM || 1) * (fc ? 1.25 + 0.05 * fc : 1) * (typeof skgDmg === "function" ? skgDmg(CUR_SL) : 1); };
-const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1); }; // 擴大／集中
+const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1) * (typeof trAreaX === "function" ? trAreaX() : 1); }; // 擴大／集中；天賦樹刀魂、萬法
 const AM = () => areaMul(CUR_SL);
 const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
 let HIT_CRIT = false, DOT_HIT = false; const dotBase = (d) => d / (HIT_CRIT ? B.critDmg || 2 : 1); // DOT_HIT：這一下是持續傷害（火牆、旋風、黑洞每跳）
@@ -957,9 +957,9 @@ function updateWorld(dt) {
     const tl = sl === "a" || sl === "q" ? gemLv("totem", sl) : 0;
     if (tl && manual) {
       if (!W0.totems) W0.totems = [];
-      const old = W0.totems.find((o) => o.sl === sl);
-      W0.totems = W0.totems.filter((o) => o.sl !== sl);
-      W0.totems.push({ x: p.x, y: p.y, sl, t: 6 + tl, max: 6 + tl, cd: old ? old.cd : 0.15, every: Math.max(0.5, WSKILL[sl === "a" ? "attack" : "spin"].cd), dm: 0.5 });
+      const mine = W0.totems.filter((o) => o.sl === sl), old = mine[mine.length - 1], tn = typeof trTotemN === "function" ? trTotemN() : 1; // 天賦樹「法壇」：可以放 2 座
+      if (mine.length >= tn) W0.totems = W0.totems.filter((o) => o !== mine[0]);
+      W0.totems.push({ x: p.x, y: p.y, sl, t: 6 + tl, max: 6 + tl, cd: old ? old.cd : 0.15, every: Math.max(0.5, WSKILL[sl === "a" ? "attack" : "spin"].cd), dm: 0.5 * (tn > 1 ? 1.08 : 1) });
       if (!old) { sfx("arrive"); seenHint("totem", "法壇：這招會自己朝附近的怪放；再按一次可以把法壇搬到腳下"); }
       return true;
     }
@@ -1025,7 +1025,8 @@ function updateWorld(dt) {
   if (W0.rshT > 0) W0.rshT -= dt;
   if (W0.bellT > 0) W0.bellT -= dt;
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y, typeof triOf === "function" ? triOf(wt, "a") : null); }
-  if (act("roll", " ", "l", "shift") && useSkill("roll")) cast("r", () => {
+  if (B.noRoll && act("roll", " ", "l", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
+  if (!B.noRoll && act("roll", " ", "l", "shift") && useSkill("roll")) cast("r", () => {
     const tr = typeof triOf === "function" ? triOf(wt, "r") : null; // 身法
     if (tr === "blink") { // 縮地：瞬間移到前面 70
       const a = ml > 0.1 ? Math.atan2(my, mx) : p.face, ar = typeof wbArena === "function" ? wbArena() : null, gt = gemLv("trail"), gi = gemLv("icepath");

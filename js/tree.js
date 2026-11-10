@@ -13,6 +13,7 @@ const TR_EFF = { // 效果顯示文字（數字是 %，力量那四個是點數�
   str: "力量 +", agi: "敏捷 +", wis: "智力 +", vit: "體魄 +", atk: "攻擊 +%", crit: "爆擊率 +%", cdmg: "爆擊傷害 +%", aspd: "攻擊速度 +%", spd: "移動速度 +%",
   hp: "生命 +%", armor: "護甲 +%", dodge: "閃避 +%", supp: "法術壓制 +%", es: "能量護盾 +%", mp: "真氣上限 +", mpr: "真氣回復 +%", leech: "吸血 +%", res: "火、冰、雷抗性 +%", loot: "秘境物品數量 +%",
   tp: "投射招傷害 +%", tm: "近戰招傷害 +%", ta: "範圍招傷害 +%", td: "持續招傷害 +%", tv: "位移招傷害 +%",
+  fire: "火焰傷害 +%", ice: "冰冷傷害 +%", thun: "閃電傷害 +%", chaos: "混沌（毒）傷害 +%", // 企劃 42：元素（看這一招的元素）
 };
 const trEffTxt = (e) => Object.keys(e).map((k) => { const t = TR_EFF[k]; return t.endsWith("%") ? t.slice(0, -1) + e[k] + "%" : t + e[k]; });
 // 天賦群主題：4 小格＋1 重要天賦
@@ -31,6 +32,20 @@ const TR_TH = {
   loot: { s: { loot: 4 }, n: "聚寶", e: { loot: 12 } },
   supp: { s: { supp: 3 }, n: "護體", e: { supp: 8 } },
   duomo: { s: { mpr: 10 }, n: "奪魔", e: { mpr: 15, mp: 20 } }, // 第二版：取代藍區一個吐納
+  // 企劃 42 A：元素（各 2 群）
+  fire: { s: { fire: 5 }, n: "烈焰", e: { fire: 12 } }, fire2: { s: { fire: 4 }, n: "燎原", e: { fire: 8, ta: 3 } },
+  ice: { s: { ice: 5 }, n: "寒冰", e: { ice: 12 } }, ice2: { s: { ice: 4 }, n: "凍土", e: { ice: 8, armor: 10 } },
+  thun: { s: { thun: 5 }, n: "奔雷", e: { thun: 12 } }, thun2: { s: { thun: 4 }, n: "雷殛", e: { thun: 8, crit: 1 } },
+  psn: { s: { chaos: 5 }, n: "劇毒", e: { chaos: 12 } }, psn2: { s: { chaos: 4 }, n: "腐骨", e: { chaos: 8, td: 3 } },
+  // 武器專精（放在對應起點旁）
+  swd: { s: { atk: 3 }, n: "劍心", e: { atk: 6, crit: 1 } }, bow: { s: { tp: 2 }, n: "箭神", e: { tp: 3, aspd: 4 } },
+  stf: { s: { atk: 3 }, n: "法源", e: { atk: 6, mp: 20 } }, bld: { s: { tm: 2 }, n: "刀魂", e: { tm: 3, armor: 15 } },
+  fst: { s: { aspd: 3 }, n: "拳意", e: { aspd: 6, tm: 2 } }, fan: { s: { td: 2 }, n: "風骨", e: { td: 4, es: 10 } },
+  // 招式類型
+  t_a: { s: { ta: 2 }, n: "萬法", e: { ta: 3 } }, t_p: { s: { tp: 2 }, n: "千里", e: { tp: 3 } }, t_m: { s: { tm: 2 }, n: "近身", e: { tm: 3 } },
+  t_d: { s: { td: 2 }, n: "綿延", e: { td: 3 } }, t_v: { s: { tv: 2 }, n: "身法", e: { tv: 3, spd: 3 } }, t_s: { s: { atk: 3 }, n: "法壇", e: { atk: 5 } },
+  // 防禦／續航
+  still: { s: { armor: 8 }, n: "不動", e: { armor: 20, hp: 3 } }, regen: { s: { hp: 2 }, n: "回春", e: { hp: 4 } }, qi: { s: { mp: 8 }, n: "聚氣", e: { mp: 30, mpr: 10 } },
 };
 // 第二版：重要天賦的特殊效果（效果在 tree2.js）
 const TR_SP = {
@@ -38,16 +53,24 @@ const TR_SP = {
   life: "生命低於 35% 時受到的傷害 −15%", armor: "站著不動 1 秒後，物理傷害 −8%", dodge: "閃避成功後 1 秒移速 +30%", es: "能量護盾被打破時 1 秒無敵（冷卻 20 秒）",
   mp: "真氣低於 20% 時，回復速度 ×2", leech: "吸血可以超過生命上限，最多 10% 變成血盾（3 秒沒補就消失）", res: "被元素打到後 3 秒，那個元素抗性 +15%（上限可到 80%）",
   loot: "精英有 10% 多掉 1 件裝備", supp: "法術壓制成功時回 2% 生命", duomo: "打中時回造成傷害 1% 的真氣（每秒最多真氣上限 10%）",
+  // 企劃 42（效果在 tree3.js）
+  fire: "燃燒時間 +30%", fire2: "燃燒中的敵人死掉時，火會燒到旁邊 2 隻", ice: "冰凍時間 +40%", ice2: "打冰凍、變慢的敵人傷害 +15%",
+  thun: "感電機率 +15%", thun2: "感電的敵人受到你的傷害再 +10%", psn: "毒最多疊到 8 層（原本 5 層）", psn2: "打中毒的敵人傷害 +12%",
+  swd: "拿劍時：打中有 15% 再砍一下（60% 傷害）", bow: "拿弓時：每次射擊多 1 道箭（70% 傷害）", stf: "拿法杖時：傷害更多 10%",
+  bld: "拿大刀時：範圍 +20%", fst: "拿拳套時：攻速 +10%；連續打同一隻每下 +1%（最多 +10%，換目標歸零）", fan: "拿扇時：旋風、火牆這類持續招存在時間 +30%",
+  t_a: "範圍招傷害更多 5%；範圍 +10%", t_p: "投射招傷害更多 5%；投射物飛得遠 20%", t_m: "近戰招傷害更多 5%；近戰招打中後 2 秒受傷 −5%",
+  t_d: "持續招傷害更多 5%；燃燒、中毒多 1 秒", t_v: "位移招傷害更多 5%；閃身冷卻 −10%", t_s: "法壇可以同時放 2 座（普攻、Q 各自算）；法壇傷害更多 8%",
+  still: "站著不動 0.5 秒後，受到的所有傷害 −8%", regen: "4 秒沒受傷，每秒回 2% 生命", qi: "真氣高於 80% 時傷害 +8%",
 };
 const TR_TAGN = { tp: "投射", tm: "近戰", ta: "範圍", td: "持續", tv: "位移" };
 // 6 區：角度、顏色、屬性、4 個天賦群（−分支 A、B，＋分支 A、B）、外圈核心（−、＋）
 const TR_SEC = [
-  { k: "b", n: "藍", a: -90, at: ["wis"], c: "#6aa8ff", th: ["atk", "duomo", "es", "res"], ks: ["tiandao", "tianren"], tg: [["ta", "td"], ["ta", "td"]], fit: "法杖、扇" },
-  { k: "gb", n: "綠藍", a: -30, at: ["agi", "wis"], c: "#6ad8c8", th: ["aspd", "es", "crit", "supp"], ks: ["jianxin", "jianyi"], tg: [["tp", "td"], ["tp", "ta"]], fit: "弓、扇" },
-  { k: "g", n: "綠", a: 30, at: ["agi"], c: "#6adf7a", th: ["aspd", "dodge", "crit", "cdmg"], ks: ["xueji", "huixin"], tg: [["tp", "tv"], ["ta", "tp"]], fit: "弓、劍" },
-  { k: "rg", n: "紅綠", a: 90, at: ["str", "agi"], c: "#d8c85a", th: ["atk", "leech", "crit", "cdmg"], ks: ["wuxin", "shayi"], tg: [["tm", "tv"], ["tp", "tm"]], fit: "劍、拳" },
-  { k: "r", n: "紅", a: 150, at: ["str"], c: "#ff6a5a", th: ["atk", "life", "armor", "cdmg"], ks: ["kuang", "panshi"], tg: [["tm", "tm"], ["tm", "tv"]], fit: "大刀、拳" },
-  { k: "br", n: "藍紅", a: 210, at: ["wis", "str"], c: "#c87aff", th: ["life", "res", "loot", "atk"], ks: ["guzhu", "xuemo"], tg: [["ta", "tm"], ["td", "tm"]], fit: "法杖、大刀" },
+  { k: "b", n: "藍", a: -90, at: ["wis"], c: "#6aa8ff", th: ["fan", "es", "duomo", "t_a"], ks: ["tiandao", "tianren"], tg: [["ta", "td"], ["ta", "td"]], fit: "法杖、扇" },
+  { k: "gb", n: "綠藍", a: -30, at: ["agi", "wis"], c: "#6ad8c8", th: ["bow", "t_d", "supp", "t_p"], ks: ["jianxin", "jianyi"], tg: [["tp", "td"], ["tp", "ta"]], fit: "弓、扇" },
+  { k: "g", n: "綠", a: 30, at: ["agi"], c: "#6adf7a", th: ["swd", "dodge", "aspd", "crit"], ks: ["xueji", "huixin"], tg: [["tp", "tv"], ["ta", "tp"]], fit: "弓、劍" },
+  { k: "rg", n: "紅綠", a: 90, at: ["str", "agi"], c: "#d8c85a", th: ["fst", "leech", "cdmg", "t_v"], ks: ["wuxin", "shayi"], tg: [["tm", "tv"], ["tp", "tm"]], fit: "劍、拳" },
+  { k: "r", n: "紅", a: 150, at: ["str"], c: "#ff6a5a", th: ["bld", "armor", "life", "t_m"], ks: ["kuang", "panshi"], tg: [["tm", "tm"], ["tm", "tv"]], fit: "大刀、拳" },
+  { k: "br", n: "藍紅", a: 210, at: ["wis", "str"], c: "#c87aff", th: ["stf", "res", "atk", "t_s"], ks: ["guzhu", "xuemo"], tg: [["ta", "tm"], ["td", "tm"]], fit: "法杖、大刀" },
 ];
 const TR_KS_LV = 40; // 核心天賦 Lv.40 才能點
 const TREE = {};
@@ -95,12 +118,35 @@ const TREE = {};
     const j = (i + 1) % 6, id = "x" + i;
     attrNode(id, 610, S.a + 30, "vit", -1, 5); link(`${i}b1a1`, id); link(id, `${j}b0a1`);
   });
+  // 企劃 42 A／B：區和區中間往外長一條（3 個天賦群＋玉槽，最外面核心），id g{i}…；另外 2 個內圈玉槽 j0、j1
+  const GAP = [
+    { th: ["thun", "thun2", "qi"], ks: "hundun" }, { th: ["psn", "psn2", "loot"] }, { th: ["leech", "regen", "crit"], ks: "xunlei" },
+    { th: ["still", "armor", "cdmg"], ks: "budong" }, { th: ["fire", "fire2", "life"], ks: "tiegu" }, { th: ["ice", "ice2", "mp"], ks: "yuangui" },
+  ];
+  const clusterAt = (base, rc, ang, thk, from) => { // 4 小格一圈＋中間重要天賦；回傳出口
+    const T = TR_TH[thk], [cx, cy] = P(rc, ang), ring = [];
+    for (let q = 0; q < 4; q++) { const d = ang * Math.PI / 180 + Math.PI + q * Math.PI / 2, id = base + q; add(id, cx + Math.cos(d) * 40, cy + Math.sin(d) * 40, "small", { e: Object.assign({}, T.s), n: trEffTxt(T.s)[0], sec: -1, th: thk, cl: base + "n" }); ring.push(id); }
+    for (let q = 0; q < 4; q++) link(ring[q], ring[(q + 1) % 4]);
+    add(base + "n", cx, cy, "note", { e: Object.assign({}, T.e), n: T.n, sec: -1, th: thk }); link(ring[2], base + "n");
+    link(from, ring[0]); return ring[2];
+  };
+  GAP.forEach((G, i) => {
+    const S = TR_SEC[i], S2 = TR_SEC[(i + 1) % 6], ang = S.a + 30, g = "g" + i;
+    let pv = clusterAt(g + "C", 730, ang, G.th[0], "x" + i);
+    add(g + "j", ...P(850, ang), "jw", { n: "天賦玉槽", sec: -1 }); link(pv, g + "j");
+    pv = clusterAt(g + "D", 965, ang, G.th[1], g + "j");
+    attrNode(g + "a", 1085, ang, S2.at[0], -1, 14); link(pv, g + "a");
+    pv = clusterAt(g + "E", 1195, ang, G.th[2], g + "a");
+    if (G.ks) { add("k_" + G.ks, ...P(1325, ang), "ks", { ks: G.ks, sec: -1 }); link(pv, "k_" + G.ks); }
+  });
+  [[0, 1, 2], [180, 4, 5]].forEach(([deg, a, b], q) => { add("j" + q, ...P(300, deg), "jw", { n: "天賦玉槽", sec: -1 }); link("j" + q, `${a}p1`); link("j" + q, `${b}p1`); });
 })();
 const TR_IDS = Object.keys(TREE);
 const trKsDef = (k) => (typeof ksDef === "function" ? ksDef(k) : null);
 function trNodeName(N) { if (N.t === "ks") { const d = trKsDef(N.ks); return d ? d.n : N.ks; } return N.n; }
 function trNodeLines(N) {
   if (N.t === "ks") { const d = trKsDef(N.ks); return d ? [d.d] : []; }
+  if (N.t === "jw") return typeof trJwLines === "function" ? trJwLines(N.id) : [];
   const L = trEffTxt(N.e);
   if (N.t === "note" && TR_SP[N.th]) L.push(`<b class="trsp">★ ${TR_SP[N.th]}</b>`);
   if (N.tag === "tv") L.push("閃身冷卻 −3%");
@@ -114,6 +160,10 @@ function treeSt() {
   const w = save.w; if (!w) return null;
   if (!w.treeV) treeMig(w);
   if (!w.tree) w.tree = { s: null, n: [], fr: 1 };
+  if (w.treeV === 1) { // 企劃 42：格子主題重排、多了 100 多格 → 全部退點（起點保留）＋送一次免費重置
+    const T = w.tree, had = T.n.length > 1; T.n = T.s ? [T.s] : []; T.fr = 1; w.treeV = 2;
+    if (had && typeof notice === "function") notice("天賦樹變大了：多了元素、武器專精、招式類型、防禦的天賦群、5 個核心和 8 個天賦玉槽。點數全部退回，打開天賦樹（P）重新點，或按「推薦路線」", "#ffe066");
+  }
   return w.tree;
 }
 function treeMig(w) {
@@ -123,7 +173,7 @@ function treeMig(w) {
   if (!s && w.created) s = trWStart();
   w.tree = { s, n: s ? [s] : [], fr: 1 };
   w.ap = { str: 0, vit: 0, agi: 0, wis: 0 }; w.free = 0; delete w.ks; w.para = {};
-  w.treeV = 1;
+  w.treeV = 2;
   if (had) { w.treeHint = 1; if (typeof notice === "function") notice("配點、大節點、巔峰點合成「天賦樹」了（右上「天」／P 鍵），點數全部退回。打開後按「推薦路線」可以一鍵點好", "#ffe066"); }
 }
 function trWStart() { const wt = typeof curWeapon === "function" ? curWeapon() : "sword"; return { str: "s4", agi: "s2", wis: "s0" }[TR_WMAIN[wt] || "agi"]; }
@@ -136,6 +186,7 @@ function treeSum() { // 快取：同一個陣列、同樣長度就不重算（�
   const T = treeSt(), arr = T ? T.n : null, len = arr ? arr.length : 0;
   if (TR_SUM && arr === TR_SUMA && len === TR_SUML) return TR_SUM;
   const s = {}; if (T) for (const id of T.n) { const N = TREE[id]; if (N) for (const k in N.e) s[k] = (s[k] || 0) + N.e[k]; }
+  if (T && typeof trJwSum === "function") trJwSum(T, s); // 企劃 42 B：鑲在已點玉槽上的天賦玉
   TR_SUM = s; TR_SUMA = arr; TR_SUML = len; return s;
 }
 function treeAttr() { const s = treeSum(); return { str: s.str || 0, agi: s.agi || 0, wis: s.wis || 0, vit: s.vit || 0 }; }
@@ -230,14 +281,22 @@ function trValue(N, main) {
   for (const k in N.e) {
     const x = N.e[k];
     v += k === main ? x : k === "vit" ? x * 0.45 : ["str", "agi", "wis"].includes(k) ? x * (k === "agi" ? 0.2 : 0.08)
-      : ({ atk: 2.2, crit: 3.2, cdmg: 0.55, aspd: main === "agi" ? 2.2 : 2.6, spd: 0.5, hp: 1.2, armor: 0.2, dodge: 1.2, supp: 0.6, es: main === "wis" ? 0.35 : 0.1, mp: 0.08, mpr: 0.15, leech: 9, res: 0.8, loot: 0.15, tp: 1.1, tm: 1.1, ta: 1.0, td: 0.7, tv: 0.5 }[k] || 0) * x * (k[0] === "t" && k.length === 2 && !trTagUse(k) ? 0 : 1);
+      : ({ atk: 2.2, crit: 3.2, cdmg: 0.55, aspd: main === "agi" ? 2.2 : 2.6, spd: 0.5, hp: 1.2, armor: 0.2, dodge: 1.2, supp: 0.6, es: main === "wis" ? 0.35 : 0.1, mp: 0.08, mpr: 0.15, leech: 9, res: 0.8, loot: 0.15, tp: 1.1, tm: 1.1, ta: 1.0, td: 0.7, tv: 0.5, ...TR_EV }[k] || 0) * x * (k[0] === "t" && k.length === 2 && !trTagUse(k) ? 0 : 1);
   }
+  if (N.t === "note" && typeof trNoteVal === "function") v += trNoteVal(N.th);
   return v;
+}
+let TR_EV = {};
+function trEleVal() { // 推薦路線：只看這把武器普攻／Q 的元素
+  const o = { fire: 0, ice: 0, thun: 0, chaos: 0 }, M = { F: "fire", W: "ice", T: "thun", P: "chaos" };
+  if (typeof slotEle !== "function") return o;
+  for (const sl of ["a", "q"]) { let e = null; try { e = slotEle(sl); } catch (x) {} if (e && M[e]) o[M[e]] += 0.8; }
+  return o;
 }
 function treeRecommend() {
   const T = treeSt(); if (!T.s) { T.s = trWStart(); T.n = [T.s]; }
-  const main = TR_WMAIN[curWeapon()] || "agi";
-  let free = treeFree(), guard = 300;
+  const main = TR_WMAIN[curWeapon()] || "agi"; TR_EV = trEleVal();
+  let free = treeFree(), guard = 400;
   while (free > 0 && guard--) {
     const have = new Set(T.n), dist = {}, prev = {}, val = {}, q = [];
     for (const id of T.n) { dist[id] = 0; val[id] = 0; q.push(id); }
@@ -261,7 +320,7 @@ function treeRecommend() {
 // ───────── 4. 畫面 ─────────
 let trQ = "", trHitSet = null; // 搜尋
 let trView = null, trSel = null, trMsg = "", trCv = null, trPtr = new Map(), trPinch = null, trMoved = 0;
-const TR_R = { hub: 24, start: 19, attr: 9, small: 9, note: 16, ks: 21 };
+const TR_R = { hub: 24, start: 19, attr: 9, small: 9, note: 16, ks: 21, jw: 14 };
 function renderTree(msg) {
   if (!save.w) return;
   if (ovKind !== "tree" && !ovOpen("tree")) return;
@@ -290,13 +349,14 @@ function trPanel() {
   let h = "";
   if (trSel && TREE[trSel]) {
     const N = TREE[trSel], has = T.n.includes(trSel), path = has ? null : trPath(trSel), why = has ? "" : trWhyNot(trSel, path);
-    const kind = { hub: "樞紐", start: "起點", attr: "屬性", small: "小天賦", note: "重要天賦", ks: "核心天賦（有好有壞）" }[N.t];
+    const kind = { hub: "樞紐", start: "起點", attr: "屬性", small: "小天賦", note: "重要天賦", ks: "核心天賦（有好有壞）", jw: "天賦玉槽" }[N.t];
     const extra = N.t === "start" ? `<small class="dim">適合：${TR_SEC[N.sec].fit}（不限武器）</small>` : N.t === "ks" ? `<small class="dim">Lv.${TR_KS_LV} 以後才能點</small>` : "";
     let act = "";
     if (!T.s && N.t === "start") act = `<button id="trPick" class="trb gold">選這個起點</button>`;
     else if (has) act = trRemovable(trSel) ? `<button id="trUndo" class="trb">退這一格<small>${curN("regret") ? "−1 洗心丹" : `−${trUndoCost()} 靈石`}</small></button>` : trSel === T.s ? `<small class="dim">你的起點</small>` : `<small class="dim">已點亮（要先退外面的才能退這格）</small>`;
     else if (why) act = `<small class="bad">${why}</small>`;
     else act = `<button id="trGo" class="trb gold">${path.length > 1 ? `點亮這條路（${path.length} 點）` : "點亮（1 點）"}</button>`;
+    if (N.t === "jw" && typeof trJwAct === "function") act += trJwAct(trSel, has);
     h = `<div class="trcard"><div class="trname" style="color:${N.t === "ks" ? "#ff9ae0" : N.t === "note" ? "#ffe066" : "#f0e2c4"}">${trNodeName(N)}<small>${kind}</small></div>
       <div class="trlines">${trNodeLines(N).map((x) => `<span>${x}</span>`).join("") || "<span class='dim'>（沒有效果，只是路）</span>"}</div>${extra}<div class="tract">${act}</div></div>`;
   } else {
@@ -315,6 +375,7 @@ function trPanel() {
   on("trPick", () => { const m = trPickStart(trSel); res(m, "起點選好了，往外點吧"); });
   on("trGo", () => { const N = TREE[trSel], m = trAlloc(trSel); res(m, `點亮：${trNodeName(N)}`); });
   on("trUndo", () => { const N = TREE[trSel], m = trUndo(trSel); res(m, `退掉：${trNodeName(N)}`); });
+  if (typeof trJwBind === "function") trJwBind(info, res);
 }
 function trSearch() { // 名字＋說明文字有這個字就亮起來
   if (!trQ) { trHitSet = null; return; }
@@ -364,6 +425,7 @@ function trDraw() {
   for (const id of TR_IDS) {
     if (col && TREE[id].cl) continue;
     const N = TREE[id], [x, y] = trXY(N), rr = Math.max(N.t === "attr" || N.t === "small" ? 3 : 6, TR_R[N.t] * z) * (col && N.t === "note" ? 1.5 : 1);
+    if (N.t === "jw") { if (!(x < -60 || x > W + 60 || y < -60 || y > H + 60) && typeof trJwDraw === "function") trJwDraw(g, N, x, y, rr, have.has(id), avail.has(id), pset.has(id), trSel === id); continue; }
     if (trHitSet && (trHitSet.has(id) || (col && N.t === "note" && TR_IDS.some((o) => TREE[o].cl === id && trHitSet.has(o))))) { g.beginPath(); g.arc(x, y, rr + 6 + 2 * Math.sin(performance.now() / 200), 0, Math.PI * 2); g.fillStyle = "rgba(120,220,255,0.35)"; g.fill(); }
     if (x < -60 || x > W + 60 || y < -60 || y > H + 60) continue;
     const on = have.has(id), av = avail.has(id) || (!T.s && N.t === "start"), inP = pset.has(id), sel = trSel === id;
@@ -377,7 +439,8 @@ function trDraw() {
     g.stroke();
     if (rr >= 7 && (N.t === "note" || N.t === "ks" || N.t === "start")) { // 使用者畫的圖示（企劃 31）
       const ik = N.t === "note" ? (N.th === "duomo" ? "mp" : N.th) : N.t === "ks" ? N.ks : "s" + N.sec, s2 = rr * (N.t === "ks" ? 2.3 : 2.1);
-      if (icoHas("tree", ik)) { g.globalAlpha = on || inP || av || sel ? 1 : 0.55; icoDraw(g, "tree", ik, x - s2 / 2, y - s2 / 2, s2, s2); g.globalAlpha = 1; if (on) { g.lineWidth = Math.max(1.2, 2 * Math.min(1.3, z)); g.strokeStyle = "#fff1b0"; g.beginPath(); g.arc(x, y, s2 / 2, 0, Math.PI * 2); g.stroke(); } }
+      if (!icoHas("tree", ik)) { const nm = N.t === "note" ? (TR_TH[N.th] ? TR_TH[N.th].n : "") : N.t === "ks" ? trNodeName(N) : ""; if (nm) { g.font = `bold ${Math.round(rr * 1.05)}px 'Noto Sans TC', sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : N.t === "ks" ? "#ffb8ea" : "#ffe9a0"; g.globalAlpha = on || inP || av || sel ? 1 : 0.7; g.fillText(nm[0], x, y + rr * 0.38); g.globalAlpha = 1; } }
+      else { g.globalAlpha = on || inP || av || sel ? 1 : 0.55; icoDraw(g, "tree", ik, x - s2 / 2, y - s2 / 2, s2, s2); g.globalAlpha = 1; if (on) { g.lineWidth = Math.max(1.2, 2 * Math.min(1.3, z)); g.strokeStyle = "#fff1b0"; g.beginPath(); g.arc(x, y, s2 / 2, 0, Math.PI * 2); g.stroke(); } }
     }
     if (col && N.t === "note") { const ring = TR_IDS.filter((o) => TREE[o].cl === id), k = ring.filter((o) => have.has(o)).length + (on ? 1 : 0); g.font = `bold 10px sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#d8ccb0"; g.fillText(`${k}/5`, x, y + 4); }
     if (N.tag && !col && z >= 0.55) { g.font = `bold ${Math.max(8, 10 * z)}px 'Noto Sans TC', sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : "#9fe8ff"; g.fillText(TR_TAGN[N.tag][0], x, y + 3.5 * Math.max(0.8, z)); }
@@ -398,7 +461,7 @@ function trHit(px, py) {
 function trBindCanvas() {
   const c = trCv, pos = (e) => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   const zoomAt = (px, py, nz) => {
-    const r = c.getBoundingClientRect(); nz = Math.max(0.28, Math.min(2.6, nz));
+    const r = c.getBoundingClientRect(); nz = Math.max(0.2, Math.min(2.6, nz)); // v8.6 樹變大（半徑約 1350）
     const wx = trView.x + (px - r.width / 2) / trView.z, wy = trView.y + (py - r.height / 2) / trView.z;
     trView.z = nz; trView.x = wx - (px - r.width / 2) / nz; trView.y = wy - (py - r.height / 2) / nz;
   };

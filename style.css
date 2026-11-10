@@ -1009,3 +1009,8 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .tjb.on { border-color: #ff8a5a; background: rgba(90, 40, 20, 0.6); color: #ffb08a; box-shadow: 0 0 0 1px #ff8a5a inset; }
 .tjb:disabled:not(.on) { opacity: 0.45; }
 .tjeff { color: #ffb08a; }
+/* v8.6 天賦玉（企劃 42 B） */
+.ov.k-tree .jwlist { max-height: 34vh; overflow-y: auto; margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.ov.k-tree .jwrow { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.04); }
+.ov.k-tree .jwrow b { white-space: nowrap; } .ov.k-tree .jwrow small { flex: 1; color: #d8ccb0; font-size: 11px; }
+.ov.k-tree .tract .jwrow .trb { width: auto; flex: none; padding: 4px 8px; }
