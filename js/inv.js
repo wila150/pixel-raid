@@ -62,7 +62,13 @@ function drawShield() {
 }
 
 // ───────── 暗黑式雙球（螢幕座標）─────────
+let orbBadLogged = false;
 function drawOrb(cx, cy, R, f, c1, c2, rim) {
+  if (!isFinite(f)) { // 企劃 48 ERR_LOG：剛進世界前幾幀有 NaN，記一次是誰傳的
+    if (!orbBadLogged && typeof errCatch === "function") { orbBadLogged = true; errCatch(new Error(`drawOrb f=${f} hp=${W0 && W0.hp}/${W0 && W0.maxHp} en=${W0 && W0.en} es=${W0 && W0.es}/${B && B.maxEs} mp=${W0 && W0.mp}/${B && B.maxMp}`), "orb"); }
+    f = 0;
+  }
+  if (!isFinite(cx) || !isFinite(cy) || !isFinite(R)) return;
   f = clamp(f, 0, 1);
   ctx.save();
   ctx.fillStyle = "rgba(10,8,14,0.72)"; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
