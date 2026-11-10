@@ -289,6 +289,7 @@ function eCost(sk) {
   const i = typeof TRI_E !== "undefined" && TRI_E[wt] ? TRI_E[wt].findIndex((x) => x.k === sk) : -1;
   return i >= 0 && i < 3 ? [9, 3] : [12, 4];
 }
+let OFF_CD = 2; // 企劃 70 §11：招式放在不是自己類別的格子，冷卻 ×2（普攻類攻速算完再 ×2）
 let E_OFF_MP = 3; // 企劃 69 §9：E 類招放在左鍵或 Q 時真氣 ×3（企劃寫 ×6，bot 量到 10 秒就乾、杖扇一次放不起，改 3；冷卻不加）
 const E_CD_CAP = 0.3; // 企劃 69 §8：裝備＋傳說的 E 冷卻縮短最多 30%
 const eCdGear = () => Math.min(E_CD_CAP, ((typeof B !== "undefined" && B && B.gUlt) || 0) / 100);
@@ -316,6 +317,7 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
       if (c === "a") { if (k === "snipe") S.cd *= 2; if (k === "frost") S.cd *= 1.54; if (k === "quake") S.cd *= 1.67; if (k === "break") S.cd *= BREAK_CD; } // 企劃 08-B／68
       if (c === "q") { if (k === "rush") S.cd += 0.3; if (k === "doom") S.cd += 0.6; if (wt === "staff" && save.eq.sword && save.eq.sword.u === "xingyun") S.cd *= 1.3; } // 企劃 57 星隕天樞杖
       if (c === "e" && k === "uq" && u) S.uq = u;
+      if (c !== sl) S.cd *= OFF_CD;
     }
     const tr = triOf(wt, "r"), RM = { blink: ["縮地", 0.715], pull: ["聚妖", 0.99], guard: ["護體", 1.375] }; /* 企劃 68：閃身冷卻 2 秒，縮地／聚妖／護體維持原本的秒數 */ // 企劃 66 C：聚妖、護體也會閃身，冷卻縮短 // 身法通用招
     if (RM[tr]) { WSKILL.roll.n = RM[tr][0]; WSKILL.roll.cd *= RM[tr][1]; }

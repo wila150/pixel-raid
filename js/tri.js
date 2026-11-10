@@ -438,7 +438,7 @@ function triPoolList(wt) {
   return out;
 }
 const pickEq = (a, b) => a.c === b.c && (a.k || (a.c === "e" ? "base" : "")) === (b.k || (b.c === "e" ? "base" : ""));
-const costTxt = (wt, c, k, sl) => { if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}${sl && sl !== "e" ? `<b class="toff">・放在${sl === "a" ? "左鍵" : "Q"}：真氣 ×${E_OFF_MP}</b>` : ""}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`; };
+const costTxt = (wt, c, k, sl) => { const SN = { a: "左鍵", q: "Q", e: "E" }, off = sl && sl !== c ? `<b class="toff">・放在${SN[sl]}：冷卻 ×${OFF_CD}${c === "e" ? `、真氣 ×${E_OFF_MP}` : ""}</b>` : ""; if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}${off}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return (c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`) + off; };
 function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy();
   if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
