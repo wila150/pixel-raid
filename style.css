@@ -1247,3 +1247,41 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
   .ov .b3hero { min-height: 200px; } .ov .b3hero img { height: min(220px, 100%); }
   .ov .b3cp b { font-size: 20px; }
 }
+/* v9.14 企劃 63：輔助寶石選單彈窗 */
+.ov .gpop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.55); }
+.ov .gpbox { width: 80vw; max-width: 760px; max-height: 92vh; display: flex; flex-direction: column; background: #1b1622; border: 1px solid #5a4a38; border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); overflow: hidden; }
+@media (orientation: portrait) {
+  .ov .gpop { align-items: flex-end; }
+  .ov .gpbox { width: 100vw; max-width: none; height: 70vh; max-height: 70vh; border-radius: 14px 14px 0 0; animation: gpUp 0.18s ease-out; }
+}
+@keyframes gpUp { from { transform: translateY(40%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.ov .gphead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 6px; border-bottom: 1px solid #3a3040; }
+.ov .gphead b { color: #ffe9a0; font-size: 14px; }
+.ov .gpx { width: 34px; height: 30px; padding: 0; font-size: 16px; border-radius: 6px; flex: none; background: #241d2e; color: #ece4d4; border: 1px solid #5a4a38; }
+.ov .gptabs { display: flex; gap: 4px; padding: 6px 10px; align-items: center; overflow-x: auto; flex: none; }
+.ov .gptabs button { flex: none; padding: 4px 10px; font-size: 12px; border-radius: 14px; background: #241d2e; color: #ece4d4; border: 1px solid #5a4a38; }
+.ov .gptabs button.cr { color: #ff8a7a; } .ov .gptabs button.cg { color: #7adf8a; } .ov .gptabs button.cb { color: #7ab0ff; }
+.ov .gptabs button.on { border-color: #ffd84a; background: #3a2f1a; color: #ffd84a; }
+.ov .gpq { flex: 1 1 90px; min-width: 80px; max-width: 200px; margin-left: auto; padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid #5a4a38; background: #120e18; color: #ece4d4; }
+.ov .gplist { overflow-y: auto; padding: 4px 10px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; align-content: start; }
+@media (orientation: portrait) { .ov .gplist { grid-template-columns: 1fr; } }
+.ov .gplist > .sub { grid-column: 1 / -1; }
+.ov .gpitem { min-width: 0; }
+.ov .gpitem.open { grid-column: 1 / -1; }
+.ov .gprow { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 30px; padding: 2px 8px; text-align: left; background: #241d2e; color: #ece4d4; border: 1px solid #3a3442; border-left: 3px solid var(--c, #5a4a38); border-radius: 6px; font-size: 12px; }
+.ov .gprow:hover { background: #2d2438; }
+.ov .gpitem.open .gprow { background: #3a2f1a; border-color: #8a7240; border-left-color: var(--c, #5a4a38); }
+.ov .gprow .gico { width: 24px; height: 24px; flex: none; }
+.ov .gprow b { flex: none; font-size: 12.5px; }
+.ov .gprow .gplvn { flex: none; color: #cfc4dc; font-size: 11px; white-space: nowrap; }
+.ov .gprow .gplvn small { margin-left: 4px; font-size: 10px; color: #9a90a8; }
+.ov .gprow .gpd { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c8bca6; font-size: 11px; }
+.ov .gprow em { font-style: normal; color: #9a8f88; } .ov .gprow em.mv { color: #ffd08a; }
+.ov .gpitem.dim .gprow { opacity: 0.55; }
+.ov .gpbody { padding: 6px 10px 8px 14px; font-size: 12px; line-height: 1.45; color: #ece4d4; border-left: 3px solid #3a3040; margin: 2px 0 4px 4px; }
+.ov .gpbody p { margin: 4px 0; }
+.ov .gplv { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.ov .gplv button { padding: 3px 8px; font-size: 11px; background: #241d2e; color: #ece4d4; border: 1px solid #5a4a38; } .ov .gplv button.on { border-color: #ffd84a; } .ov .gplv button.no { opacity: 0.5; }
+.ov .gpput { padding: 6px 18px; font-size: 13px; font-weight: bold; background: #6a5320; color: #ffe9a0; border: 1px solid #ffd84a; border-radius: 6px; }
+.ov .gpno { color: #ff9a7a; }
+.ov .gmg { justify-content: flex-start; } .ov .gmg span { color: #ffe9a0; } .ov .gmg i { margin-left: auto; font-style: normal; color: #9a90a8; font-size: 11px; }

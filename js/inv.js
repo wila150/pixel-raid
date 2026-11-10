@@ -214,6 +214,7 @@ function ovSub() {
   if (ovKind === "map" && mapSel) { mapSel = null; openStarMap(); return true; }
   if (ovKind === "tree" && trSel) { trSel = null; renderTree(); return true; }
   if (ovKind === "char" && typeof chHelp !== "undefined" && chHelp) { chHelp = null; renderChar(); return true; }
+  if (ovKind === "skill" && typeof triPick !== "undefined" && triPick && typeof gemPopClose === "function") return gemPopClose(); // 企劃 63：寶石彈窗
   return false;
 }
 // Android 返回鍵：最上面永遠留一筆「陷阱」紀錄，按返回 → 補回去，再關子視窗／介面／舊畫面；都沒有就問要不要離開
@@ -253,6 +254,7 @@ window.addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   if (!ovKind || ovJust || e.repeat) return;
   if (k === "tab") e.preventDefault();
+  if (k === "escape" && ovSub()) return; // 子視窗先關
   if ((OV_KEYS[ovKind] || []).includes(k)) { ovClose(); return; }
   const sw = { p: "tree", i: "bag", b: "smith", l: "cards", c: "ap", o: "ap", n: "skill", y: "quest", m: "map", tab: "map", g: "social", r: "rank" }[k];
   if (sw && sw !== OV_TAB[ovKind]) ovGo(sw);

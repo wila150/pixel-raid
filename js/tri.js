@@ -292,14 +292,86 @@ function chainCells(l) {
     else cells += `<button class="rcell empty${triPick && triPick.l === l && triPick.i === i ? " pick" : ""}" data-cs="${l}:${i}">＋<small>輔助</small></button>`;
     if (i < 4) cells += `<i class="rlink"></i>`;
   }
-  let pick = "";
-  if (triPick && triPick.l === l) {
-    const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] > 0).sort(gemSort);
-    const btn = (g) => { const [k, lv] = g.split(":"), why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, triPick.i), mv = why && why.startsWith("已經串在") && !gemCantMsg(g); return `<button class="gem${mv ? " mv" : ""}" data-rg="${g}" style="border-color:${gemCol(g)[1]}" ${why && !mv ? "disabled" : ""}><b style="color:${GEMS[k].c}">${gemIco(g, "gico")}${gemTag(g)}${gemFullN(k)} ${lv} 級 ×${save.gems[g]}</b><small><span class="gtype">${GEM_TYPE}・${gemCol(g)[0]}・Lv.${gemReq(g)}</span><br>${gemDesc(g)}</small>${why ? `<em class="greq">${why}${mv ? "・點了搬過來" : ""}</em>` : ""}</button>`; };
-    const merge = gs.filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).map((g) => `<button class="gmerge2" data-gm="${g}">${gemFullN(g.split(":")[0])} ${g.split(":")[1]} 級 ×3 → ${+g.split(":")[1] + 1} 級</button>`).join("");
-    pick = `<div class="rpick"><div class="trihead"><b>選一顆輔助寶石串上去</b><small>紅＝力量、綠＝敏捷、藍＝智力；灰色的寫了為什麼不能串</small></div>${gs.length ? `<div class="gbag">${gs.map(btn).join("")}</div>` : `<p class="sub">背包裡沒有輔助寶石（精英、王、秘境會掉）</p>`}${merge ? `<div class="gmrow"><small>3 顆合成高一級：</small>${merge}</div>` : ""}</div>`;
+  return `<div class="rchain">${cells}</div>`;
+}
+// ───────── 企劃 63：輔助寶石選單改成彈窗（分頁、一種一列、點開才看說明、搜尋、合成分頁）─────────
+let gemTab = (() => { try { return localStorage.getItem("pr_gemTab") || "ok"; } catch (e) { return "ok"; } })(), gemOpenK = null, gemOpenG = null, gemQ = "";
+const GP_TABS = [["ok", "可以串"], ["r", "紅"], ["g", "綠"], ["b", "藍"], ["all", "全部"], ["mg", "合成"]];
+const gpShort = (k, lv) => String(GEMS[k].d(+lv)).replace(/<[^>]+>/g, "").split(/[；。]/)[0];
+const gpSkillN = (l) => (l === "a" ? WSKILL.attack.n : l === "q" ? WSKILL.spin.n : l === "e" ? WSKILL.ult.n : WSKILL.roll.n || "閃身") || TRI_LAYER_N[l];
+function gpWhy(g) { const { l, i } = triPick; const why = gemCantMsg(g) ? gemNeedTxt(g) : gemWhy(g, l, i); const mv = !!why && why.startsWith("已經串在") && !gemCantMsg(g); return { why, mv }; }
+function gpKinds() { // 背包裡的寶石照種類分組：最高等級在前
+  const by = {};
+  for (const g of Object.keys(save.gems || {})) { if (!(save.gems[g] > 0)) continue; const [k, lv] = g.split(":"); (by[k] = by[k] || []).push({ g, lv: +lv, n: save.gems[g], ...gpWhy(g) }); }
+  return Object.keys(by).map((k) => { const L = by[k].sort((a, b) => b.lv - a.lv), best = L.find((x) => !x.why) || L.find((x) => x.mv) || null; return { k, L, best, ok: !!best, col: GEM_COL[k] || "b" }; })
+    .sort((a, b) => (b.ok - a.ok) || (gemSortKey(a.L[0].g) < gemSortKey(b.L[0].g) ? -1 : 1));
+}
+function gpListHtml() {
+  if (gemTab === "mg") {
+    const gs = Object.keys(save.gems || {}).filter((g) => save.gems[g] >= 3 && +g.split(":")[1] < GEM_MAX).sort(gemSort);
+    return gs.length ? gs.map((g) => { const [k, lv] = g.split(":"); return `<button class="gprow gmg" data-gm="${g}">${gemIco(g, "gico")}<b style="color:${GEMS[k].c}">${GEMS[k].n}</b><span>${lv} 級 ×3 → ${+lv + 1} 級</span><i>有 ${save.gems[g]} 顆</i></button>`; }).join("") : `<p class="sub">沒有可以合成的（同一種同一級要 3 顆）</p>`;
   }
-  return `<div class="rchain">${cells}</div>${pick}`;
+  const q = gemQ.trim();
+  let K = gpKinds();
+  if (gemTab === "ok") K = K.filter((x) => x.ok); else if (gemTab !== "all") K = K.filter((x) => x.col === gemTab);
+  if (q) K = K.filter((x) => (GEMS[x.k].n + gpShort(x.k, x.L[0].lv) + (GEM_TAGS[x.k] || "").split("").map((t) => TAG_N[t] || "").join("")).includes(q));
+  if (!K.length) return `<p class="sub">${Object.keys(save.gems || {}).length ? (gemTab === "ok" ? "這一格現在沒有串得上的（看「全部」分頁有寫原因）" : "沒有符合的寶石") : "背包裡沒有輔助寶石（精英、王、秘境會掉）"}</p>`;
+  return K.map((x) => {
+    const top = x.best || x.L[0], open = gemOpenK === x.k, sel = (open && x.L.find((y) => y.g === gemOpenG)) || top;
+    const more = x.L.filter((y) => y !== top).map((y) => `${y.lv}級×${y.n}`).join(" ");
+    const st = !x.ok ? `<em>${x.L[0].why}</em>` : top.mv ? `<em class="mv">在 ${top.why.replace("已經串在", "").trim()} → 搬過來</em>` : "";
+    let body = "";
+    if (open) {
+      const lvs = x.L.length > 1 ? `<div class="gplv">${x.L.map((y) => `<button data-gl="${y.g}" class="${y === sel ? "on" : ""}${y.why && !y.mv ? " no" : ""}">${y.lv} 級 ×${y.n}</button>`).join("")}</div>` : "";
+      const act = sel.why && !sel.mv ? `<p class="gpno">不能串：${sel.why}</p>` : `<button class="gold gpput" data-rg="${sel.g}">${sel.mv ? `從 ${sel.why.replace("已經串在", "").trim()} 搬過來` : "串上去"}</button>`;
+      body = `<div class="gpbody">${lvs}<small class="gtype">${GEM_TYPE}・${gemCol(sel.g)[0]}・Lv.${gemReq(sel.g)}</small><p>${gemDesc(sel.g)}</p>${act}</div>`;
+    }
+    return `<div class="gpitem${x.ok ? "" : " dim"}${open ? " open" : ""}"><button class="gprow" data-gk="${x.k}" style="--c:${gemCol(top.g)[1]}">${gemIco(top.g, "gico")}<b style="color:${GEMS[x.k].c}">${GEMS[x.k].n}</b><span class="gplvn">${top.lv} 級 ×${top.n}${more ? `<small>＋${more}</small>` : ""}</span><span class="gpd">${st || gpShort(x.k, top.lv)}</span></button>${body}</div>`;
+  }).join("");
+}
+function gemPopHtml() {
+  if (!triPick) return "";
+  const { l, i } = triPick;
+  return `<div class="gpop" data-gpx="bg"><div class="gpbox"><div class="gphead"><b>串到：${gpSkillN(l)}（${TRI_LAYER_N[l]}）第 ${i + 1} 格</b><button class="gpx" data-gpx="x" aria-label="關閉">✕</button></div>
+    <div class="gptabs">${GP_TABS.map(([k, n]) => `<button data-gt="${k}" class="${gemTab === k ? "on" : ""}${k.length === 1 ? " c" + k : ""}">${n}</button>`).join("")}<input class="gpq" type="search" placeholder="搜尋（投射、火…）" value="${gemQ.replace(/"/g, "&quot;")}"></div>
+    <div class="gplist">${gpListHtml()}</div></div></div>`;
+}
+function gemPopClose() { if (!triPick) return false; triPick = null; gemOpenK = gemOpenG = null; renderSkills(); return true; }
+function gemPopBind(again) {
+  const pop = ov.querySelector(".gpop"); if (!pop) return;
+  const relist = () => { pop.querySelector(".gplist").innerHTML = gpListHtml(); };
+  const q = pop.querySelector(".gpq");
+  q.addEventListener("input", () => { gemQ = q.value; gemOpenK = null; relist(); });
+  q.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Escape") q.blur(); });
+  pop.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-gpx],[data-gt],[data-gk],[data-gl],[data-rg],[data-gm]");
+    if (!t || (t.dataset.gpx === "bg" && e.target !== pop)) return;
+    if (t.dataset.gpx) { sfx("click"); gemPopClose(); return; }
+    if (t.dataset.gt) { gemTab = t.dataset.gt; try { localStorage.setItem("pr_gemTab", gemTab); } catch (er) {} gemOpenK = null; sfx("click"); pop.querySelectorAll("[data-gt]").forEach((b) => b.classList.toggle("on", b.dataset.gt === gemTab)); relist(); return; }
+    if (t.dataset.gk) { gemOpenK = gemOpenK === t.dataset.gk ? null : t.dataset.gk; gemOpenG = null; sfx("click"); relist(); const o = pop.querySelector(".gpitem.open"); if (o && o.scrollIntoView) o.scrollIntoView({ block: "nearest" }); return; }
+    if (t.dataset.gl) { gemOpenG = t.dataset.gl; sfx("click"); relist(); return; }
+    if (t.dataset.rg) { triPutGem(t.dataset.rg, again); return; }
+    if (t.dataset.gm) { triMergeGem(t.dataset.gm, again, relist); return; }
+  });
+}
+function triPutGem(g, again) {
+  if (!triPick || !(save.gems[g] > 0)) return;
+  const { l, i } = triPick;
+  let why = gemCantMsg(g) || gemWhy(g, l, i);
+  const o = why && why.startsWith("已經串在") ? gemElse(g.split(":")[0], l) : null;
+  if (o) { // 搬過來：舊的那格退回背包，這格串上
+    const orow = o.l === "r" ? save.w.chain.r : save.w.chain[o.wt][o.l]; addGem(orow[o.i]); orow[o.i] = null;
+    why = gemCantMsg(g) || gemWhy(g, l, i);
+    if (!why) { chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; triPick = null; gemOpenK = null; sfx("good"); again(`從${o.label}搬到${TRI_LAYER_N[l]}：${gemName(g)}`); return; }
+  }
+  if (why) { sfx("bad"); triPick = null; renderSkills(why); return; }
+  chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g];
+  triPick = null; gemOpenK = null; sfx("good"); again(`${TRI_LAYER_N[l]}串上 ${gemName(g)}`);
+}
+function triMergeGem(g, again, relist) {
+  const [k, l] = g.split(":"); if ((save.gems[g] || 0) < 3) return;
+  save.gems[g] -= 3; if (!save.gems[g]) delete save.gems[g]; const ng = `${k}:${+l + 1}`; addGem(ng); sfx("arrive"); writeSave();
+  if (triPick && relist) { relist(); notice(`合成出 ${gemName(ng)}！`); } else again(`合成出 ${gemName(ng)}！`);
 }
 function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy(), ws = WSKILLS[wt];
@@ -326,7 +398,7 @@ function renderTri(msg = "") {
     const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
     return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
   };
-  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>`;
+  return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>${gemPopHtml()}`;
 }
 function bindTri() {
   const again = (m) => { writeSave(); setPadLabels(true); renderSkills(m); };
@@ -343,26 +415,9 @@ function bindTri() {
   ov.querySelectorAll("[data-cs]").forEach((b) => b.addEventListener("click", () => {
     const [l, si] = b.dataset.cs.split(":"), i = +si, row = chainRaw(l), g = row[i];
     if (g) { addGem(g); row[i] = null; triPick = null; sfx("click"); again(`拆下 ${gemName(g)}`); return; }
-    triPick = triPick && triPick.l === l && triPick.i === i ? null : { l, i }; sfx("click"); renderSkills();
+    triPick = triPick && triPick.l === l && triPick.i === i ? null : { l, i }; gemOpenK = gemOpenG = null; gemQ = ""; sfx("click"); renderSkills();
   }));
-  ov.querySelectorAll("[data-rg]").forEach((b) => b.addEventListener("click", () => {
-    const g = b.dataset.rg; if (!triPick || !(save.gems[g] > 0)) return;
-    const { l, i } = triPick;
-    let why = gemCantMsg(g) || gemWhy(g, l, i);
-    const o = why && why.startsWith("已經串在") ? gemElse(g.split(":")[0], l) : null;
-    if (o) { // 搬過來：舊的那格退回背包，這格串上
-      const orow = o.l === "r" ? save.w.chain.r : save.w.chain[o.wt][o.l]; addGem(orow[o.i]); orow[o.i] = null;
-      why = gemCantMsg(g) || gemWhy(g, l, i);
-      if (!why) { chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g]; triPick = null; sfx("good"); again(`從${o.label}搬到${TRI_LAYER_N[l]}：${gemName(g)}`); return; }
-    }
-    if (why) { sfx("bad"); renderSkills(why); return; }
-    chainRaw(l)[i] = g; save.gems[g]--; if (!save.gems[g]) delete save.gems[g];
-    triPick = null; sfx("good"); again(`${TRI_LAYER_N[l]}串上 ${gemName(g)}`);
-  }));
-  ov.querySelectorAll("[data-gm]").forEach((b) => b.addEventListener("click", () => {
-    const g = b.dataset.gm, [k, l] = g.split(":"); if ((save.gems[g] || 0) < 3) return;
-    save.gems[g] -= 3; if (!save.gems[g]) delete save.gems[g]; const ng = `${k}:${+l + 1}`; addGem(ng); sfx("arrive"); again(`合成出 ${gemName(ng)}！`);
-  }));
+  gemPopBind(again);
 }
 // 舊存檔搬家：進世界時
 const _enterWorldCh = enterWorld;
