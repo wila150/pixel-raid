@@ -18,7 +18,7 @@ const TR3_EK = { F: "fire", W: "ice", T: "thun", P: "chaos" };
 const TR3_TAG = { a: "t_a", p: "t_p", m: "t_m", d: "t_d", v: "t_v" };
 const TR3_MORE = 1.05; // 招式類型「更多」：企劃寫 8%，bot 打王 Lv.110 快 47%，降到 5%
 const TR3_WT = { swd: "sword", bow: "bow", stf: "staff", bld: "blade", fst: "fist", fan: "fan" };
-const trAreaX = () => (!save.w ? 1 : (curWeapon() === "blade" && trN("bld") ? 1.2 : 1) * (trN("t_a") ? 1.1 : 1));
+const trAreaX = () => (!save.w ? 1 : (curWeapon() === "blade" && trN("bld") ? 1.2 : 1) * (trN("t_a") ? 1.1 : 1) * (typeof ascArea === "function" ? ascArea() : 1)); // asc.js 昇華的範圍
 const trTotemN = () => (save.w && trN("t_s") ? 2 : 1);
 function trNoteVal(th) { // 推薦路線：重要天賦的特殊效果值多少（跟屬性值同一個單位）
   if (TR3_WT[th]) return TR3_WT[th] === curWeapon() ? 14 : 0;

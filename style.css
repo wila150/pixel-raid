@@ -1014,3 +1014,21 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 .ov.k-tree .jwrow { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 6px; background: rgba(255,255,255,0.04); }
 .ov.k-tree .jwrow b { white-space: nowrap; } .ov.k-tree .jwrow small { flex: 1; color: #d8ccb0; font-size: 11px; }
 .ov.k-tree .tract .jwrow .trb { width: auto; flex: none; padding: 4px 8px; }
+/* v8.7 昇華（asc.js） */
+.ov.k-tree .ascbox { position: absolute; inset: 60px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left)); max-width: 720px; margin: 0 auto; overflow-y: auto; padding: 12px 14px; border-radius: 12px; background: rgba(12, 11, 9, 0.96); border: 1px solid var(--line); z-index: 5; }
+.ov.k-tree .aschead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ov.k-tree .aschead > b { font-size: 18px; }
+.ov.k-tree .aschead > small { color: var(--dim); flex: 1; }
+.ov.k-tree .aschead .hot { color: #ffe066; }
+.ov.k-tree .ascbox p.dim { margin: 6px 0 10px; font-size: 12px; color: var(--dim); }
+.ov.k-tree .ascrow { display: grid; grid-template-columns: 44px 1fr 1fr; gap: 8px; margin-bottom: 8px; align-items: stretch; }
+.ov.k-tree .ascrow.lock { opacity: 0.55; }
+.ov.k-tree .asct { display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--dim); font-size: 13px; }
+.ov.k-tree .ascn { text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 26, 22, 0.9); display: flex; flex-direction: column; gap: 3px; min-height: 72px; }
+.ov.k-tree .ascn b { color: var(--ac); font-size: 15px; }
+.ov.k-tree .ascn span { font-size: 12px; line-height: 1.4; }
+.ov.k-tree .ascn em { font-style: normal; font-size: 11px; color: #ffe9a0; }
+.ov.k-tree .ascn em.bad { color: #ff8a7a; }
+.ov.k-tree .ascn.on { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac) inset, 0 0 12px color-mix(in srgb, var(--ac) 40%, transparent); background: rgba(50, 42, 26, 0.95); }
+.ov.k-tree .ascn.no:not(.on) { cursor: default; }
+@media (max-width: 520px) { .ov.k-tree .ascrow { grid-template-columns: 1fr; } .ov.k-tree .asct { justify-content: flex-start; } }
