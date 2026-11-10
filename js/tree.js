@@ -179,7 +179,7 @@ function treeMig(w) {
 function trWStart() { const wt = typeof curWeapon === "function" ? curWeapon() : "sword"; return { str: "s4", agi: "s2", wis: "s0" }[TR_WMAIN[wt] || "agi"]; }
 // ── 武器組專屬點（總表第 35 項，企劃 46）：每 TRWS_EVERY 級 1 點，三組各一份，只在拿那一組時生效 ──
 const WS_SHORT = { sword: "劍", staff: "法杖", bow: "弓", blade: "大刀", fist: "拳套", fan: "扇" };
-const TRWS_EVERY = 6, TRWS_C = ["#5ab4ff", "#6ae08a", "#ffa64a"];
+const TRWS_EVERY = 8, TRWS_C = ["#5ab4ff", "#6ae08a", "#ffa64a"];
 let TRM = 0; // 天賦樹畫面：0＝主樹、1–3＝武器組
 const wsCur = () => (save.w && save.w.wi) || 0;
 function wsTree(i) {
@@ -197,6 +197,7 @@ const wsNoNode = (N) => N.t === "ks" || N.t === "jw" || N.t === "start"; // 核�
 let TRA = null, TRA_K = "";
 function treeAll() { // 現在生效的格子＝主樹＋目前武器組
   const T = treeSt(); if (!T) return [];
+  if ([0, 1, 2].some((i) => wsTree(i).n.length > wsTotal())) { wsPrune(); TR_SUM = null; }
   const S = wsTree(wsCur()), k = T.n.length + "/" + wsCur() + "/" + S.n.length;
   if (TRA && TRA_K === k && TRA.m === T.n && TRA.w === S.n) return TRA;
   TRA = T.n.concat(S.n); TRA.m = T.n; TRA.w = S.n; TRA_K = k; return TRA;
@@ -207,6 +208,7 @@ function wsPrune() { // 主樹變了：跟主樹重複的拿掉、接不到主�
   for (let i = 0; i < 3; i++) {
     const S = wsTree(i); let L = S.n.filter((id) => TREE[id] && !main.has(id) && !wsNoNode(TREE[id]));
     if (!T.s) L = [];
+    while (L.length > wsTotal()) L.pop(); // 點數變少（v9.1.2 改每 8 級）：從最後點的退
     const left = new Set(L), seen = new Set(), q = [...main];
     while (q.length) { const u = q.shift(); for (const v of TREE[u].adj) if (left.has(v) && !seen.has(v)) { seen.add(v); q.push(v); } }
     L = L.filter((id) => seen.has(id));
