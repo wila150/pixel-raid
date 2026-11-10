@@ -34,9 +34,9 @@ function migHero() {
 const HEROES_OLD = { ronin: 1, witch: 1, vampire: 1 };
 function giftUnique(u, lv) {
   if (!UNIQUES[u]) return null;
-  const il = Math.floor((lv || 1) / 3) + 1, sl = UNIQUES[u].slot, bv = BASE_VAL[SLOTS[sl].base];
+  const il = Math.floor((lv || 1) / 3) + 1, sl = UNIQUES[u].slot;
   const it = rollItem(0, il); it.slot = sl; it.u = u; it.q = 3; delete it.wt; delete it.so;
-  it.base = Math.round((bv[0] + bv[1] * il) * 2); rollAffixes(it, 2); nameItem(it); return it;
+  if (UNIQUES[u].wt) it.wt = UNIQUES[u].wt; uqApply(it); nameItem(it); return it;
 }
 
 // ───────── 轉職（不換職業，是擴充插槽與被動）─────────

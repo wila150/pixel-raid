@@ -384,10 +384,10 @@ function renderEquip(msg = "") {
   if (selItem) {
     const worn = eqSel.startsWith("eq:"), cur = save.eq[selItem.slot], diff = itemCP(selItem) - itemCP(cur);
     right = `<div class="cmp-item">
-      <div class="ilvl">物品等級 ${selItem.il}</div>
+      <div class="ilvl">物品等級 ${itLv(selItem)}${selItem.bt ? `・基底第 ${selItem.bt} 階` : ""}</div>
       <div class="big-ico" style="--c:${RARITY[selItem.q].c}">${itemIcon(selItem)}</div>
       <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
-      <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・${selItem.il} 級${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
+      <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・物品等級 ${itLv(selItem)}${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>
       ${reqLine(selItem)}${selItem.cor ? `<div class="corline">已渡劫${selItem.jie ? `・劫紋：${AFFIX[selItem.jie].n}` : ""}（不能再用通貨改）</div>` : ""}
       <div class="cp">裝備評分 ${itemCP(selItem)}${worn || !cur ? "" : ` <em class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "+" : ""}${diff} ${diff >= 0 ? "↑" : "↓"}</em>`}</div>
       ${!worn ? (() => { const now = totalCP(), nx = typeof cpIf === "function" ? cpIf(selItem) : now + itemCP(selItem) - itemCP(cur), d = nx - now, F = typeof fmtN === "function" ? fmtN : (x) => x; return `<div class="cpafter">穿上後戰力 ${F(now)} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${F(nx)}</b>（<b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${F(Math.abs(d))}</b>）</div>`; })() : ""}
@@ -501,6 +501,7 @@ function bindEquip(selItem) {
   });
   on("sell", () => { ungem(selItem); save.stone += sellPrice(selItem); save.bag = save.bag.filter((b) => b !== selItem); eqSel = null; writeSave(); again(`賣掉 ${selItem.name}，靈石 +${sellPrice(selItem)}`); });
   on("enh", () => {
+    if ((selItem.en || 0) >= enMax(selItem)) { again(`已經 +${enMax(selItem)}，精煉到頂了`); return; }
     const c = enCost(selItem), nd = enhNeed(selItem);
     if (save.stone < c) { again("靈石不夠"); return; }
     if (nd && !matHas(nd)) { again(`精煉 +${(selItem.en || 0) + 1} 需要 ${matTxt(nd)}`); return; }

@@ -524,7 +524,7 @@ function renderCreate(msg = "") {
     if (n.length < 2) { renderCreate("名字至少 2 個字"); return; }
     save.w = blankW();
     Object.assign(save.w, { created: 1, hv: 1, sv: "rewind", tut: save.chars && save.chars.length > 1 ? undefined : 0, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
-    const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; nameItem(it);
+    const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; it.bt = 1; setBase(it); nameItem(it);
     if (save.eq.sword) save.bag.push(save.eq.sword);
     save.eq.sword = it;
     writeSave(); sfx("arrive");

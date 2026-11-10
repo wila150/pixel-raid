@@ -9,9 +9,9 @@
 "use strict";
 
 // ───────── 1. 基礎傷害 ─────────
-const REF_W = (lv) => (8 + (4 * Math.max(1, lv)) / 3) * 1.12; // 同等級藍武器底材
+const REF_W = (lv) => (8 + (4 * Math.max(1, lv)) / 3) * 1.12; // 同等級藍武器底材（舊公式；企劃 44 的縮水另外乘 gearHpK／spellK，不改成階梯——階梯會讓 Lv.89→90 的怪血跳 40%）
 // 法術（企劃 41 §8）：同等級藍武器底材 × (0.8 + 0.4 × 寶石等級／上限)：1 級約 0.8、上限一半 1.0、滿 1.2；法術不再吃技能寶石每級「更多 2%」（skgem.js）
-const GEM_BASE = (L) => REF_W(wLv()) * (0.8 + 0.4 * Math.min(1, L / skgCap()));
+const GEM_BASE = (L) => REF_W(wLv()) * spellK(wLv()) * (0.8 + 0.4 * Math.min(1, L / skgCap()));
 const ADD_K = 0.15; // 附加傷害：「攻擊 +N」詞綴 × 0.15 點底材（第一版是增加 N%，同等級換算差不多）
 // 傷害效用（附加傷害乘這個）：沒寫的＝100%；割草、多段招 30–60%
 const SK_EFF = {
@@ -87,7 +87,7 @@ function dotSeed(dmg) {
 
 // ───────── 4. 怪血 × 同等級武器底材 ─────────
 const HP_REF_K = 0.87; // 攻擊招少了武器底材那份「增加」，怪血跟著少一點（#scan：一般怪回到 3–4 下）
-const DMG_REF = (lv) => (REF_W(lv) / 8) * HP_REF_K;
+const DMG_REF = (lv) => (REF_W(lv) / 8) * HP_REF_K * gearHpK(lv); // gearHpK：企劃 44 詞綴分階後的縮水（equip.js）
 function hpV2() {
   if (!W0 || !W0.mobs) return;
   for (const m of W0.mobs) { if (m.hv2 || m.ghost) continue; const k = DMG_REF(m.lv || 1); m.hp *= k; m.max *= k; m.hv2 = 1; }

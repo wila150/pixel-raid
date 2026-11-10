@@ -47,7 +47,7 @@ function startWorldBossField(k = "volcano") {
   burst(R.x, R.y, `rgb(${R.col})`, 50, 160, 0.8);
   floatText(R.x, R.y - 40, R.wake, `rgb(${R.col})`, true);
 }
-const wbDmg = (m, mul = 1) => WMOBS.wboss.dmg * (1 + 0.22 * (m.lv - 1)) * mul * (rbOf(m).dmgMul || 1) * (m.R ? 1 : (RBOSS[m.rb] && RBOSS[m.rb].fieldMul) || 1) * lvGapIn(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1);
+const wbDmg = (m, mul = 1) => WMOBS.wboss.dmg * (1 + 0.22 * (m.lv - 1)) * mul * (rbOf(m).dmgMul || 1) * (m.R ? 1 : (RBOSS[m.rb] && RBOSS[m.rb].fieldMul) || 1) * lvGapIn(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1) * gearDmgK(m.lv);
 function wbZone(o) { o.t = 0; wbZones.push(o); return o; }
 const wbFast = (m) => (m.phase >= 2 ? 0.8 : 1); // 第二階段預警最多縮到 0.8 倍
 // 排程：取代 setTimeout（暫停、切 App 時不會偷跑）
@@ -359,9 +359,9 @@ function drawWBossBar() { // 畫面上方的王血條
 // 王專屬傳說（不會在一般掉落、碎屑兌換出現）
 function rbUnique(u, il) {
   const U = UNIQUES[u], sl = U.anySlot ? ["crown", "robe", "boots", "charm", "ring", "ear"][Math.floor(Math.random() * 6)] : U.slot;
-  const it = rollItem(1, il), bv = BASE_VAL[SLOTS[sl].base];
+  const it = rollItem(1, il);
   it.slot = sl; it.u = u; it.q = 3; if (U.slot === "sword") it.wt = U.wt; else delete it.wt;
-  it.base = Math.round((bv[0] + bv[1] * il) * 2); rollAffixes(it, 1 + Math.floor(Math.random() * 4));
+  uqApply(it);
   nameItem(it); delete it.risk; return it;
 }
 function wbKilled(m) { // 打倒區域王

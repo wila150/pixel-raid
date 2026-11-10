@@ -14,12 +14,12 @@ function smListHtml(items) {
   if (!items.length) return `<p class="dim">沒有裝備</p>`;
   return `<div class="smlist">${items.map((it, i) => `<button class="smit${it === smSel ? " sel" : ""}" data-si="${i}" style="--c:${RARITY[it.q].c}" title="${it.name}"><span class="smico">${itemIcon(it)}${it.en ? `<i>+${it.en}</i>` : ""}</span><span class="smn"><b>${dispName(it)}</b><small>${smWorn(it) ? "身上・" : ""}${it.slot === "sword" ? WEAPONS[wtOf(it)].n : SLOTS[it.slot].n}・戰 ${itemCP(it)}</small></span></button>`).join("")}</div>`;
 }
-const smHead = (it) => `<div class="smhead"><div class="big-ico" style="--c:${RARITY[it.q].c}">${itemIcon(it)}</div><div><h3 style="color:${RARITY[it.q].c}">${dispName(it)}</h3><small>${RARITY[it.q].n}・${it.il} 級・戰力 ${itemCP(it)}${smWorn(it) ? "・穿在身上" : ""}</small></div></div>`;
+const smHead = (it) => `<div class="smhead"><div class="big-ico" style="--c:${RARITY[it.q].c}">${itemIcon(it)}</div><div><h3 style="color:${RARITY[it.q].c}">${dispName(it)}</h3><small>${RARITY[it.q].n}・物品等級 ${itLv(it)}・戰力 ${itemCP(it)}${smWorn(it) ? "・穿在身上" : ""}</small></div></div>`;
 const smCampLine = (camp) => (camp ? "" : `<p class="warn">在野外可以看、比較；回到安全營地（傳送點、青雲城）才能動手</p>`);
 // 精煉：一顆主要按鈕
 function smEnHtml(it, camp) {
   const en = it.en || 0;
-  if (en >= EN_MAX) return `${smHead(it)}<p class="smbig">已經 +${EN_MAX}，精煉到頂了</p>`;
+  if (en >= enMax(it)) return `${smHead(it)}<p class="smbig">已經 +${enMax(it)}，精煉到頂了${it.u && enMax(it) < EN_MAX ? `<br><small>傳說的精煉上限看物品等級：40 以下 +6、80 以下 +9、80 以上 +12</small>` : ""}</p>`;
   const nx = Object.assign({}, it, { en: en + 1 }), c = enCost(it), nd = enhNeed(it), a = itemCP(it), b = itemCP(nx);
   const okStone = save.stone >= c, okMat = !nd || matHas(nd);
   return `${smHead(it)}
@@ -88,6 +88,7 @@ function bindSmith(items) {
   const en = document.getElementById("smEn");
   if (en) en.onclick = () => {
     if (!atCamp()) { again("回營地才能精煉"); return; }
+    if ((it.en || 0) >= enMax(it)) { again(`已經 +${enMax(it)}，精煉到頂了`); return; }
     const c = enCost(it), nd = enhNeed(it);
     if (save.stone < c) { again("靈石不夠"); return; }
     if (nd && !matHas(nd)) { again(`精煉 +${(it.en || 0) + 1} 需要 ${matTxt(nd)}`); return; }

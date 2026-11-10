@@ -79,7 +79,8 @@ const zoneIl = (z) => Math.floor((ZONES[z].lv[0] + ZONES[z].lv[1]) / 2 / 3);
 let forgeSlot = "sword", forgeAff = "atk", econTab = "forge";
 
 // ───────── 裝備軟限制（企劃 11 第 4 節）─────────
-const reqLv = (it) => Math.max(1, (it.il || 0) * 3 - 8);
+// 企劃 44：需求等級＝基底那一階的需求；戒指耳飾（沒有基底）＝詞綴裡最高那一階的最低物品等級；還沒搬家的舊裝備照舊公式
+const reqLv = (it) => { if (!it.bt) return Math.max(1, (it.il || 0) * 3 - 8); if (SLOTS[it.slot] && SLOTS[it.slot].acc && !it.u) { let r = 1; for (const k in it.aff || {}) { const i = affTierIdx(k, it.aff[k]); if (i >= 0) r = Math.max(r, TIER_LV[i]); } return r; } return BASE_REQ[it.bt - 1]; };
 const reqMul = (it) => { const d = reqLv(it) - ((save.w && save.w.lv) || 1); return (d <= 0 ? 1 : Math.max(0.6, 1 - 0.04 * d)) * (typeof attrReqMul === "function" ? attrReqMul(it) : 1); };
 const reqTag = (it) => (save.w && save.w.lv < reqLv(it) ? `<span class="rq">Lv${reqLv(it)}</span>` : typeof attrReqShort === "function" && attrReqShort(it) ? `<span class="rq">${TR_ATTR[attrReq(it)[0]].n}不足</span>` : "");
 const reqLine = (it) => { const d = reqLv(it) - save.w.lv; return (typeof attrReqHtml === "function" ? attrReqHtml(it) : "") + (d > 0 ? `<div class="reqline">建議等級 ${reqLv(it)}・境界不足，只能發揮 ${Math.round(reqMul(it) * 100)}%（再升 ${d} 級完全發揮）</div>` : `<div class="reqline ok">建議等級 ${reqLv(it)}</div>`); };
@@ -164,19 +165,19 @@ function curBtns(it, camp) {
 function bindCur(it, again) {
   const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用鐵匠鋪"); return; } f(); }; };
   const done = (k, msg, s = "good") => { useCur(k); nameItem(it); writeSave(); sfx(s); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(msg); };
-  on("cGold", () => { if (!curN("gold")) return; it.q++; it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.12 * 10) / 10 : Math.round(it.base * 1.12); rollAffixes(it, Math.max(RARITY[it.q].aff[0], Object.keys(it.aff).length + 1)); done("gold", `點金成功：${RARITY[it.q].n}裝`, "arrive"); });
+  on("cGold", () => { if (!curN("gold")) return; it.q++; if (it.bt) setBase(it); else it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.12 * 10) / 10 : Math.round(it.base * 1.12); rollAffixes(it, Math.max(RARITY[it.q].aff[0], Object.keys(it.aff).length + 1)); done("gold", `點金成功：${RARITY[it.q].n}裝`, "arrive"); });
   on("cChaos", () => { if (!curN("chaos")) return; const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); done("chaos", "混元重骰：詞綴全部換了"); });
   on("cExalt", () => {
     if (!curN("exalt")) return; const cap = AFF_CAP[it.q], cnt = { p: 0, s: 0 }; for (const k in it.aff) if (AFFIX[k]) cnt[AFFIX[k].t]++;
     const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(k in it.aff) && cnt[AFFIX[k].t] < cap);
     if (!pool.length) { again("沒有空位了"); return; }
-    const k = pool[Math.floor(Math.random() * pool.length)]; it.aff[k] = rollAffVal(k, it.il); done("exalt", `淬靈：多了「${AFFIX[k].n}」`, "arrive");
+    const k = pool[Math.floor(Math.random() * pool.length)]; it.aff[k] = rollAffVal(k, itLv(it)); done("exalt", `淬靈：多了「${AFFIX[k].n}」`, "arrive");
   });
-  on("cDivine", () => { if (!curN("divine")) return; for (const k in it.aff) if (AFFIX[k] && AFFIX[k].hi) it.aff[k] = rollAffVal(k, it.il); done("divine", "造化：數值重骰了"); });
+  on("cDivine", () => { if (!curN("divine")) return; for (const k in it.aff) if (AFFIX[k] && AFF_T[k]) it.aff[k] = rollAffVal(k, itLv(it)); done("divine", "造化：數值重骰了"); });
   on("cVaal", () => {
     if (!curN("vaal")) return; const r = Math.random();
     if (r < 0.25) { it.cor = 1; done("vaal", "渡劫：什麼都沒發生（已渡劫，不能再改）", "click"); }
-    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {}))); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFFIX[k].hi * affMul(k, it.il) * 1.5 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
+    else if (r < 0.5) { const pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && AFFIX[k].hi && !(k in (it.aff || {}))); const k = pool[Math.floor(Math.random() * pool.length)]; it.aff = it.aff || {}; it.aff[k] = Math.round(AFF_T[k][tierTop(itLv(it))][1] * 1.3 * (AFFIX[k].dec ? 10 : 1)) / (AFFIX[k].dec ? 10 : 1); it.jie = k; it.cor = 1; done("vaal", `渡劫成功！劫紋「${AFFIX[k].n}」`, "win"); if (typeof netAnnounce === "function") netAnnounce(`渡劫成功，得到劫紋「${AFFIX[k].n}」！`); }
     else if (r < 0.75) { if (!it.u) { const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); } it.cor = 1; done("vaal", "渡劫：詞綴全部重洗了", "arrive"); }
     else { useCur("vaal"); ungem(it); save.bag = save.bag.filter((b) => b !== it); for (const k of SLOT_KEYS) if (save.eq[k] === it) delete save.eq[k]; if (save.w.ws) save.w.ws = save.w.ws.map((b) => (b === it ? null : b)); eqSel = null; writeSave(); sfx("hurt"); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(`渡劫失敗⋯⋯${it.name}碎掉了`); }
   });
@@ -227,7 +228,7 @@ function bindEcon(again) {
     if ((r.kind === "forge" || r.kind === "slot") && save.bag.length >= BAG_MAX) { again("行囊滿了"); return; }
     matUse(r.need);
     if (r.kind === "forge") { const it = rbUnique(r.u, Math.floor(r.lv / 3) + 2); save.bag.push(it); sfx("win"); again(`鍛造成功：${it.name}`); }
-    else if (r.kind === "slot") { const it = shardItem(forgeSlot, 2); it.il = zoneIl(r.z); const bv = BASE_VAL[SLOTS[forgeSlot].base]; it.base = Math.round((bv[0] + bv[1] * it.il) * 1.24); rollAffixes(it, 4 + Math.floor(Math.random() * 2), forgeAff); nameItem(it); delete it.risk; save.bag.push(it); sfx("arrive"); again(`鍛造成功：${it.name}（保底 ${AFFIX[forgeAff].n}）`); }
+    else if (r.kind === "slot") { const it = shardItem(forgeSlot, 2); it.il = zoneIl(r.z); it.lvI = Math.round((ZONES[r.z].lv[0] + ZONES[r.z].lv[1]) / 2); it.bt = pickBt(it.lvI); setBase(it); rollAffixes(it, 4 + Math.floor(Math.random() * 2), forgeAff, true); nameItem(it); delete it.risk; save.bag.push(it); sfx("arrive"); again(`鍛造成功：${it.name}（保底 ${AFFIX[forgeAff].n}）`); }
     else if (r.kind === "pill") { const w = save.w; w.buffs = w.buffs || {}; w.buffs[r.b] = Date.now() + BUFF_MS; if (W0) { B = worldStats(); } sfx("heal"); again(`吃下${BUFFS[r.b].n}：${BUFFS[r.b].d}，30 分鐘`); }
     else if (r.kind === "key") { addKey(makeKey(keyTierFor(Math.round((ZONES[r.z].lv[0] + ZONES[r.z].lv[1]) / 2)))); sfx("arrive"); again("做好一把秘境鑰"); }
     if (W0 && W0.trackDone) delete W0.trackDone[r.id];

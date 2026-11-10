@@ -326,7 +326,7 @@ function enterWorld() {
   // 第一次進來：先建立角色（取名、選初始武器）；舊存檔已經練過的直接當作建好了
   if (save.w && !save.w.created && (save.w.lv > 1 || save.w.exp > 0 || save.w.q)) save.w.created = 1;
   if (!save.w || !save.w.created) { renderCreate(); return; }
-  if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; nameItem(it); save.eq.sword = it; writeSave(); }
+  if (!save.eq.sword) { const it = rollItem(0, 0, "sword"); it.q = 0; it.u = null; it.wt = "sword"; it.aff = {}; it.bt = 1; setBase(it); nameItem(it); save.eq.sword = it; writeSave(); }
   if (!save.gems) { save.gems = {}; addGem("multi:1"); addGem("power:1"); writeSave(); W0gift = true; }
   const heroNote = typeof migHero === "function" ? migHero() : "";
   if (heroNote) writeSave();
@@ -413,7 +413,7 @@ const lvGapIn = (m) => 1 + 0.03 * lvGap(m);
 // 企劃 22 §10-2：深區一般怪傷害（物理、元素都乘；王不算）
 const DEEP_DMG = { forest: 1.3, waste: 1.3, volcano: 1.3, snow: 1.6, swamp: 2, thunder: 1.2, sky: 2.4 }; // 雷谷 2.2→1.2（v8.0.1 企劃驗收）；森林、荒原、火山 ×1.3（企劃 41 §8 複驗：有 ES 時荒原火山小怪只掉 0–4%）
 const deepMul = (m) => { if (m.boss) return 1; if (typeof RIFT !== "undefined" && RIFT) return RIFT.tier >= 11 ? 2.4 : 1; return DEEP_DMG[zoneAt(m.x, m.y)] || 1; };
-const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1); // dmgMul：秘境詞綴
+const mobDmg = (m, d) => d.dmg * (1 + 0.22 * (m.lv - 1)) * (m.elite ? 1.6 : 1) * (m.dmgMul || 1) * lvGapIn(m) * deepMul(m) * (typeof tjDmgMul === "function" ? tjDmgMul(m) : 1) * gearDmgK(m.lv); // dmgMul：秘境詞綴；gearDmgK：企劃 44
 function packAggro(m) { // 打一隻，整個營地一起衝過來
   for (const o of W0.mobs) if (!o.dead && o.camp === m.camp && o.st === "idle") o.st = "chase";
 }
@@ -1889,7 +1889,7 @@ function checkQuest() {
   save.stone += st;
   floatText(W0.x, W0.y - 46, `任務完成！靈石 +${st}`, "#ffe066", true);
   sfx("win");
-  if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) notice(`得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b"); }
+  if (q.item !== undefined || !q.main) { const it = rollItem(q.item || 0, Math.floor(w.lv / 3) + 1, q.wt || null); if (q.wt && it.q === 3) { it.q = 1; it.u = null; it.wt = q.wt; it.bt = pickBt(itLv(it)); setBase(it); rollAffixes(it, 1 + Math.floor(Math.random() * 2)); nameItem(it); } grantLoot(it, W0.x, W0.y - 6); if (q.wt) notice(`得到${WEAPONS[q.wt].n}！到背包換上就能用${WEAPONS[q.wt].job}的招式`, "#ffcf6b"); }
   if (!q.main && Math.random() < 0.5) { const g = randGem(1); addGem(g); floatText(W0.x, W0.y - 74, `◆ ${gemName(g)}`, GEMS[g.split(":")[0]].c, true); }
   gainExp(exp);
 }

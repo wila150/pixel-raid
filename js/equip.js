@@ -90,11 +90,72 @@ const AFF_WORD = { atk: "鋒銳", atkP: "霸道", hp: "厚實", es: "玄光", de
 function nameItem(it) {
   const en = it.en ? ` +${it.en}` : "";
   if (it.u) { it.name = UNIQUES[it.u].n + en; return; }
-  const base = (it.slot === "sword" ? WEAPONS[wtOf(it)].names : SLOTS[it.slot].names)[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
+  const base = it.bt ? baseName(it) : (it.slot === "sword" ? WEAPONS[wtOf(it)].names : SLOTS[it.slot].names)[Math.min(4, Math.floor(it.il / 1.2))], ks = Object.keys(it.aff);
   const pre = ks.find((k) => AFFIX[k] && AFFIX[k].t === "p"), suf = ks.find((k) => AFFIX[k] && AFFIX[k].t === "s");
   it.name = (it.q === 0 || !ks.length ? base : `${pre ? AFF_WORD[pre] : ""}${base}${suf ? `・${AFF_WORD[suf]}` : ""}`) + en;
 }
-const BASE_VAL = { none: [0, 0], atk: [8, 4], hp: [30, 15], def: [12, 6], spd: [4, 1], crit: [2, 0.5] }; // 主屬性：[0 級, 每級]
+const BASE_VAL = { none: [0, 0], atk: [8, 4], hp: [30, 15], def: [12, 6], spd: [4, 1], crit: [2, 0.5] }; // 舊的（v9.3 前）：[0 級, 每級]，只剩搬家用
+// ───────── 企劃 44（v9.3）：裝備基底 8 階＋詞綴 T5–T1 ─────────
+// 物品等級 it.lvI＝掉落的怪等級（1–130）：只決定能掉哪些基底、詞綴最高骰到哪一階。it.il 舊欄位留著算費用（賣價、精煉費）。
+const ITEM_LV_MAX = 130;
+const itLv = (it) => (it && it.lvI) || Math.max(1, Math.min(ITEM_LV_MAX, ((it && it.il) || 0) * 3));
+const BASE_REQ = [1, 10, 20, 35, 50, 70, 90, 110]; // 第 1–8 階的需求等級
+const BASE_TBL = { atk: [10, 18, 30, 50, 75, 110, 155, 210], spell: [10, 20, 30, 40, 50, 60, 70, 80], hp: [30, 55, 90, 150, 230, 340, 480, 650], def: [12, 22, 36, 60, 90, 135, 190, 260], spd: [4, 5, 6, 7, 8, 9, 10, 11], crit: [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5], none: [0, 0, 0, 0, 0, 0, 0, 0] };
+const BASE_N = {
+  sword: ["鐵劍", "青鋼劍", "寒鐵劍", "流雲劍", "赤霄劍", "斬月劍", "星辰劍", "太虛劍"],
+  staff: ["桃木杖", "青竹杖", "青玉杖", "紫焰杖", "玄冰杖", "九幽杖", "星辰杖", "太乙杖"],
+  bow: ["竹弓", "鐵胎弓", "柘木弓", "追星弓", "落日弓", "穿雲弓", "星辰弓", "射天弓"],
+  blade: ["柴刀", "厚背刀", "鬼頭刀", "虎牙刀", "破山刀", "斬月刀", "星辰刀", "斷岳刀"],
+  fist: ["布纏手", "鐵指虎", "銅拳套", "熊爪套", "金剛拳套", "伏魔拳套", "星辰拳套", "龍鱗拳套"],
+  fan: ["竹扇", "紙扇", "羽扇", "流風扇", "青鸞扇", "鶴翎扇", "星辰扇", "乾坤扇"],
+  crown: ["布冠", "木簪冠", "玉簪冠", "紫金冠", "鳳翎冠", "星辰冠", "蓮華冠", "太虛冠"],
+  robe: ["粗麻袍", "青衫", "鶴紋道袍", "雲紋袍", "玄鱗甲", "紫綬仙衣", "星辰法袍", "雲錦法衣"],
+  boots: ["草鞋", "布靴", "皮靴", "追風靴", "流光靴", "踏雲靴", "星辰靴", "凌虛靴"],
+  charm: ["木牌", "銅符", "玉佩", "靈犀佩", "龍紋佩", "鳳血佩", "星辰佩", "太虛佩"],
+  ring: ["銅戒", "鐵戒", "銀戒", "青玉戒", "紫晶戒", "赤金戒", "星辰戒", "太虛戒"],
+  ear: ["木耳墜", "銅耳環", "銀耳環", "翡翠墜", "鳳羽墜", "龍珠墜", "星辰墜", "星河墜"],
+};
+// 詞綴不再無限長 → 同等級的玩家比 v9.2 弱（藍裝：Lv.20 ×0.74、Lv.50 ×0.69、Lv.80 ×0.61、Lv.110 ×0.58；防禦 ×0.75–0.88）。
+// 怪物血量、傷害照同樣比例縮（scratchpad t.js ?cmp 量的），打王時間才會跟 v8.5.1 差不多（企劃 44 §4 ±15%）
+const lerpTbl = (t, x) => { if (x <= t[0][0]) return t[0][1]; for (let i = 1; i < t.length; i++) if (x <= t[i][0]) { const [a, va] = t[i - 1], [b, vb] = t[i]; return va + ((vb - va) * (x - a)) / (b - a); } return t[t.length - 1][1]; };
+const GEAR_HP_K = [[1, 0.85], [20, 0.74], [50, 0.69], [80, 0.61], [110, 0.58], [130, 0.6]];
+const GEAR_DMG_K = [[1, 0.85], [20, 0.79], [80, 0.79], [110, 0.85], [130, 0.75]];
+const SPELL_K = [[1, 0.85], [20, 0.8], [50, 0.86], [80, 0.8], [110, 0.98], [130, 1]]; // 法術基礎（技能寶石）跟攻擊武器一起縮
+const gearHpK = (lv) => lerpTbl(GEAR_HP_K, lv || 1), gearDmgK = (lv) => lerpTbl(GEAR_DMG_K, lv || 1), spellK = (lv) => lerpTbl(SPELL_K, lv || 1);
+const baseKey = (it) => (it.slot === "sword" && SPELL_W[wtOf(it)] ? "spell" : SLOTS[it.slot].base);
+const baseName = (it) => (BASE_N[it.slot === "sword" ? wtOf(it) : it.slot] || BASE_N.sword)[(it.bt || 1) - 1];
+const QMUL = [1, 1.12, 1.24, 1.3]; // 品質對基底的加成（傳說固定 1.3，不再 2 倍）
+function baseVal(it) { const v = BASE_TBL[baseKey(it)][(it.bt || 1) - 1] * QMUL[it.q || 0]; return baseKey(it) === "crit" ? Math.round(v * 10) / 10 : Math.round(v); }
+const setBase = (it) => { it.base = baseVal(it); return it; };
+// 掉落時抽基底：需求等級 ≤ 物品等級的階裡抽，最高那階 50%、次一階 30%、其他平分 20%
+function pickBt(lv) {
+  let top = 0; for (let i = 0; i < 8; i++) if (BASE_REQ[i] <= lv) top = i;
+  if (top === 0) return 1;
+  const r = Math.random();
+  if (r < 0.5) return top + 1;
+  if (r < 0.8 || top === 1) return top;
+  return 1 + Math.floor(Math.random() * (top - 1));
+}
+// 詞綴分階：T5（index 0）～T1（index 4）；最低物品等級／權重
+const TIER_LV = [1, 15, 30, 55, 80], TIER_W = [100, 80, 60, 35, 15];
+const tierCurve = (u, c, dec) => c.map(([a, b]) => [dec ? Math.round(a * u * 10) / 10 : Math.round(a * u), dec ? Math.round(b * u * 10) / 10 : Math.round(b * u)]);
+const CURVE_P = [[1, 1.8], [1.9, 3], [3.1, 4.8], [4.9, 6.8], [6.9, 9]]; // 百分比類（攻擊％：5–9…35–45）
+const CURVE_F = [[1, 2], [2.1, 4], [4.1, 7.3], [7.4, 12], [12.1, 17.3]]; // 固定值類（生命：15–30…181–260）
+const AFF_T = {
+  atk: tierCurve(5, CURVE_F), atkP: tierCurve(5, CURVE_P), hp: tierCurve(15, CURVE_F), es: tierCurve(13, CURVE_F), def: tierCurve(8, CURVE_F),
+  leech: [[0.5, 0.8], [0.9, 1.4], [1.5, 2.1], [2.2, 2.9], [3, 4]], thorns: tierCurve(5, CURVE_P),
+  spd: tierCurve(2, CURVE_P), aspd: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 17]],
+  resF: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resW: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]], resT: [[6, 10], [11, 16], [17, 25], [26, 35], [36, 45]],
+  resA: [[3, 5], [6, 8], [9, 11], [12, 14], [15, 16]], resP: [[4, 7], [8, 12], [13, 17], [18, 23], [24, 28]],
+  dodge: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]], supp: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]],
+  crit: [[2, 4], [5, 7], [8, 10], [11, 13], [14, 16]], critD: tierCurve(8, CURVE_P), ult: tierCurve(4, CURVE_P), magnet: tierCurve(10, CURVE_P),
+};
+for (const k in AFF_T) { const t = AFF_T[k], st = AFFIX[k].dec ? 0.1 : 1; for (let i = 1; i < 5; i++) if (t[i][0] <= t[i - 1][1]) { t[i][0] = Math.round((t[i - 1][1] + st) * 10) / 10; if (t[i][1] < t[i][0]) t[i][1] = t[i][0]; } } // 各階不重疊（四捨五入後）
+const tierTop = (lv) => { let t = 0; for (let i = 0; i < 5; i++) if (TIER_LV[i] <= lv) t = i; return t; }; // 這個物品等級最高能到的階（index）
+function pickTier(lv, top) { const n = tierTop(lv); if (top) return n; let r = Math.random() * TIER_W.slice(0, n + 1).reduce((a, b) => a + b, 0); for (let i = 0; i <= n; i++) if ((r -= TIER_W[i]) < 0) return i; return n; }
+const tierName = (i) => `T${5 - i}`;
+// 這條詞綴的值落在哪一階（顯示用、搬家用）；超過 T1（渡劫）算 T1
+function affTierIdx(k, v) { const t = AFF_T[k]; if (!t) return -1; let r = 0; for (let i = 0; i < 5; i++) if (v >= t[i][0] - 1e-9) r = i; return r; }
 const RARITY = [
   { n: "凡品", c: "#ecebf2", aff: [0, 0], sell: 2 }, // 白
   { n: "靈品", c: "#5fa8ff", aff: [1, 2], sell: 6 }, // 藍
@@ -126,6 +187,38 @@ const UNIQUES = {
   fentian: { slot: "charm", n: "焚天石心", rb: true, anySlot: true, d: "王專屬（焚天石魔，部位隨機）：火焰抗性上限 +3%" },
   wuxiang: { slot: "sword", wt: "sword", n: "無相劍", mods: ["echo"], rb: true, d: "王專屬（無相劍尊）：普攻打中時 25% 劍影再砍一次（60% 傷害）" },
 };
+// 企劃 44 §2-4：傳說完全寫死——固定基底（第 bt 階）＋固定詞綴（小範圍）；物品等級只決定精煉上限
+const UQ_FIX = {
+  thunder: { bt: 5, aff: { crit: [8, 10], critD: [30, 36] } },
+  phoenix: { bt: 5, aff: { atkP: [20, 25], ult: [15, 20] } },
+  sunbow: { bt: 5, aff: { aspd: [8, 10], crit: [6, 8] } },
+  moon: { bt: 5, aff: { atkP: [22, 26], hp: [80, 110] } },
+  tiger: { bt: 5, aff: { aspd: [9, 11], leech: [1.2, 1.6] } },
+  qiankun: { bt: 5, aff: { atkP: [18, 22], magnet: [40, 50] } },
+  qkhy: { bt: 8, aff: { atkP: [32, 38], crit: [10, 12] } },
+  splitbox: { bt: 4, aff: { atkP: [12, 16], aspd: [5, 7] } },
+  starcrown: { bt: 4, aff: { es: [60, 80], resA: [6, 8] } },
+  voidrobe: { bt: 5, aff: { es: [90, 120], resA: [8, 10] } },
+  orbitboots: { bt: 4, aff: { aspd: [6, 8], dodge: [3, 4] } },
+  wavecleaver: { bt: 6, aff: { atkP: [25, 30], critD: [20, 25] } },
+  vajra: { bt: 6, aff: { hp: [150, 180], def: [70, 90] } },
+  devour: { bt: 2, aff: { leech: [0.8, 1] } },
+  cloud: { bt: 3, aff: { dodge: [4, 5] } },
+  heart: { bt: 2, aff: { critD: [10, 14] } },
+  toadrobe: { bt: 5, aff: { resP: [18, 22], hp: [100, 130] } },
+  hourglass: { bt: 6, aff: { aspd: [8, 10], atkP: [15, 18] } },
+  bloodjade: { bt: 7, aff: { hp: [120, 150], leech: [1.5, 2] } },
+  tstep: { bt: 6, aff: { resT: [20, 25], spd: [10, 12] } },
+  fentian: { bt: 3, aff: { resF: [15, 20], hp: [50, 70] } },
+  wuxiang: { bt: 8, aff: { atkP: [30, 35], aspd: [10, 12] } },
+};
+function uqApply(it) { // 設定傳說的固定基底＋詞綴（it.slot、it.u 要先設好）
+  const F = UQ_FIX[it.u] || { bt: 1, aff: {} };
+  it.q = 3; it.bt = F.bt; setBase(it); it.aff = {};
+  for (const k in F.aff) { const [lo, hi] = F.aff[k], v = lo + Math.random() * (hi - lo); it.aff[k] = AFFIX[k].dec ? Math.round(v * 10) / 10 : Math.round(v); }
+  it.resV2 = 1; return it;
+}
+const enMax = (it) => (it && it.u ? (itLv(it) < 40 ? 6 : itLv(it) < 80 ? 9 : 12) : EN_MAX); // 傳說：物品等級 <40 最多 +6、<80 +9、≥80 +12
 const BAG_MAX = 40;
 // ───────── 強化（+1～+10，每級全部數值 +10%，越高越容易失敗，失敗只扣靈石）─────────
 const EN_MAX = 12;
@@ -267,7 +360,7 @@ const randEss = () => ESS_KEYS[Math.floor(Math.random() * ESS_KEYS.length)];
 // 精髓注入：白裝／藍裝直接變紫裝，保底洗出這個詞條（傳說不能用）
 function essCraft(it, k) {
   if (it.u) return false;
-  if (it.q < 2) { it.q = 2; it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.24 * 10) / 10 : Math.round(it.base * 1.24); }
+  if (it.q < 2) { it.q = 2; if (it.bt) setBase(it); else it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.24 * 10) / 10 : Math.round(it.base * 1.24); }
   rollAffixes(it, 3 + Math.floor(Math.random() * 3), k);
   nameItem(it); return true;
 }
@@ -279,15 +372,15 @@ function shardItem(slot, q) {
   if (q === 3) {
     const us = Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb && (slot !== "sword" || UNIQUES[u].wt === curWeapon()) && !["devour", "heart"].includes(u));
     const pick = us.length ? us : Object.keys(UNIQUES).filter((u) => UNIQUES[u].slot === slot && !UNIQUES[u].rb);
+    const okLv = pick.filter((u) => BASE_REQ[((UQ_FIX[u] || {}).bt || 1) - 1] <= save.w.lv); if (okLv.length) pick.splice(0, pick.length, ...okLv);
     do { it = rollItem(1, il, slot === "sword" ? curWeapon() : null); } while (false);
-    const u = pick[Math.floor(Math.random() * pick.length)], bv = BASE_VAL[SLOTS[slot].base];
+    const u = pick[Math.floor(Math.random() * pick.length)];
     it.slot = slot; it.u = u; it.q = 3; it.wt = slot === "sword" ? UNIQUES[u].wt : undefined;
-    it.base = Math.round((bv[0] + bv[1] * il) * 2); rollAffixes(it, 1 + Math.floor(Math.random() * 4));
+    uqApply(it);
   } else {
     for (let i = 0; i < 50; i++) { it = rollItem(0, il, slot === "sword" ? curWeapon() : null); if (it.slot === slot && !it.u) break; }
     it.slot = slot; if (slot === "sword") it.wt = curWeapon(); else delete it.wt;
-    const bv = BASE_VAL[SLOTS[slot].base]; it.base = Math.round((bv[0] + bv[1] * il) * 1.24);
-    it.q = 2; rollAffixes(it, 4 + Math.floor(Math.random() * 3));
+    it.q = 2; setBase(it); rollAffixes(it, 4 + Math.floor(Math.random() * 3));
   }
   nameItem(it); return it;
 }
@@ -298,23 +391,25 @@ const RES_TIER = [[[5, 12], [3, 6], [3, 8]], [[12, 22], [6, 9], [8, 14]], [[20, 
 const resTierIdx = (il) => Math.max(0, Math.min(3, Math.floor((il || 0) / 10)));
 const resRange = (k, il) => { const t = RES_TIER[resTierIdx(il)]; return k === "resA" ? t[1] : k === "resP" ? t[2] : t[0]; };
 const isTierRes = (k) => ["resF", "resW", "resT", "resA", "resP"].includes(k);
-const rollAffVal = (k, il) => { const a = AFFIX[k]; if (isTierRes(k)) { const [lo, hi] = resRange(k, il); return Math.round(lo + Math.random() * (hi - lo)); } const v = (a.lo + Math.random() * (a.hi - a.lo)) * affMul(k, il); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
-function rollAffixes(it, n, force = null) {
+// 企劃 44：lv＝新物品等級（itLv(it)）；top＝直接用這個等級最高的那一階（部位鍛造的保底）
+const rollAffVal = (k, lv, top) => { const a = AFFIX[k], t = AFF_T[k]; if (!t) return a.lo || 1; const [lo, hi] = t[pickTier(lv, top)], v = lo + Math.random() * (hi - lo); return a.dec ? Math.round(v * 10) / 10 : Math.max(1, Math.round(v)); };
+function rollAffixes(it, n, force = null, forceTop = false) {
   const cap = AFF_CAP[it.q] || 1, cnt = { p: 0, s: 0 };
   let pool = Object.keys(AFFIX).filter((k) => (AFFIX[k].t === "p" || AFFIX[k].t === "s") && !(SLOTS[it.slot] && SLOTS[it.slot].acc && ACC_NO.includes(k)));
   it.aff = {};
   if (force && !pool.includes(force)) force = null; // 飾品不吃護甲類保底
-  if (force) { it.aff[force] = Math.max(rollAffVal(force, it.il), rollAffVal(force, it.il)); cnt[AFFIX[force].t]++; pool = pool.filter((k) => k !== force); n--; } // 精髓：保底詞條（取兩次較高）
+  const lv = itLv(it);
+  if (force) { it.aff[force] = forceTop ? rollAffVal(force, lv, true) : Math.max(rollAffVal(force, lv), rollAffVal(force, lv)); cnt[AFFIX[force].t]++; pool = pool.filter((k) => k !== force); n--; } // 精髓：保底詞條（取兩次較高）
   for (let i = 0; i < n; i++) {
     const ok = pool.filter((k) => cnt[AFFIX[k].t] < cap);
     if (!ok.length) break;
     const acc = SLOTS[it.slot] && SLOTS[it.slot].acc, wt = (k) => (AFFIX[k].rw || 1) * (acc && isResAff(k) ? 2.5 : 1); // 企劃 22：飾品比較常出抗性
     let r = Math.random() * ok.reduce((s, k) => s + wt(k), 0), k = ok[ok.length - 1];
     for (const x of ok) { r -= wt(x); if (r < 0) { k = x; break; } }
-    pool = pool.filter((x) => x !== k); cnt[AFFIX[k].t]++; it.aff[k] = rollAffVal(k, it.il);
+    pool = pool.filter((x) => x !== k); cnt[AFFIX[k].t]++; it.aff[k] = rollAffVal(k, lv);
   }
 }
-const affTier = (k, v, il) => { const a = AFFIX[k]; if (isTierRes(k)) { const [lo, hi] = resRange(k, il), f = (v - lo) / Math.max(1, hi - lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; } if (!a.hi) return ""; const f = (v / affMul(k, il) - a.lo) / (a.hi - a.lo); return f > 0.8 ? "T1" : f > 0.5 ? "T2" : "T3"; };
+const affTier = (k, v) => { const i = affTierIdx(k, v); return i < 0 ? "" : tierName(i); };
 // 掉一件裝備；boost 越高越容易出好東西（妖將、魔王）
 function rollItem(boost = 0, ilv = null, wt = null) {
   const il = ilv !== null ? ilv : realmIdx() + Math.floor(Math.random() * 2);
@@ -322,15 +417,17 @@ function rollItem(boost = 0, ilv = null, wt = null) {
   let q = 0, acc = 0;
   for (; q < 3; q++) { acc += w[q]; if (r < acc) break; }
   let slot = pickSlot(), u = null;
-  if (q === 3) { const uk = Object.keys(UNIQUES).filter((k) => !UNIQUES[k].rb && slotOpen(UNIQUES[k].slot)); u = uk[Math.floor(Math.random() * uk.length)]; slot = UNIQUES[u].slot; }
+  if (q === 3) { const lv0 = Math.max(1, il * 3), uk0 = Object.keys(UNIQUES).filter((k) => !UNIQUES[k].rb && slotOpen(UNIQUES[k].slot)), uk1 = uk0.filter((k) => BASE_REQ[((UQ_FIX[k] || {}).bt || 1) - 1] <= lv0), uk = uk1.length ? uk1 : uk0; u = uk[Math.floor(Math.random() * uk.length)]; slot = UNIQUES[u].slot; } // 企劃 44：傳說也照需求等級，物品等級不夠的不掉
   else if (wt) slot = "sword";
-  const s = SLOTS[slot], bv = BASE_VAL[s.base];
-  const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, u,
-    name: u ? UNIQUES[u].n : s.names[Math.min(4, Math.floor(il / 1.2))], base: Math.round((bv[0] + bv[1] * il) * (0.85 + Math.random() * 0.3) * (q === 3 ? 2 : 1 + q * 0.12) * 10) / 10 };
-  if (s.base !== "crit") it.base = Math.round(it.base);
+  const s = SLOTS[slot], lvI = Math.max(1, Math.min(ITEM_LV_MAX, il * 3)); // 物品等級＝怪等級（呼叫的地方傳的是舊 il＝怪等級÷3）
+  const it = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, q, il, lvI, u, bt: pickBt(lvI), name: u ? UNIQUES[u].n : "" };
   if (slot === "sword") it.wt = u ? UNIQUES[u].wt : wt || WT_KEYS[Math.floor(Math.random() * WT_KEYS.length)];
-  const [a0, a1] = RARITY[q].aff;
-  rollAffixes(it, Math.max(s.acc ? 1 : 0, a0 + Math.floor(Math.random() * (a1 - a0 + 1)))); // 飾品沒主屬性：凡品也給 1 條
+  if (u) uqApply(it);
+  else {
+    setBase(it);
+    const [a0, a1] = RARITY[q].aff;
+    rollAffixes(it, Math.max(s.acc ? 1 : 0, a0 + Math.floor(Math.random() * (a1 - a0 + 1)))); // 飾品沒主屬性：凡品也給 1 條
+  }
   nameItem(it);
   return it;
 }
@@ -348,7 +445,7 @@ function itemCP(it) {
   const st = itemStats(it);
   let cp = 0;
   for (const k in st) cp += st[k] * (AFFIX[k] ? AFFIX[k].w : 0);
-  if (it.u) cp += 250 * (1 + 0.3 * it.il);
+  if (it.u) cp += 250 * (1 + 0.1 * BASE_REQ[(it.bt || 1) - 1]);
   return Math.round(cp);
 }
 function totalCP() {
@@ -452,7 +549,7 @@ const statRows = (it) => {
   return Object.keys(st).map((k) => `<div class="srow"><span>${AFFIX[k].n}${k === SLOTS[it.slot].base ? "（主）" : ""}</span><b>+${AFFIX[k].dec || k === "crit" ? Math.round(st[k] * 10) / 10 : Math.round(st[k])}${AFFIX[k].pct ? "%" : ""}</b></div>`).join("")
     + (it.u ? `<div class="srow uq">${UNIQUES[it.u].d}</div>` : "");
 };
-const itemHead = (it) => `<div class="ihead" style="color:${RARITY[it.q].c}">${itemIcon(it)}【${RARITY[it.q].n}】${it.name}<small>${it.slot === "sword" ? `${WEAPONS[wtOf(it)].n}（${WEAPONS[wtOf(it)].job}：${WEAPONS[wtOf(it)].d}）` : SLOTS[it.slot].n}・${it.il} 級</small></div>`;
+const itemHead = (it) => `<div class="ihead" style="color:${RARITY[it.q].c}">${itemIcon(it)}【${RARITY[it.q].n}】${it.name}<small>${it.slot === "sword" ? `${WEAPONS[wtOf(it)].n}（${WEAPONS[wtOf(it)].job}：${WEAPONS[wtOf(it)].d}）` : SLOTS[it.slot].n}・物品等級 ${itLv(it)}</small></div>`;
 let eqSel = null; // 正在看的裝備 id（或 "eq:slot"）
 function renderEquip(msg = "") {
   if (typeof tutEvent === "function") tutEvent("bag");
@@ -473,7 +570,7 @@ function renderEquip(msg = "") {
           ${worn ? `<button id="unequip" class="sbtn">卸下</button>` : `<button id="equip" class="sbtn gold">裝備</button><button id="sell" class="sbtn red">出售 +${sellPrice(selItem)}</button>`}
           ${!selItem.u && selItem.q > 0 ? `<button id="reroll" class="sbtn">洗練 −${rerollCost(selItem)}</button>` : ""}
           ${selItem.q < 2 ? `<button id="upq" class="sbtn">點金 −${upCost(selItem)}</button>` : ""}
-          ${(selItem.en || 0) < EN_MAX ? `<button id="enh" class="sbtn gold">強化 +${(selItem.en || 0) + 1}（${Math.round(EN_RATE[selItem.en || 0] * 100)}%）−${enCost(selItem)}</button>` : `<span class="sbtn">已強化到頂</span>`}
+          ${(selItem.en || 0) < enMax(selItem) ? `<button id="enh" class="sbtn gold">強化 +${(selItem.en || 0) + 1}（${Math.round(EN_RATE[selItem.en || 0] * 100)}%）−${enCost(selItem)}</button>` : `<span class="sbtn">已強化到頂</span>`}
         </div>
         <small class="hint">洗練：重新隨機詞綴　點金：品質升一級、多一條詞綴　強化：每級全部數值 +10%，失敗只扣靈石</small>
       </div></div>`;
@@ -546,7 +643,7 @@ function renderEquip(msg = "") {
     if (save.stone < c) { renderEquip("靈石不夠"); return; }
     save.stone -= c;
     selItem.q++;
-    selItem.base = SLOTS[selItem.slot].base === "crit" ? Math.round(selItem.base * 1.12 * 10) / 10 : Math.round(selItem.base * 1.12);
+    if (selItem.bt) setBase(selItem); else selItem.base = SLOTS[selItem.slot].base === "crit" ? Math.round(selItem.base * 1.12 * 10) / 10 : Math.round(selItem.base * 1.12);
     const [a0] = RARITY[selItem.q].aff;
     rollAffixes(selItem, Math.max(a0, Object.keys(selItem.aff).length + 1));
     nameItem(selItem); writeSave(); sfx("arrive"); renderEquip(`點金成功：${selItem.name}`);
