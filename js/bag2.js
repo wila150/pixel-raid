@@ -54,7 +54,7 @@ function b2EqBar() {
   const cell = (k) => {
     const it = save.eq[k];
     if (!slotOpen(k)) return `<span class="b2eqc lock" title="${SLOTS[k].n}（${slotLockTxt(k)}）"><small>${SLOTS[k].n}</small><i>🔒</i></span>`;
-    return `<button class="b2eqc${eqSel === "eq:" + k ? " sel" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="--c:${it ? RARITY[it.q].c : "#5a5068"}">${it ? itemIcon(it) + (it.en ? `<i class="en">+${it.en}</i>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
+    return `<button class="b2eqc${it ? " has" : ""}${eqSel === "eq:" + k ? " sel" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="--c:${it ? RARITY[it.q].c : "#5a5068"}">${it ? itemIcon(it) + (it.en ? `<i class="en">+${it.en}</i>` : "") : `<small>${SLOTS[k].n}</small>`}</button>`;
   };
   const ws = [1, 2].map((i) => { const it = typeof wsGet === "function" ? wsGet(i) : null; return `<button class="b2eqc ws" data-wsw="${i}" title="武器組 ${i + 1}${it ? "：" + it.name : ""}" style="--c:${it ? RARITY[it.q].c : "#3a3448"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b></button>`; }).join("");
   const mt = save.w.mount && typeof MOUNTS !== "undefined" && MOUNTS[save.w.mount] ? MOUNTS[save.w.mount].n : "";

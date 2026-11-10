@@ -1169,3 +1169,17 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .kfin { width: min(440px, 100%); max-height: 80vh; overflow-y: auto; background: #1a1520; border: 1px solid #8a6a46; border-radius: 10px; padding: 12px 14px; box-sizing: border-box; }
 .ov .kfsteps { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
 .ov .kfstep { padding: 6px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); } .ov .kfstep b { display: block; color: #f0e2c4; font-size: 13px; } .ov .kfstep small { font-size: 11px; }
+/* 企劃 58 行囊配色（v9.10.1）：深底、亮字、品質用左邊色條；對比 ≥ 4.5:1 */
+.ov .b2, .b2tip { --dim: #b0a48e; }
+.ov .b2 button:not(.b2eqc) { background: #241d2e; border: 1px solid #5a4a38; color: #ece4d4; }
+.ov .b2 button:not(.b2eqc).on { background: #3a2f1a; border-color: #ffd84a; color: #ffd84a; }
+.ov .b2 button:not(.b2eqc):disabled { opacity: 1; color: #6f6878; border-color: #3a3442; background: #241d2e; }
+.ov .b2 button:not(.b2eqc) small { color: var(--dim); }
+.ov .b2 button:not(.b2eqc):disabled small { color: #6f6878; }
+.ov .b2row { background: #1b1622; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); border-left: 4px solid var(--c); }
+.ov .b2row.q2, .ov .b2row.q3 { animation: b2breath2 2.6s ease-in-out infinite; }
+@keyframes b2breath2 { 0%, 100% { border-color: color-mix(in srgb, var(--c) 55%, transparent); border-left-color: color-mix(in srgb, var(--c) 75%, transparent); } 50% { border-color: var(--c); border-left-color: var(--c); } }
+.ov .b2row.open { border-color: #ffd84a; border-left-color: var(--c); }
+.ov .b2row.q0 .b2mid b { color: #f2f0f6; } .ov .b2row.q1 .b2mid b { color: #7cc4ff; } .ov .b2row.q2 .b2mid b { color: #cf9bff; } .ov .b2row.q3 .b2mid b { color: #ffa45c; }
+.ov .b2rt small { font-size: 11px; }
+.ov .b2eqc { background: #1b1622; } .ov .b2eqc.has { border: 2px solid var(--c); } .ov .b2eqc small { color: #a89c8a; }

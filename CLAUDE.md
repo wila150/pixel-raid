@@ -440,4 +440,5 @@
 - **v9.9.2 閃身接側踹（企劃 55 §10）**：`skillUsed('roll')` 設 `W0.ssRollK`；world.js 散手下一拳直接第 4 段、傷害 ×`SS_ROLL_K`（sanda.js，2），不加「一套」勢，`ssN` 歸 0；`comboGlow` 普攻亮。
 - **v9.9.3（企劃 55 §12，第 43 項結案）**：`SS_SEG` 傷害 ×1.04＝4.4／4.8／4.2／9.9。
 - **v9.10 鑰匙合成（總表第 44 項，企劃 56），11/10**：新檔 `js/keyfuse.js`（sanda.js 後）包 `renderRift`（鑰匙分頁才加）：選中的鑰匙「合成」`#kfOne`（選中那把＋同層品質最低的 2 把）、「鎖定」`#kfLock`（`k.lock`，鎖了「丟掉」變灰）、左欄「一鍵合成」`#kfAll`（`kfPlan()` 從低層往上模擬、合出來的也算）；都先跳 `.kfbox` 確認框列出用掉哪幾把。`kfOk`＝沒鎖、沒 `cor`、沒 `tj`；`kfWhy` 擋營地、cap（`riftCap()`）、不到 3 把、靈石（`KF_COST`×用掉那層）；`kfDo` 結果 `makeKey(t+1, 有玄品 30% ? 2 : 1)`。`addKey` 包裝：滿 20 把自動丟最低層時跳過鎖定的。測試 `t.js ?kf`（邏輯）、`?kfs[&cf][&sc]`（截圖）。
+- **v9.10.1 行囊配色（總表第 46 項，企劃 58）**：style.css 最後一段覆蓋 `.ov .b2`：按鈕 `button:not(.b2eqc)` 底 #241d2e／框 #5a4a38／字 #ece4d4，`.on` 金框金字底 #3a2f1a，`:disabled` 不用 opacity（字 #6f6878、框 #3a3442）；`.b2row` 底 #1b1622＋`border-left: 4px var(--c)`＋55% 框，呼吸 `b2breath2` 只動框；名字 q0–q3 #f2f0f6／#7cc4ff／#cf9bff／#ffa45c（`RARITY` 沒改）；`.b2` 的 `--dim` #b0a48e、`.b2rt small` 11px；bag2.js 裝備小格有東西加 `.has`（2px 品質色框）。測試 `t.js ?bagc[&op]`。
 - **下一項**：41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留。
