@@ -353,7 +353,7 @@ function enterWorld() {
   }
   Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0, shield: 3, en: W0.en || 0,
     roll: 0, rollDir: 0, cds: { attack: 0, spin: 0, ult: 0, roll: 0, potion: 0 }, regenAcc: 0, lavaT: 0, es: B.maxEs, esT: 0 });
-  W0.voids = W0.voids || []; W0.orbs = W0.orbs || [];
+  W0.voids = W0.voids || []; W0.orbs = W0.orbs || []; W0.barrs = []; W0.swArr = null; W0.novaP = null;
   if (W0.keepHp) { W0.hp = Math.min(B.maxHp, W0.keepHp); W0.keepHp = 0; }
   particles = []; floaters = []; shake = 0; flashT = 0; hitstop = 0;
   cam = { x: W0.x, y: W0.y, zoom: 1 };
@@ -433,7 +433,8 @@ const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上（點了天賦「
 const kcWin = () => (typeof trN === "function" && trN("kc") ? 5 : KC_WIN);
 // 企劃 64：連斬增傷拿掉（原本人人有、每 5 連斬 +2%、最多 +30% 獨立乘），改成天賦樹「連斬」群：每格每 5 連斬 +0.5%，算在 trTagMul 那池（加算）
 const kcBonus = () => { if (!save.w || typeof treeSum !== "function" || !W0) return 0; const s = treeSum(); return Math.min(s.kc || 0, Math.floor((W0.kc || 0) / 5) * (s.kcr || 0)) / 100; };
-const eAspd = () => (W0 && W0.swDom && dist(W0, W0.swDom) < W0.swDom.r ? 1.2 : 1) * (W0 && W0.dragT > 0 ? 1.4 : 1); // 企劃 35：劍域、化龍
+const ARRAY_D = 43, DOMAIN_D = 1.6, NOVA_D = 108, BLADES_D = 3.5, CYC_D = 137, TYPH_D = 5, BARR_D = 20; // 企劃 66 B 重做的 7 招（bot 校正）
+const eAspd = () => (W0 && W0.swDom && dist(W0, W0.swDom) < W0.swDom.r ? 1.12 : 1) * (W0 && W0.dragT > 0 ? 1.4 : 1); // 企劃 35：劍域、化龍
 const wDmg = (base) => { const fc = gemLv("focus"); return (typeof hitBase === "function" ? hitBase(base) : base) * B.atk * (W0.titanT > 0 ? 1.2 : 1) * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (CUR_DM || 1) * ((CUR_SL && CHAIN_DMS[CUR_SL]) || 1) * (fc ? 1.25 + 0.05 * fc : 1) * (typeof skgDmg === "function" ? skgDmg(CUR_SL) : 1); };
 const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1) * (typeof trAreaX === "function" ? trAreaX() : 1) * ((W0 && W0.shiAM) || 1); }; // 擴大／集中；天賦樹刀魂、萬法
 const AM = () => areaMul(CUR_SL);
@@ -706,20 +707,20 @@ function updateWorld(dt) {
   if (p.roll > 0) {
     p.roll -= dt;
     const ar = typeof wbArena === "function" ? wbArena() : null, wasIn = ar && Math.hypot(p.x - ar.x, p.y - ar.y) <= ar.r, ox = p.x, oy = p.y;
-    moveBody(p, Math.cos(p.rollDir) * 250 * dt, Math.sin(p.rollDir) * 250 * dt, 5);
+    moveBody(p, Math.cos(p.rollDir) * (p.rollSpd || 250) * dt, Math.sin(p.rollDir) * (p.rollSpd || 250) * dt, 5);
     if (wasIn && Math.hypot(p.x - ar.x, p.y - ar.y) > ar.r) { p.x = ox; p.y = oy; p.roll = 0; } // 打王：衝刺／後跳撞到圈邊就停
     if (p.dashHit) { CUR_SL = p.dashSl || null; CUR_DM = p.dashDm || 1; for (const m of W0.mobs) if (!m.dead && !p.dashHit.has(m) && dist(m, p) < 14 + WMOBS[m.type].r) { p.dashHit.add(m); hitMob(m, wDmg(p.dashDmg || 16), 90, p); } CUR_SL = null; CUR_DM = 1; }
     if (p.ghostT !== undefined && (p.ghostT -= dt) <= 0 && p.ghostN > 0) { p.ghostT = 0.05; p.ghostN--; W0.fires.push({ x: p.x, y: p.y, t: 0.12, r: 16, dmg: p.ghostD || 6, c: "#bfe6ff", sl: p.ghostSl || "r", dm: 1 }); } // 殘影
     if (p.iceN > 0 && (p.iceT -= dt) <= 0) { p.iceT = 0.035; p.iceN--; W0.walls.push({ x: p.x, y: p.y, t: p.iceL || 2, tick: 0, ice: 1 }); } // 冰徑
     if (p.roll <= 0) {
       if (p.dashHit && p.dashSl === "q" && B.uq.zhenyue && curWeapon() === "fist" && typeof zyCrack === "function") zyCrack(p, p.dashDmg, p.dashDm); // 企劃 57 震岳碎山拳：衝拳停下地裂
-      p.dodge = false; p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
+      p.dodge = false; p.rollSpd = 0; p.jumpT = 0; p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
       if (p.rshPend) { W0.rshT = p.rshPend; p.rshPend = 0; }
-      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * AFTER_DM(l), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
+      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * AFTER_DM(l), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); if (L.r2) { for (const m of W0.mobs) { if (m.dead) continue; const dd = dist(m, p); if (dd >= L.r + WMOBS[m.type].r && dd < L.r2 + WMOBS[m.type].r) hitMob(m, wDmg(L.dmg * L.k2) * (m.boss ? 0.8 : 1), 120, p, true); } W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.45, r: L.r2, c: "255,120,90" }); } if (L.wheel) { burst(p.x, p.y, "#ffb08a", 26, 160, 0.5); shake = Math.max(shake, 8); } CUR_SL = null; CUR_DM = 1; }
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" && W0.spinK !== "cyc" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -943,15 +944,26 @@ function updateWorld(dt) {
     const F = p.face, cs = Math.cos(F), sn = Math.sin(F);
     if (typeof eNewFx === "function" && eNewFx(k, { p, t, tx, ty, F, cs, sn, near, shoot, castLater, arcHit })) return true; // 企劃 43 新招（enew.js）
     if (k === "storm") { for (let i = 0; i < 12; i++) W0.fires.push({ x: tx + rand(-32, 32), y: ty + rand(-24, 24), t: 0.2 + i * 0.06, r: 14, dmg: 27, c: "#bfe6ff" }); sfx("volley"); }
-    else if (k === "nova") { for (let i = 0; i < 16; i++) shoot(F + (i / 16) * Math.PI * 2, { v: 240, life: 0.7, dmg: 57, kind: "sword", pierce: true, kb: 40 }); sfx("volley"); shake = Math.max(shake, 4); }
+    else if (k === "nova") { // 企劃 66 B 萬劍歸心：160 內的怪腳下金線，0.6 秒拉到身邊 60 內（精英一半、王不拉），接著 16 道劍氣從外面收回來
+      const ms = []; for (const m of W0.mobs) if (!m.dead && !m.noTarget && dist(m, p) < 160 + WMOBS[m.type].r) { const ex = Math.max(0, dist(m, p) - 60) * (m.boss ? 0 : m.elite ? 0.5 : 1); m.nvE = ex; ms.push(m); }
+      W0.novaP = { t: 0.6, ms }; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.6, r: 160, c: "255,220,120" }); sfx("arrive");
+      castLater(0.6, () => { const R = 150; for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; shoot(a + Math.PI, { x: W0.x + Math.cos(a) * R, y: W0.y - 3 + Math.sin(a) * R, v: 260, life: 0.85, dmg: NOVA_D, kind: "sword", pierce: true, kb: 0 }); } sfx("volley"); shake = Math.max(shake, 4); });
+    }
     else if (k === "judg") { W0.fires.push({ x: tx, y: ty, t: 0.6, r: 40, dmg: 120, c: "#e8f4ff" }); W0.rings.push({ x: tx, y: ty, t: 0, max: 0.6, r: 40, c: "230,240,255" }); sfx("arrive"); }
     else if (k === "blizz") { for (let i = 0; i < 10; i++) W0.fires.push({ x: tx + rand(-36, 36), y: ty + rand(-26, 26), t: 0.2 + i * 0.13, r: 20, dmg: 19.6, c: "#bfefff", slow: 2 }); sfx("volley"); }
     else if (k === "chainl") { shoot(F, { v: 260, life: 1.2, dmg: 72, kind: "orb", pierce: false, kb: 30, bnAdd: 6 }); bolts.push({ x: p.x, y: p.y, life: 0.2 }); sfx("crit"); }
     else if (k === "inferno") { for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; W0.walls.push({ x: p.x + Math.cos(a) * 40, y: p.y + Math.sin(a) * 30, t: 3, tick: 0, mul: 1.3 }); } sfx("break"); }
-    else if (k === "barr") { for (let w = 0; w < 3; w++) castLater(w * 0.25, () => { for (let i = -3; i <= 3; i++) shoot(p.face + i * 0.12, { v: 300, life: 0.6, dmg: 8, kind: "arrow", pierce: false, kb: 20 }); sfx("volley"); }); }
+    else if (k === "barr") { // 企劃 66 B 千鈞箭陣：目標一帶落一片箭，留下 4 秒拒馬陣（緩速、每 0.5 秒受傷）
+      const bx = tx, by = ty, r = 60 * AM(); W0.rings.push({ x: bx, y: by, t: 0, max: 0.4, r, c: "255,230,170" });
+      for (let i = 0; i < 14; i++) particles.push({ x: bx + rand(-r, r) * 0.8, y: by - 60 + rand(-10, 10), vx: 0, vy: 150, life: 0.4, max: 0.4, color: "#f0e0b0", size: 2 });
+      castLater(0.4, () => { const st = []; for (let i = 0; i < 12; i++) { const a = rand(0, 6.28), d = Math.sqrt(Math.random()) * r * 0.9; st.push([Math.cos(a) * d, Math.sin(a) * d * 0.6, rand(-0.4, 0.4)]); } W0.barrs.push({ x: bx, y: by, r, t: 4, tick: 0, st, sl: CUR_SL, dm: CUR_DM }); sfx("volley"); shake = Math.max(shake, 3); });
+    }
     else if (k === "seekr") { for (let i = 0; i < 8; i++) shoot(F + (i - 3.5) * 0.17, { v: 260, life: 1.0, dmg: 11, kind: "arrow", pierce: false, kb: 20, home: true }); sfx("volley"); }
     else if (k === "star") { for (let i = 1; i <= 5; i++) W0.fires.push({ x: p.x + cs * i * 30, y: p.y + sn * i * 30, t: 0.25 + i * 0.1, r: 24, dmg: 40, c: "#ffe9a0" }); sfx("volley"); }
-    else if (k === "cyclone") { W0.spinT = 2; W0.spinTick = 0; W0.spinK = "cyc"; sfx("volley"); }
+    else if (k === "cyclone") { // 企劃 66 B 天刀旋：跳起 0.5 秒（無敵、往前 60），落地刀光巨輪砸地 r80＋外圈 r130 衝擊波 40%
+      if (t) p.face = angTo(p, t); p.rollDir = p.face; p.roll = 0.5; p.rollSpd = 120; p.iframe = Math.max(p.iframe, 0.55); p.jumpT = 0.5;
+      p.land = { r: 80 * AM(), dmg: CYC_D, r2: 130 * AM(), k2: 0.4, sl: CUR_SL, dm: CUR_DM, wheel: 1 }; sfx("dash");
+    }
     else if (k === "rift") { for (let i = 1; i <= 8; i++) W0.fires.push({ x: p.x + cs * i * 20, y: p.y + sn * i * 20, t: 0.05 + i * 0.05, r: 20, dmg: 34, c: "#d8c8a0" }); sfx("crit"); shake = Math.max(shake, 6); }
     else if (k === "exec") {
       const r = 60 * AM(); p.swing = p.swingMax = 0.3; p.swingR = 44;
@@ -961,10 +973,10 @@ function updateWorld(dt) {
     else if (k === "hund") { for (let i = 0; i < 12; i++) castLater(i * 0.08, () => { const tg = near(60); if (tg) p.face = angTo(p, tg); p.swing = p.swingMax = 0.08; p.swingR = 14; arcHit(26, 0.9, 9, 20); sfx("hit"); }); }
     else if (k === "dragon") { const tg = near(140); if (tg) p.face = p.rollDir = angTo(p, tg); else p.rollDir = F; p.roll = tg ? clamp((dist(p, tg) - 6) / 250, 0.06, 0.5) : 0.2; p.iframe = Math.max(p.iframe, 0.3); p.land = { r: 50, dmg: 80 }; sfx("dash"); }
     else if (k === "gong") { shoot(F, { v: 240, life: 0.7, dmg: 70, kind: "big", pierce: true, kb: 120 }); sfx("crit"); shake = Math.max(shake, 4); }
-    else if (k === "typh") { for (const da of [-0.4, 0, 0.4]) W0.tornados.push({ x: p.x + Math.cos(F + da) * 14, y: p.y + Math.sin(F + da) * 14, vx: Math.cos(F + da) * 45, vy: Math.sin(F + da) * 45, t: 2, tick: 0, dmg: 5.5 }); sfx("volley"); }
+    else if (k === "typh") { W0.tornados = W0.tornados.filter((o) => !(o.typh && !o.ghost)); W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 3, tick: 0, tk: 0.3, fol: 1, typh: 1, pr: 120, pull: 70, hr: 60, dmg: TYPH_D, sc: 2.6 }); sfx("volley"); } // 企劃 66 B 颱風：腳下大颶風 3 秒、120 內吸怪
     else if (k === "bloom") { const h = Math.min(Math.round(p.maxHp * 0.15 * (CUR_DM < 1 ? 0.4 : 1) * brkMul()), p.maxHp - p.hp); p.hp += h; if (h) floatText(p.x, p.y - 16, `+${h}`, "#7dff8a"); for (let i = 0; i < 12; i++) shoot((i / 12) * Math.PI * 2, { v: 200, life: 0.9, dmg: 8, kind: "wind", pierce: true, kb: 20, back: 0.4 }); sfx("heal"); }
     // 企劃 35：中期 E（Lv.20／35／55）
-    else if (k === "array") { W0.orbs = W0.orbs.filter((o) => !o.eArr); for (let i = 0; i < 4; i++) W0.orbs.push({ t: 5, hit: new Map(), dmg: 55, eArr: 1 }); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 26, c: "200,230,255" }); sfx("arrive"); }
+    else if (k === "array") { const ax = t ? t.x : p.x + Math.cos(F) * 60, ay = t ? t.y : p.y + Math.sin(F) * 60; W0.swArr = { x: ax, y: ay, r: 50 * AM(), t: 5, tick: 0, sl: CUR_SL, dm: CUR_DM }; W0.rings.push({ x: ax, y: ay, t: 0, max: 0.3, r: 50 * AM(), c: "200,230,255" }); sfx("arrive"); } // 企劃 66 B 劍陣：插在地上的一圈靈劍
     else if (k === "cold") {
       const L = 160, r0 = 16 * AM(); let n = 0;
       for (const m of W0.mobs) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y, along = dx * cs + dy * sn, perp = Math.abs(-dx * sn + dy * cs); if (along > -6 && along < L + 6 && perp < r0 + WMOBS[m.type].r) { hitMob(m, wDmg(90), 60, p, true); n++; } }
@@ -972,7 +984,7 @@ function updateWorld(dt) {
       moveBody(p, cs * L, sn * L, 5); p.iframe = Math.max(p.iframe, 0.3); afterAt(p.x, p.y, 30, 90);
       sfx("crit"); shake = Math.max(shake, n ? 5 : 2); flashT = 0.05; flashColor = "220,240,255";
     }
-    else if (k === "domain") { W0.swDom = { x: p.x, y: p.y, r: 60 * AM(), t: 5, tick: 0, sl: CUR_SL, dm: CUR_DM }; sfx("arrive"); }
+    else if (k === "domain") { W0.swDom = { x: p.x, y: p.y, r: 40 * AM(), t: 5, tick: 0, sl: CUR_SL, dm: CUR_DM, fol: 1 }; sfx("arrive"); } // 企劃 66 B 劍域：跟著你走
     else if (k === "freeze") {
       const rr = 80 * AM(); { let nb = null, bd = rr + 20; for (const m of W0.mobs) if (!m.dead && dist(m, p) < bd) { bd = dist(m, p); nb = m; } if (nb && !(mouseAim() && t)) p.face = angTo(p, nb); } // 沒瞄到也朝最近的怪
       const F2 = p.face;
@@ -990,7 +1002,7 @@ function updateWorld(dt) {
       for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.1) hitMob(m, wDmg(60), 230, p, true);
       afterAt(p.x + cs * 30, p.y + sn * 30, rr * 0.7, 60); sfx("break"); shake = Math.max(shake, 7);
     }
-    else if (k === "blades") { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; W0.fires.push({ x: p.x + Math.cos(a) * 34, y: p.y + Math.sin(a) * 26, t: 1, r: 22, dmg: 44.8, c: "#d8c8a0" }); } sfx("break"); }
+    else if (k === "blades") { W0.orbs = W0.orbs.filter((o) => !o.blade); for (let i = 0; i < 6; i++) W0.orbs.push({ t: 5, hit: new Map(), dmg: BLADES_D, eArr: 1, blade: 1, rad: 34, cd: 0.25 }); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: 34, c: "220,60,60" }); sfx("break"); } // 企劃 66 B 刀陣：6 把血色刀影繞身 5 秒
     else if (k === "titan") { W0.titanT = 5; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r: 26, c: "255,190,110" }); floatText(p.x, p.y - 20, "霸體", "#ffbe6e"); sfx("arrive"); }
     else if (k === "palm") { W0.fires.push({ x: p.x + cs * 38, y: p.y + sn * 38, t: 0.12, r: 42, dmg: 66, c: "#ffd08a", kb: 200 }); p.swing = p.swingMax = 0.15; p.swingR = 20; sfx("break"); shake = Math.max(shake, 6); }
     else if (k === "thous") { for (let i = 0; i < 15; i++) { const d = rand(20, 75), sd = rand(-26, 26); W0.fires.push({ x: p.x + cs * d - sn * sd, y: p.y + sn * d + cs * sd, t: 0.15 + i * 0.1, r: 16, dmg: 12, c: "#ffd08a", kb: 20 }); } sfx("volley"); }
@@ -1066,7 +1078,16 @@ function updateWorld(dt) {
       if (tg) { T.cd = 0.3; const sx = p.x, sy = p.y; p.x = T.x; p.y = T.y + 3; W0.noAim = true; try { cast(T.sl || "e", () => shoot(angTo(p, tg), { v: 320, life: 0.6, dmg: 4, kind: "arrow", pierce: false, kb: 15 }), T.dm || 1); } finally { p.x = sx; p.y = sy; W0.noAim = false; } } }
     if (T.t <= 0) W0.turret = null;
   }
-  if (W0.swDom) { const D = W0.swDom; D.t -= dt; D.tick -= dt; if (D.tick <= 0) { D.tick = 0.5; CUR_SL = D.sl || "e"; CUR_DM = D.dm || 1; for (const m of W0.mobs) if (!m.dead && dist(m, D) < D.r + WMOBS[m.type].r) hitMob(m, wDmg(4), 0, D, true); CUR_SL = null; CUR_DM = 1; } if (D.t <= 0) W0.swDom = null; }
+  if (W0.swDom) { const D = W0.swDom; if (D.fol) { D.x = p.x; D.y = p.y; } D.t -= dt; D.tick -= dt; if (D.tick <= 0) { D.tick = D.fol ? 0.2 : 0.5; CUR_SL = D.sl || "e"; CUR_DM = D.dm || 1; for (const m of W0.mobs) if (!m.dead && dist(m, D) < D.r + WMOBS[m.type].r) hitMob(m, wDmg(D.fol ? DOMAIN_D : 4), 0, D, true); CUR_SL = null; CUR_DM = 1; } if (D.t <= 0) W0.swDom = null; }
+  if (W0.swArr) { const D = W0.swArr; D.t -= dt; D.tick -= dt; // 企劃 66 B 劍陣：每 0.3 秒，6 把靈劍各切陣裡一隻（最近的先）
+    if (D.tick <= 0) { D.tick = 0.3; CUR_SL = D.sl || "e"; CUR_DM = D.dm || 1; const ins = W0.mobs.filter((m) => !m.dead && dist(m, D) < D.r + WMOBS[m.type].r).sort((a, b) => dist(a, D) - dist(b, D)).slice(0, 6); for (const m of ins) { hitMob(m, wDmg(ARRAY_D), 0, D, true); bolts.push({ x: m.x, y: m.y, life: 0.08 }); } CUR_SL = null; CUR_DM = 1; }
+    if (D.t <= 0) W0.swArr = null; }
+  if (W0.novaP) { const N = W0.novaP; N.t -= dt; for (const m of N.ms) { if (m.dead || !(m.nvE > 0)) continue; const st = Math.min(m.nvE, (m.nvE / Math.max(dt, N.t + dt)) * dt), a = angTo(m, p); moveBody(m, Math.cos(a) * st, Math.sin(a) * st, WMOBS[m.type].r); m.nvE -= st; } if (N.t <= 0) W0.novaP = null; } // 萬劍歸心拉怪
+  W0.barrs = W0.barrs || [];
+  for (const b of W0.barrs) { b.t -= dt; b.tick -= dt; CUR_SL = b.sl || "e"; CUR_DM = b.dm || 1; const hit = b.tick <= 0; if (hit) b.tick = 0.5; // 拒馬陣
+    for (const m of W0.mobs) if (!m.dead && dist(m, b) < b.r + WMOBS[m.type].r) { m.slowT = Math.max(m.slowT || 0, 0.3); if (hit) hitMob(m, wDmg(BARR_D), 0, b, true); }
+    CUR_SL = null; CUR_DM = 1; }
+  W0.barrs = W0.barrs.filter((b) => b.t > 0);
   if (W0.titanT > 0) W0.titanT -= dt;
   if (W0.dragT > 0) W0.dragT -= dt;
   if (W0.healZ) { const H = W0.healZ; H.t -= dt; H.fx = (H.fx || 0) - dt; if (H.fx <= 0 && dist(p, H) < H.r) { H.fx = 0.8; fxPlay("heal", 0, 0, 26, 0.4, { follow: 1 }); } if (dist(p, H) < H.r && p.hp < p.maxHp) { H.acc = (H.acc || 0) + p.maxHp * 0.03 * dt * brkMul(); if (H.acc >= 1) { const h = Math.min(Math.floor(H.acc), p.maxHp - p.hp); p.hp += h; H.acc -= Math.floor(H.acc); } } if (H.t <= 0) W0.healZ = null; }
@@ -1213,15 +1234,16 @@ function updateWorld(dt) {
   if (W0.focusT > 0) W0.focusT -= dt;
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
-    if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const sr = 40 * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : W0.spinK === "cyc" ? 8 : 17) * (m.boss ? 0.8 : 1), 60, p, true); CUR_SL = null; CUR_DM = 1; sfx("dash"); }
+    if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const sr = 40 * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : 17) * (m.boss ? 0.8 : 1), 60, p, true); CUR_SL = null; CUR_DM = 1; sfx("dash"); }
   }
   for (const t of W0.tornados) {
     t.t -= dt; t.tick -= dt; CUR_SL = t.sl || null; CUR_DM = t.dm || 1;
-    if (t.orbit !== undefined) { const o = t.own || p; t.orbit += dt * 6; t.x = o.x + Math.cos(t.orbit) * 22; t.y = o.y + Math.sin(t.orbit) * 16; } // 風陣：繞著自己轉
-    else moveBody(t, t.vx * dt, t.vy * dt, 3);
+    if (t.fol) { const o = t.own || p; t.x = o.x; t.y = o.y; }
+    else if (t.orbit !== undefined) { const o = t.own || p; t.orbit += dt * 6; t.x = o.x + Math.cos(t.orbit) * 22; t.y = o.y + Math.sin(t.orbit) * 16; } // 風陣：繞著自己轉
+    else if (!(t.hold > 0 && t.stopT !== undefined && t.t <= t.hold)) moveBody(t, t.vx * dt, t.vy * dt, 3);
     if (t.orbit !== undefined && !t.ghost) for (const s of W0.eshots) if (Math.hypot(s.x - p.x, s.y - p.y) < 36) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } // 吹散敵方子彈
-    if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40)) { const a = angTo(m, t), f = t.pull || 40; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg((t.dmg || 13) * (typeof TORN_K !== "undefined" ? TORN_K : 1)), 0, t, true); DOT_HIT = false; if (t.boom && wEleGem() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
+    if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40) && !(t.typh && m.boss)) { const a = angTo(m, t), f = (t.pull || 40) * (t.typh && m.elite ? 0.5 : 1); if (t.typh && dist(m, t) < 18) continue; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
+    if (t.tick <= 0 && !t.ghost) { t.tick = t.tk || 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg((t.dmg || 13) * (typeof TORN_K !== "undefined" ? TORN_K : 1)), 0, t, true); DOT_HIT = false; if (t.boom && wEleGem() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
     if (t.t <= 0 && t.boom) { fxBoom(t.x, t.y, 34, "190,220,255"); bolts.push({ x: t.x, y: t.y, life: 0.25 }); shake = Math.max(shake, 4); sfx("crit"); if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 34 + WMOBS[m.type].r) hitMob(m, wDmg(t.boom), 80, t, true); }
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }
@@ -1242,8 +1264,8 @@ function updateWorld(dt) {
   W0.orbs = W0.orbs.filter((o) => (o.t -= dt) > 0);
   W0.orbClk = (W0.orbClk || 0) + dt; const oc = W0.orbClk; // 自己的時鐘（不靠畫面的 time，機器人直接呼叫 updateWorld 也會轉）
   W0.orbs.forEach((o, i) => { // 環身飛劍
-    const a = oc * 4 + (i / W0.orbs.length) * Math.PI * 2; o.x = p.x + Math.cos(a) * 24; o.y = p.y - 2 + Math.sin(a) * 18; o.a = a + Math.PI / 2;
-    for (const m of W0.mobs) if (!m.dead && dist(m, o) < WMOBS[m.type].r + 5 && (o.hit.get(m) || 0) < oc) { o.hit.set(m, oc + (o.eArr ? 0.5 : 0.35)); hitMob(m, wDmg(o.dmg || 5), o.eArr ? 0 : 20, p, true); } // 劍陣不擊退（不然怪被推出圈外就打不到）
+    const a = oc * 4 + (i / W0.orbs.length) * Math.PI * 2, rr = o.rad || 24; o.x = p.x + Math.cos(a) * rr; o.y = p.y - 2 + Math.sin(a) * rr * 0.75; o.a = a + Math.PI / 2;
+    for (const m of W0.mobs) if (!m.dead && dist(m, o) < WMOBS[m.type].r + (o.blade ? 9 : 5) && (o.hit.get(m) || 0) < oc) { o.hit.set(m, oc + (o.cd || (o.eArr ? 0.5 : 0.35))); hitMob(m, wDmg(o.dmg || 5), o.eArr ? 0 : 20, p, true); } // 劍陣不擊退（不然怪被推出圈外就打不到）
   });
 
   // 怪物：只更新玩家附近的
@@ -1613,7 +1635,7 @@ function renderWorld() {
         drawHeroAura(p);
         if (rd) drawMount(rd, p.x, p.y, p.flip, p.walk);
         if (behind && !rd) drawHeldWeapon(p, wt);
-        ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y) - (rd ? 6 : 0)); if (p.flip) ctx.scale(-1, 1);
+        ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y) - (rd ? 6 : 0) - (p.jumpT > 0 && p.roll > 0 ? Math.round(Math.sin((1 - p.roll / 0.5) * Math.PI) * 14) : 0)); if (p.flip) ctx.scale(-1, 1);
         ctx.drawImage(heroImg(rd ? 0 : Math.floor(p.walk) % 2), -6, -9); ctx.restore();
         if (!behind && !rd) drawHeldWeapon(p, wt);
         if (!rd) drawSlash(p, wt);
@@ -1630,7 +1652,7 @@ function renderWorld() {
     for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(v.x, v.y, R * (0.5 + i * 0.22), time * (6 + i) + i, time * (6 + i) + i + 2); ctx.stroke(); }
     ctx.restore(); ctx.globalAlpha = 1;
   }
-  for (const o of W0.orbs) { if (o.x === undefined) continue; ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a); glow(0, 0, 7, "150,210,255", 0.5); ctx.fillStyle = "#e8f4ff"; ctx.fillRect(-5, -1, 9, 2); ctx.fillStyle = "#ffd84a"; ctx.fillRect(-6, -2, 2, 4); ctx.restore(); }
+  for (const o of W0.orbs) { if (o.x === undefined) continue; ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a); if (o.blade) { glow(0, 0, 10, "230,50,50", 0.55); ctx.fillStyle = "#ffb0a0"; ctx.fillRect(-7, -1.5, 12, 3); ctx.fillStyle = "#c02020"; ctx.fillRect(-7, 0.5, 12, 1); ctx.fillStyle = "#3a1010"; ctx.fillRect(-9, -2, 2, 4); } else { glow(0, 0, 7, "150,210,255", 0.5); ctx.fillStyle = "#e8f4ff"; ctx.fillRect(-5, -1, 9, 2); ctx.fillStyle = "#ffd84a"; ctx.fillRect(-6, -2, 2, 4); } ctx.restore(); }
   for (const s of W0.pshots) {
     ctx.globalAlpha = s.ghost ? allyA() : 1;
     if (s.kind === "sword" && fxLoop("qi", s.x, s.y, 30, s.a)) {}
@@ -1671,7 +1693,7 @@ function renderWorld() {
     if (t.ghost && allyA() < 0.5) continue;
     glow(t.x, t.y - 8, 16, "160,255,200", 0.25);
     ctx.save(); ctx.globalCompositeOperation = "lighter";
-    for (let i = 0; i < 5; i++) { ctx.strokeStyle = `rgba(190,255,220,${0.8 - i * 0.1})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(t.x + Math.sin(time * 8 + i) * 1.5, t.y - i * 4, 4 + i * 2.2, 1.5 + i * 0.6, 0, time * 12 + i, time * 12 + i + 4.5); ctx.stroke(); }
+    { const k = t.sc || 1; for (let i = 0; i < 5; i++) { ctx.strokeStyle = `rgba(190,255,220,${0.8 - i * 0.1})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(t.x + Math.sin(time * 8 + i) * 1.5 * k, t.y - i * 4 * k, (4 + i * 2.2) * k, (1.5 + i * 0.6) * k, 0, time * 12 + i, time * 12 + i + 4.5); ctx.stroke(); } }
     ctx.restore();
     for (let i = 0; i < 3; i++) { const a = time * 9 + i * 2.1; ctx.fillStyle = "#6fd08a"; ctx.fillRect(t.x + Math.cos(a) * (6 + i * 3), t.y - 4 - i * 5 + Math.sin(a) * 2, 2, 1); }
   }
@@ -1681,6 +1703,9 @@ function renderWorld() {
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = `rgba(${c},${1 - q})`; ctx.lineWidth = 4 * (1 - q) + 1; ctx.beginPath(); ctx.arc(r.x, r.y, r.r * q, 0, Math.PI * 2); ctx.stroke();
     ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(r.x, r.y + 4, r.r * q * 1.1, r.r * q * 0.5, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
   }
+  if (W0.swArr) { const D = W0.swArr, a = Math.min(1, D.t * 2); ctx.save(); ctx.globalAlpha = a * 0.55; ctx.strokeStyle = "#bfe0ff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(D.x, D.y + 2, D.r, D.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = a; for (let i = 0; i < 6; i++) { const q = (i / 6) * Math.PI * 2, sx = D.x + Math.cos(q) * D.r * 0.9, sy = D.y + 2 + Math.sin(q) * D.r * 0.54; glow(sx, sy - 5, 6, "150,210,255", 0.4); ctx.fillStyle = "#e8f4ff"; ctx.fillRect(sx - 1, sy - 11, 2, 10); ctx.fillStyle = "#ffd84a"; ctx.fillRect(sx - 2.5, sy - 12, 5, 1.5); } ctx.restore(); } // 劍陣
+  for (const b of W0.barrs || []) { const a = Math.min(1, b.t * 2); ctx.save(); ctx.globalAlpha = a * 0.4; ctx.strokeStyle = "#f0d890"; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(b.x, b.y + 2, b.r, b.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = a; for (const [dx, dy, r] of b.st) { const x = b.x + dx, y = b.y + dy; ctx.strokeStyle = "#6a4a2a"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + r * 8, y - 8); ctx.stroke(); ctx.fillStyle = "#e8e0d0"; ctx.fillRect(x + r * 8 - 1, y - 10, 2, 2); } ctx.restore(); } // 拒馬陣
+  if (W0.novaP) { ctx.save(); ctx.strokeStyle = `rgba(255,220,110,${0.5 + 0.3 * Math.sin(time * 20)})`; ctx.lineWidth = 1; for (const m of W0.novaP.ms) if (!m.dead) { ctx.beginPath(); ctx.moveTo(m.x, m.y + 3); ctx.lineTo(W0.x, W0.y + 3); ctx.stroke(); ctx.beginPath(); ctx.ellipse(m.x, m.y + 4, 7, 3, 0, 0, Math.PI * 2); ctx.stroke(); } ctx.restore(); } // 萬劍歸心金線
   if (W0.swDom) { const D = W0.swDom, a = Math.min(1, D.t * 2); ctx.save(); ctx.globalAlpha = a * 0.5; ctx.strokeStyle = "#cfe6ff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(D.x, D.y + 2, D.r, D.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.ellipse(D.x, D.y + 2, D.r * 0.7, D.r * 0.42, time, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); for (let i = 0; i < 8; i++) { const q = time * 0.8 + (i / 8) * Math.PI * 2; ctx.fillStyle = "#e8f4ff"; ctx.fillRect(D.x + Math.cos(q) * D.r * 0.85 - 1, D.y + 2 + Math.sin(q) * D.r * 0.51 - 4, 2, 7); } ctx.restore(); }
   if (W0.healZ) { const H = W0.healZ; ctx.save(); ctx.globalAlpha = Math.min(1, H.t * 2) * (0.45 + 0.15 * Math.sin(time * 6)); glow(H.x, H.y + 2, H.r, "150,255,190", 0.25); ctx.strokeStyle = "#a0ffbe"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(H.x, H.y + 2, H.r, H.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore(); }
   if (W0.wwall) { const V = W0.wwall, nx = -Math.sin(V.a), ny = Math.cos(V.a); ctx.save(); ctx.globalAlpha = Math.min(1, V.t * 2) * 0.75; ctx.strokeStyle = "#c8f0e0"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(V.x - nx * V.half, V.y - ny * V.half); ctx.lineTo(V.x + nx * V.half, V.y + ny * V.half); ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = "#ffffff"; for (let i = -3; i <= 3; i++) { const o = Math.sin(time * 10 + i) * 4; ctx.beginPath(); ctx.moveTo(V.x + nx * i * V.half / 3.5, V.y + ny * i * V.half / 3.5 - 6 + o); ctx.lineTo(V.x + nx * i * V.half / 3.5, V.y + ny * i * V.half / 3.5 + 4 + o); ctx.stroke(); } ctx.restore(); }

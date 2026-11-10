@@ -89,12 +89,12 @@ const TRI = {
 };
 // 企劃 21 第二版：每把武器再 3 招（E 格，Lv.70／85／100）；企劃 35：中期再 3 招（Lv.20／35／55，排在前面）
 const TRI_E = {
-  sword: [{ k: "array", n: "劍陣", d: "4 把飛劍繞身 5 秒，自動砍靠近的怪（持續、近戰）" }, { k: "cold", n: "一劍光寒", d: "往前瞬斬一條直線 160，路上全砍（位移、近戰）" }, { k: "domain", n: "劍域", d: "腳下 5 秒劍陣：裡面的怪受傷 +20%，你站在裡面攻速 +20%（範圍、輔助）" }, { k: "storm", n: "劍雨", d: "目標一帶落下 12 把飛劍（範圍清怪）" }, { k: "nova", n: "萬劍歸心", d: "16 道穿透劍氣往四面八方飛（投射）" }, { k: "judg", n: "天劍", d: "0.6 秒後一把巨劍砸在目標，傷害極高（範圍、打王）" }],
+  sword: [{ k: "array", n: "劍陣", d: "在目標一帶插下一圈靈劍 5 秒，每 0.3 秒切陣裡的怪（最多 6 隻）；你走開陣還在（持續、範圍）" }, { k: "cold", n: "一劍光寒", d: "往前瞬斬一條直線 160，路上全砍（位移、近戰）" }, { k: "domain", n: "劍域", d: "跟著你走的劍氣場 5 秒：每 0.2 秒切身邊的怪，裡面的怪受傷 +20%，你攻速 +12%（近戰、輔助）" }, { k: "storm", n: "劍雨", d: "目標一帶落下 12 把飛劍（範圍清怪）" }, { k: "nova", n: "萬劍歸心", d: "把 160 內的小怪拉到身邊（精英拉一半、王不拉），接著 16 道劍氣從外面收回來穿過怪群（投射、範圍）" }, { k: "judg", n: "天劍", d: "0.6 秒後一把巨劍砸在目標，傷害極高（範圍、打王）" }],
   staff: [{ k: "freeze", n: "冰封", d: "前方扇形冰霜，打中的怪受傷害並冰凍 1.5 秒、之後緩速（王只凍 0.5 秒）（範圍、控場）" }, { k: "tstorm", n: "雷暴", d: "3 秒內身邊隨機落 12 道雷（範圍、持續）" }, { k: "hole", n: "黑洞", d: "目標點吸怪 2 秒再爆炸（範圍、聚怪）" }, { k: "blizz", n: "暴風雪", d: "目標一帶 1.5 秒內落下 10 團冰，打中變慢（範圍）" }, { k: "chainl", n: "雷鏈", d: "一顆雷球打中後連跳 6 隻（投射）" }, { k: "inferno", n: "焚天", d: "身邊一圈火牆燒 3 秒（持續）" }],
-  bow: [{ k: "blast", n: "爆裂箭", d: "一支箭打中大爆炸（投射、範圍）" }, { k: "turret", n: "弩台", d: "放一座弩台 6 秒自動射附近的怪（召喚）" }, { k: "pierce9", n: "九天穿雲", d: "0.5 秒蓄力後一道貫穿全畫面的光箭（投射、打王）" }, { k: "barr", n: "千鈞箭陣", d: "連射 3 波，每波 7 支箭（投射）" }, { k: "seekr", n: "天狼追魂", d: "8 支追蹤箭（投射、不用瞄）" }, { k: "star", n: "墜星箭", d: "往前一排落下 5 顆星（範圍）" }],
-  blade: [{ k: "fury", n: "怒斬", d: "往前一刀大扇形，打中的怪擊飛（近戰、範圍）" }, { k: "blades", n: "刀陣", d: "身邊插 6 把刀，1 秒後一起炸（範圍）" }, { k: "titan", n: "霸體", d: "5 秒受傷 −30%、傷害 +20%（輔助）" }, { k: "cyclone", n: "天刀旋", d: "轉 2 秒、移動不變慢，可以邊走邊割草（近戰、持續）" }, { k: "rift", n: "斷界", d: "往前一路 8 段炸開（範圍）" }, { k: "exec", n: "斬魂", d: "大範圍一刀；剩 30% 血以下的怪傷害 ×2（近戰、打王）" }],
+  bow: [{ k: "blast", n: "爆裂箭", d: "一支箭打中大爆炸（投射、範圍）" }, { k: "turret", n: "弩台", d: "放一座弩台 6 秒自動射附近的怪（召喚）" }, { k: "pierce9", n: "九天穿雲", d: "0.5 秒蓄力後一道貫穿全畫面的光箭（投射、打王）" }, { k: "barr", n: "千鈞箭陣", d: "目標一帶落下一片箭，留下 4 秒拒馬陣：裡面的怪變慢、每 0.5 秒受傷（範圍、持續）" }, { k: "seekr", n: "天狼追魂", d: "8 支追蹤箭（投射、不用瞄）" }, { k: "star", n: "墜星箭", d: "往前一排落下 5 顆星（範圍）" }],
+  blade: [{ k: "fury", n: "怒斬", d: "往前一刀大扇形，打中的怪擊飛（近戰、範圍）" }, { k: "blades", n: "刀陣", d: "6 把血色刀影繞身旋轉 5 秒，碰到的怪每 0.25 秒一下（近戰、持續）" }, { k: "titan", n: "霸體", d: "5 秒受傷 −30%、傷害 +20%（輔助）" }, { k: "cyclone", n: "天刀旋", d: "跳起 0.5 秒（無敵、往前 60），落地刀光巨輪砸地：大範圍重擊＋外圈衝擊波擊退（位移、範圍）" }, { k: "rift", n: "斷界", d: "往前一路 8 段炸開（範圍）" }, { k: "exec", n: "斬魂", d: "大範圍一刀；剩 30% 血以下的怪傷害 ×2（近戰、打王）" }],
   fist: [{ k: "palm", n: "金剛掌", d: "前方巨大掌印衝擊波，把怪震退（範圍）" }, { k: "thous", n: "千手", d: "前方 1.5 秒落下 15 個小掌印（範圍、持續）" }, { k: "dragf", n: "化龍", d: "5 秒攻速 +40%、每拳多一道龍氣（輔助）" }, { k: "hund", n: "百裂拳", d: "1 秒內對前面打 12 拳（近戰）" }, { k: "dragon", n: "升龍", d: "衝到怪身上，落地大範圍（位移、範圍）" }, { k: "gong", n: "氣功炮", d: "一顆大氣彈穿透一整排（投射）" }],
-  fan: [{ k: "healz", n: "迴風陣", d: "腳下 4 秒小陣，站在裡面每秒回 3% 生命（輔助）" }, { k: "petal", n: "花舞", d: "前方錐形花瓣 2 秒持續打（持續）" }, { k: "wwall", n: "天風壁", d: "面前一道風牆 4 秒，擋住所有敵方子彈（防禦）" }, { k: "typh", n: "颱風", d: "放出 3 道旋風（持續）" }, { k: "bloom", n: "花雨", d: "回 15% 血，12 道風刃往四周飛再飛回來（投射）" }, { k: "zephyr", n: "清風結界", d: "旋風繞著自己轉 5 秒（持續）" }],
+  fan: [{ k: "healz", n: "迴風陣", d: "腳下 4 秒小陣，站在裡面每秒回 3% 生命（輔助）" }, { k: "petal", n: "花舞", d: "前方錐形花瓣 2 秒持續打（持續）" }, { k: "wwall", n: "天風壁", d: "面前一道風牆 4 秒，擋住所有敵方子彈（防禦）" }, { k: "typh", n: "颱風", d: "腳下一個大颶風 3 秒，把 120 內的小怪吸過來（精英一半、王不吸），每 0.3 秒切一次（範圍、持續）" }, { k: "bloom", n: "花雨", d: "回 15% 血，12 道風刃往四周飛再飛回來（投射）" }, { k: "zephyr", n: "清風結界", d: "旋風繞著自己轉 5 秒（持續）" }],
 };
 for (const wt in TRI_E) TRI[wt].e = TRI_E[wt];
 // 開放等級（第 i 張卡）；E＝Lv.5
@@ -156,12 +156,12 @@ const TRI_BASE_D = { a: "原本的普攻", q: "原本的 Q 招", r: "原本的�
 // 標籤：p 投射、m 近戰、a 範圍、v 位移、d 持續、b 輔助
 const TAG_N = { p: "投射", m: "近戰", a: "範圍", v: "位移", d: "持續", b: "輔助" };
 const SK_TAG = {
-  sword: { a: { base: "m", dance: "m", ray: "mp", break: "m" }, q: { base: "p", wan: "p", boom: "p", rush: "vm" }, e: { array: "md", cold: "vm", domain: "ab", base: "a", storm: "a", nova: "p", judg: "a" } },
+  sword: { a: { base: "m", dance: "m", ray: "mp", break: "m" }, q: { base: "p", wan: "p", boom: "p", rush: "vm" }, e: { array: "ad", cold: "vm", domain: "mb", base: "a", storm: "a", nova: "pa", judg: "a" } },
   staff: { a: { base: "p", split: "p", frost: "p", burst: "pa" }, q: { base: "a", shower: "a", doom: "a", wall: "da" }, e: { freeze: "a", tstorm: "ad", hole: "a", base: "a", blizz: "ad", chainl: "p", inferno: "da" } },
-  bow: { a: { base: "p", tri3: "p", home: "p", snipe: "p" }, q: { base: "p", rain: "a", refr: "p", swal: "vp" }, e: { blast: "pa", turret: "p", pierce9: "p", base: "p", barr: "p", seekr: "p", star: "a" } },
-  blade: { a: { base: "m", sweep: "m", quake: "m", crack: "m" }, q: { base: "md", gale: "md", whirl: "ma", leap: "va" }, e: { fury: "ma", blades: "a", titan: "b", base: "a", cyclone: "md", rift: "a", exec: "m" } },
+  bow: { a: { base: "p", tri3: "p", home: "p", snipe: "p" }, q: { base: "p", rain: "a", refr: "p", swal: "vp" }, e: { blast: "pa", turret: "p", pierce9: "p", base: "p", barr: "ad", seekr: "p", star: "a" } },
+  blade: { a: { base: "m", sweep: "m", quake: "m", crack: "m" }, q: { base: "md", gale: "md", whirl: "ma", leap: "va" }, e: { fury: "ma", blades: "md", titan: "b", base: "a", cyclone: "va", rift: "a", exec: "m" } },
   fist: { a: { base: "m", lean: "ma", inch: "m", qi: "p", sanshou: "ma" }, q: { base: "vm", chain: "vm", tiger: "vm", roar: "a", throw: "ma" }, e: { palm: "a", thous: "ad", dragf: "b", base: "a", hund: "m", dragon: "va", gong: "p" } },
-  fan: { a: { base: "p", twin: "p", gust: "p", spring: "p" }, q: { base: "d", suck: "d", storm: "da", ward: "d" }, e: { healz: "b", petal: "d", wwall: "b", base: "a", typh: "d", bloom: "p", zephyr: "d" } },
+  fan: { a: { base: "p", twin: "p", gust: "p", spring: "p" }, q: { base: "d", suck: "d", storm: "da", ward: "d" }, e: { healz: "b", petal: "d", wwall: "b", base: "a", typh: "ad", bloom: "p", zephyr: "d" } },
 };
 const R_TAG = { base: "v", ghost: "v", surge: "v", wave: "v", blink: "v", pull: "a", guard: "b" };
 const GEM_TAGS = { haste: "*", thrift: "*", multi: "pma", chain: "pma", burst: "pma", lmp: "p", pierce: "p", split: "p", bounce: "p", boomer: "p", seek: "p", volley: "p",

@@ -38,7 +38,7 @@ const _hitMobU2 = hitMob;
 hitMob = function (m, dmg) { // eslint-disable-line no-func-assign
   if (m && !m.dead && !m.air && W0 && B && B.uq) {
     if (W0.dvN > 0) arguments[1] = dmg * (1 + 0.03 * W0.dvN);
-    if (B.uq.xiuluo && W0.spinT > 0 && W0.spinK !== "cyc" && curWeapon() === "blade" && CUR_SL === "q") {
+    if (B.uq.xiuluo && W0.spinT > 0 && curWeapon() === "blade" && CUR_SL === "q") {
       arguments[1] *= 1.4; // 企劃 57 §8：旋風斬／颶風傷害更多 40%
       if (time - (W0.xlS || -9) >= 1) { W0.xlS = time; W0.xlH = 0; }
       const cap = W0.maxHp * 0.04, h = Math.min(W0.maxHp * 0.003 * brkMul(), cap - W0.xlH, W0.maxHp - W0.hp);
@@ -50,7 +50,7 @@ hitMob = function (m, dmg) { // eslint-disable-line no-func-assign
 // 修羅血飲刀：轉的時候受傷 −15%
 const _hurtWU2 = hurtW;
 hurtW = function (dmg) { // eslint-disable-line no-func-assign
-  if (W0 && B && B.uq && B.uq.xiuluo && W0.spinT > 0 && W0.spinK !== "cyc" && curWeapon() === "blade") arguments[0] = dmg * 0.85;
+  if (W0 && B && B.uq && B.uq.xiuluo && W0.spinT > 0 && curWeapon() === "blade") arguments[0] = dmg * 0.85;
   return _hurtWU2.apply(this, arguments);
 };
 // 殺怪：萬妖噬魂袍層數；天劫王／天劫秘境之主 8% 掉太虛幻月扇
