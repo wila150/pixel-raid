@@ -336,9 +336,9 @@ function drawFxOver() { // 畫在最上面：命中火花、爆炸、煙
 function drawSlash(p, wt) {
   if (!(p.swing > 0)) return;
   const max = p.swingMax || 0.2, q = 1 - p.swing / max, R = p.swingR || 22, c = WPN_FX[wt] || "220,240,255";
-  if ((wt === "sword" || wt === "blade") && fxReady()) { // 圖的刀光朝右上（−45°）
-    const z = R * (wt === "blade" ? 2.5 : 2.2), d = R * 0.6;
-    fxSheet(ctx, wt === "blade" ? "bslash" : "slash", Math.floor(Math.min(0.999, q) * 6), p.x + Math.cos(p.face) * d, p.y - 2 + Math.sin(p.face) * d, z, p.face + Math.PI / 4); return;
+  if ((wt === "sword" || wt === "blade") && fxReady()) { // 圖的刀光弧凸向右下（+45°），轉 face−45° 才會凸向面前（企劃 36 驗收）
+    const z = R * (wt === "blade" ? 2.5 : 2.2), d = R * (wt === "blade" ? 0.8 : 0.6);
+    fxSheet(ctx, wt === "blade" ? "bslash" : "slash", Math.floor(Math.min(0.999, q) * 6), p.x + Math.cos(p.face) * d, p.y - 2 + Math.sin(p.face) * d, z, p.face - Math.PI / 4); return;
   }
   const half = wt === "blade" ? 1.5 : wt === "fist" ? 0.6 : 1.1, a0 = p.face - half, a1 = a0 + half * 2 * Math.min(1, q * 1.6 + 0.15);
   ctx.save(); ctx.globalCompositeOperation = "lighter";
