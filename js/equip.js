@@ -118,23 +118,20 @@ const BASE_N = {
 // 詞綴不再無限長 → 同等級的玩家比 v9.2 弱（藍裝：Lv.20 ×0.74、Lv.50 ×0.69、Lv.80 ×0.61、Lv.110 ×0.58；防禦 ×0.75–0.88）。
 // 怪物血量、傷害照同樣比例縮（scratchpad t.js ?cmp 量的），打王時間才會跟 v8.5.1 差不多（企劃 44 §4 ±15%）
 const lerpTbl = (t, x) => { if (x <= t[0][0]) return t[0][1]; for (let i = 1; i < t.length; i++) if (x <= t[i][0]) { const [a, va] = t[i - 1], [b, vb] = t[i]; return va + ((vb - va) * (x - a)) / (b - a); } return t[t.length - 1][1]; };
-const GEAR_HP_K = [[1, 0.85], [20, 0.74], [50, 0.69], [80, 0.61], [110, 0.58], [130, 0.6]];
+const GEAR_HP_K = [[1, 1], [22, 1.02], [50, 0.75], [75, 1.03], [110, 0.86], [130, 0.86]]; // v9.3.1 企劃 44 §9 打王 bot（最高階藍武器）
 const GEAR_DMG_K = [[1, 0.85], [20, 0.79], [80, 0.79], [110, 0.85], [130, 0.75]];
-const SPELL_K = [[1, 0.85], [20, 0.8], [50, 0.86], [80, 0.8], [110, 0.98], [130, 1]]; // 法術基礎（技能寶石）跟攻擊武器一起縮
+const SPELL_K = [[1, 1], [22, 1.05], [50, 0.88], [75, 1.17], [110, 1.12], [130, 1.12]]; // 法術基礎（技能寶石）跟攻擊武器一起縮
 const gearHpK = (lv) => lerpTbl(GEAR_HP_K, lv || 1), gearDmgK = (lv) => lerpTbl(GEAR_DMG_K, lv || 1), spellK = (lv) => lerpTbl(SPELL_K, lv || 1);
 const baseKey = (it) => (it.slot === "sword" && SPELL_W[wtOf(it)] ? "spell" : SLOTS[it.slot].base);
 const baseName = (it) => (BASE_N[it.slot === "sword" ? wtOf(it) : it.slot] || BASE_N.sword)[(it.bt || 1) - 1];
 const QMUL = [1, 1.12, 1.24, 1.3]; // 品質對基底的加成（傳說固定 1.3，不再 2 倍）
 function baseVal(it) { const v = BASE_TBL[baseKey(it)][(it.bt || 1) - 1] * QMUL[it.q || 0]; return baseKey(it) === "crit" ? Math.round(v * 10) / 10 : Math.round(v); }
 const setBase = (it) => { it.base = baseVal(it); return it; };
-// 掉落時抽基底：需求等級 ≤ 物品等級的階裡抽，最高那階 50%、次一階 30%、其他平分 20%
+// 掉落時抽基底：需求等級 ≤ 物品等級的最高那階 50%、低一階 30%、低兩階 20%（v9.3.1 企劃 44 §9：不再掉到更低的）
 function pickBt(lv) {
   let top = 0; for (let i = 0; i < 8; i++) if (BASE_REQ[i] <= lv) top = i;
-  if (top === 0) return 1;
-  const r = Math.random();
-  if (r < 0.5) return top + 1;
-  if (r < 0.8 || top === 1) return top;
-  return 1 + Math.floor(Math.random() * (top - 1));
+  const r = Math.random(), d = r < 0.5 ? 0 : r < 0.8 ? 1 : 2;
+  return Math.max(0, top - d) + 1;
 }
 // 詞綴分階：T5（index 0）～T1（index 4）；最低物品等級／權重
 const TIER_LV = [1, 15, 30, 55, 80], TIER_W = [100, 80, 60, 35, 15];
