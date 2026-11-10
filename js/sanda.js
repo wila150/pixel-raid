@@ -5,7 +5,7 @@
 const SHI_MAX = 5;
 // 散手 4 段：[距離, 半角, 傷害, 擊退]（world.js atkFx）
 const SS_ROLL_K = 2; // v9.9.2 企劃 55 §10：閃身後下一拳直接側踹（×1.5 bot 沒到 1.05 → ×2）
-const SS_SEG = [null, [22, 0.7, 4.2, 30], [26, 1.3, 4.6, 40], [30, Math.PI, 4.0, 20], [36, 0.6, 9.5, 220]]; // v9.9.1 企劃 55 §8：放大（掃腿整圈）
+const SS_SEG = [null, [22, 0.7, 4.4, 30], [26, 1.3, 4.8, 40], [30, Math.PI, 4.2, 20], [36, 0.6, 9.9, 220]]; // v9.9.1 企劃 55 §8：放大（掃腿整圈）；v9.9.3 §12：傷害 ×1.04
 const shiOn = () => !!(typeof W0 !== "undefined" && W0 && save.w && curWeapon() === "fist" && typeof triOf === "function" && triOf("fist", "a") === "sanshou");
 function shiAdd(n, why) {
   if (!shiOn()) return;
