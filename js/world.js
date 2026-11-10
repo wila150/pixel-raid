@@ -289,6 +289,7 @@ function eCost(sk) {
   const i = typeof TRI_E !== "undefined" && TRI_E[wt] ? TRI_E[wt].findIndex((x) => x.k === sk) : -1;
   return i >= 0 && i < 3 ? [9, 3] : [12, 4];
 }
+let E_OFF_MP = 3; // 企劃 69 §9：E 類招放在左鍵或 Q 時真氣 ×3（企劃寫 ×6，bot 量到 10 秒就乾、杖扇一次放不起，改 3；冷卻不加）
 const E_CD_CAP = 0.3; // 企劃 69 §8：裝備＋傳說的 E 冷卻縮短最多 30%
 const eCdGear = () => Math.min(E_CD_CAP, ((typeof B !== "undefined" && B && B.gUlt) || 0) / 100);
 const eCdMul = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0.5, (b.eCd || 1) * (1 - eCdGear())); }; // 詞綴「E 招冷卻縮短」×天道 0.7，最低 ×0.5
@@ -302,7 +303,7 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
   const SLK = { attack: "a", spin: "q", ult: "e", roll: "r" }; // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
   for (const k of ["attack", "spin", "ult", "roll"]) {
     const S = WSKILL[k], sl = SLK[k], cdm = Math.max(0.4, 1 - 0.07 * gemLv("haste", sl)), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
-    if (S.cls === "e") { const [ecd, emx] = eCost(S.k); S.cd = ecd * cdm; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 企劃 69 A：E 類花真氣（Q 的倍數）＋冷卻
+    if (S.cls === "e") { const [ecd, emx] = eCost(S.k); S.cd = ecd * cdm; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * (sl !== "e" ? E_OFF_MP : 1) * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 企劃 69 A：E 類花真氣（Q 的倍數）＋冷卻
     S.cd *= cdm; S.mp = Math.round(S.mp ? S.mp * mm : Math.max(0, mm - 1) * 4); // 普攻、閃身原本不耗真氣：串了寶石才開始耗
     if (k === "attack" && S.cls === "a") { S.mpS = mm > 1 ? ATK_MP_K * (mm - 1) * mpLvMul() * meleeMpMul(sl) : 0; S.mp = 0; } // 企劃 61：普攻串寶石改「每秒」耗氣（攻速快不會多扣），出手時照這一下的冷卻算
     else if (S.mp) S.mp = Math.max(1, Math.round(S.mp * mpLvMul() * (k === "roll" ? 1 : meleeMpMul(sl)))); // 企劃 61 A-2／C：Q、E、身法耗氣跟等級長；近戰招 ×0.7

@@ -1297,3 +1297,4 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .tricard.cur { cursor: pointer; }
 .ov .tplist { grid-template-columns: 1fr 1fr 1fr; }
 @media (orientation: portrait) { .ov .tplist { grid-template-columns: 1fr 1fr; } }
+.ov .tricard .toff { color: #ff9a7a; font-weight: normal; }

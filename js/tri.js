@@ -438,7 +438,7 @@ function triPoolList(wt) {
   return out;
 }
 const pickEq = (a, b) => a.c === b.c && (a.k || (a.c === "e" ? "base" : "")) === (b.k || (b.c === "e" ? "base" : ""));
-const costTxt = (wt, c, k) => { if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`; };
+const costTxt = (wt, c, k, sl) => { if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}${sl && sl !== "e" ? `<b class="toff">・放在${sl === "a" ? "左鍵" : "Q"}：真氣 ×${E_OFF_MP}</b>` : ""}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`; };
 function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy();
   if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
@@ -446,7 +446,7 @@ function renderTri(msg = "") {
     const k = x.spec ? x.k : x.k === "base" ? "" : x.k, open = x.c === "e" && (k === "" || x.spec) ? lv >= E_LV : !k || triOpen(wt, x.c, k), key = skgKey(wt, x.c, k), buy = k && !x.spec && !open && !skgHas(key);
     const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}可在營地技能商人購買・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
     const ic = x.spec ? "" : skIco(wt, x.c, k, "tico");
-    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${ic}${x.n}${eleTag(x.c, k, cur)}</b><small>${open ? `${where ? `<i class="tin">在${TRI_LAYER_N[where]}</i>` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k)}</i> ${x.d}` : lockTxt}</small>${open && !x.spec ? skgBar(key) : ""}</button>`;
+    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${ic}${x.n}${eleTag(x.c, k, cur)}</b><small>${open ? `${where ? `<i class="tin">在${TRI_LAYER_N[where]}</i>` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k, sl)}</i> ${x.d}` : lockTxt}</small>${open && !x.spec ? skgBar(key) : ""}</button>`;
   };
   const rowR = () => { // 身法照舊
     const L = triList(wt, "r"), cur = triOf(wt, "r") || "";
@@ -474,7 +474,7 @@ function triPoolHtml() {
   const list = all.filter((x) => poolTab === "all" || x.c === poolTab);
   const cardOf = (x) => { const lv = wLv(), k = x.spec ? x.k : x.k === "base" ? "" : x.k, open = x.c === "e" && (k === "" || x.spec) ? lv >= E_LV : !k || triOpen(wt, x.c, k), key = skgKey(wt, x.c, k), buy = k && !x.spec && !open && !skgHas(key), on = pickEq(x, cur), w = where(x);
     const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}技能商人・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
-    return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${x.spec ? "" : skIco(wt, x.c, k, "tico")}${x.n}</b><small>${open ? `${w ? `<i class="tin">在${{ a: "左鍵", q: "Q", e: "E" }[w]}・點了對調</i> ` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k)}</i> ${x.d}` : lockTxt}</small></button>`; };
+    return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${x.spec ? "" : skIco(wt, x.c, k, "tico")}${x.n}</b><small>${open ? `${w ? `<i class="tin">在${{ a: "左鍵", q: "Q", e: "E" }[w]}・點了對調</i> ` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k, sl)}</i> ${x.d}` : lockTxt}</small></button>`; };
   const tabs = [["all", "全部"], ["a", "普攻類"], ["q", "Q 類"], ["e", "E 類"]].map(([k, n]) => `<button data-ptab="${k}" class="${poolTab === k ? "on" : ""}">${n}</button>`).join("");
   return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${{ a: "左鍵", q: "Q", e: "E" }[sl]} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
 }
