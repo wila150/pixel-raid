@@ -6,6 +6,9 @@
 
 const RIFT_IX0 = 120, RIFT_IY0 = 46, RIFT_IW = 95, RIFT_IH = 64; // x 1920–3440、y 736–1760（v6.1 再加寬 1.25 倍，企劃 16 第 10-2 節；避開沼澤傳送陣 3560）
 const RIFT_LIVES = 3;
+const riftLives = (tier) => (tier <= 10 ? 3 : tier <= 15 ? 2 : 1); // 企劃 52
+const riftMobLv = (tier) => Math.max(riftLv(tier), ((save.w && save.w.lv) || 1) - 5); // 企劃 52：怪等級跟著你（最低是這層的等級）
+const riftHpK = (tier) => 1 + 0.03 * tier; // 企劃 52：小怪血量小加
 let RIFT = null, RIFT_PEND = null, riftAskEl = null;
 const riftTheme = (tier) => (tier <= 5 ? (tier % 2 ? "grass" : "forest") : tier <= 10 ? (tier % 2 ? "volcano" : "snow") : tier <= 15 ? (tier % 2 ? "swamp" : "thunder") : "sky"); // 11–15 沼澤／雷谷、16 以上仙域（企劃 16 §3-2）
 const riftUnlocked = () => !!save.w && ((save.w.wp || []).includes("swamp") || save.w.lv >= 30);
@@ -80,6 +83,9 @@ function riftSpawn(R) {
       m.noRespawn = true; m.rift = true;
       if (!R.reach[Math.floor(m.y / TS) * TW + Math.floor(m.x / TS)]) { m.x = camp.x; m.y = camp.y; m.wx = m.x; m.wy = m.y; } // 生在走不到的角落就拉回營地中心
       if (!m.elite && mods.includes("elites") && Math.random() < 0.16) { m.elite = true; m.hp *= 4; m.max *= 4; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; }
+      if (!m.elite && Math.random() < 0.04) { m.elite = true; m.hp *= 4; m.max *= 4; m.mod = ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)]; } // 企劃 52：精英 ×1.5（8% → 約 12%）
+      if (m.elite && R.tier >= 8 && !m.mod2 && typeof ELITE_NEW !== "undefined") { const q = ELITE_NEW.filter((x) => x !== m.mod); m.mod2 = q[Math.floor(Math.random() * q.length)]; } // 第 8 層以上精英必帶 2 個詞綴
+      { const k = riftHpK(R.tier); m.hp *= k; m.max *= k; }
       if (mods.includes("hp")) { m.hp *= 1.4; m.max *= 1.4; }
       if (mods.includes("fast")) m.spdMul = 1.25;
       if (mods.includes("dmg")) m.dmgMul = 1.3;
@@ -100,7 +106,7 @@ function riftEnter(id) {
   const key = save.keys.find((k) => k.id === id);
   if (!key) return;
   save.keys = save.keys.filter((k) => k !== key); // 鑰匙進門就用掉
-  const R = RIFT = { key, tier: key.tier, lv: riftLv(key.tier), theme: riftTheme(key.tier), lives: RIFT_LIVES, pow: 0, t: 0, seed: (Math.random() * 1e9) | 0,
+  const R = RIFT = { key, tier: key.tier, lv: riftMobLv(key.tier), theme: riftTheme(key.tier), lives: riftLives(key.tier), pow: 0, t: 0, seed: (Math.random() * 1e9) | 0,
     ret: { x: W0.x, y: W0.y }, armed: false, bossOn: false, bossDown: false, saveT: 10,
     saved: { wmap, mobs: W0.mobs, camps: W0.camps, drops: W0.drops, pools: W0.pools || [], grave: W0.grave } };
   W0.mobs = []; W0.camps = []; W0.drops = []; W0.pools = []; W0.grave = null; riftClearFx();
@@ -130,7 +136,7 @@ function riftLeave(ok) {
 // 秘境之主：從區域王裡抽一隻，血量縮小、等級＝鑰匙等級
 function riftSpawnBoss() {
   const R = RIFT, k = RB_KEYS[Math.floor(Math.random() * RB_KEYS.length)], base = RBOSS[k], lv = R.lv, mods = R.key.mods;
-  const hp = Math.round(122000 * Math.pow(lv / 50, 1.65) * 0.5 * (mods.includes("lordhp") ? 1.6 : 1)); // 企劃 41：照區域王新血量內插（12.2 萬@Lv.50、23 萬@Lv.75、42 萬@Lv.110）×0.5
+  const hp = Math.round(122000 * Math.pow(lv / 50, 1.65) * 0.9 * (mods.includes("lordhp") ? 1.6 : 1)); // 企劃 52：×0.5 → ×0.9 // 企劃 41：照區域王新血量內插（12.2 萬@Lv.50、23 萬@Lv.75、42 萬@Lv.110）×0.5
   const BR = Object.assign({}, base, { x: R.boss.x, y: R.boss.y, lv, hp, cool: 0, n: `秘境之主・${base.n}`, dmgMul: (base.dmgMul || 1) * (mods.includes("dmg") ? 1.3 : 1),
     wake: `${base.n}從裂隙中現身！`, sleep: `${base.n}退回裂隙深處（走進王門可以再挑戰）` });
   W0.mobs.push({ type: base.type, rb: k, R: BR, rift: true, boss: true, lv, elite: false, camp: { x: BR.x, y: BR.y, z: R.theme, lv, respawn: [] }, x: BR.x, y: BR.y - 6, hp, max: hp,
@@ -151,8 +157,8 @@ function riftBossKilled(m) {
   wDropItem(best, m);
   const n = 2 + Math.floor(Q / 50) + (Math.random() < (Q % 50) / 50 ? 1 : 0);
   for (let i = 0; i < n; i++) wDropItem(roll(1), m);
-  wDrop({ kind: "key", k: makeKey(R.tier) }, m); // 必掉同層
-  if (R.tier < riftCap() && Math.random() < 0.3 + (mods.includes("keyf") ? 0.3 : 0)) wDrop({ kind: "key", k: makeKey(R.tier + 1) }, m);
+  if (Math.random() < 0.7) wDrop({ kind: "key", k: makeKey(R.tier) }, m); // 企劃 52：同層 70%（原本必掉）
+  if (R.tier < riftCap() && Math.random() < (R.tier >= 11 ? 0.12 : 0.2) + (mods.includes("keyf") ? 0.3 : 0)) wDrop({ kind: "key", k: makeKey(R.tier + 1) }, m); // 高一層 20%（第 11 層以上 12%）
   for (let i = 0; i < (R.tier >= 6 ? 2 : 1); i++) wDrop({ kind: "gem", g: randGem(Math.random() < 0.25 ? 2 : 1) }, m);
   for (let i = 0; i < 2; i++) wDrop({ kind: "ess", k: randEss() }, m);
   if (Math.random() < 0.08 && typeof CARDS !== "undefined" && CARDS[m.type]) wDrop({ kind: "card", c: m.type }, m);
@@ -303,7 +309,7 @@ drawWorldHud = function () {
   ctx.textAlign = "left"; ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#e8d8ff";
   ctx.fillText(`秘境 ${R.tier} 層・Lv.${R.lv}・${"★".repeat(keyStars(R.key))}・數量+${keyQuant(R.key)}%`, bx + 7, by + 14);
   ctx.textAlign = "left"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ff7a8a";
-  ctx.fillText("❤".repeat(R.lives) + "♡".repeat(RIFT_LIVES - R.lives), bx + 8, by + 32);
+  ctx.fillText("❤".repeat(R.lives) + "♡".repeat(Math.max(0, riftLives(R.tier) - R.lives)), bx + 8, by + 32);
   const px = bx + 56, pw = bw - 64;
   ctx.fillStyle = "#2a1e3a"; ctx.fillRect(px, by + 24, pw, 9);
   ctx.fillStyle = R.pow >= 100 ? "#ffd84a" : "#b07dff"; ctx.fillRect(px, by + 24, pw * R.pow / 100, 9);
@@ -337,20 +343,20 @@ function riftModRow(m, k) {
 function keyCurBtns(k, camp) {
   if (k.cor) return "";
   const b = (id, c, label, ok, sub) => `<button id="${id}" class="curb" style="--cc:${CUR[c].c}" ${camp && ok && curN(c) > 0 ? "" : "disabled"}>${label}<small>${CUR[c].n} ${curN(c)}${sub ? "・" + sub : ""}</small></button>`;
-  const max = KEY_RARITY[k.q].mods[1];
+  const max = KEY_MODS_MAX;
   return (k.q < 2 ? b("kcGold", "gold", "點金", true, "新詞綴一定是前綴") : "")
     + (k.q > 0 ? b("kcChaos", "chaos", "混元重骰", true, "保證有物品數量") : "")
-    + (k.q === 2 ? b("kcExalt", "exalt", "淬靈加詞綴", !k.ex && k.mods.length < max + 1, k.ex ? "已經加過" : "可以超過上限 1 條") : "")
+    + (k.q === 2 ? b("kcExalt", "exalt", "淬靈加詞綴", keyModN(k) < max, keyModN(k) < max ? `詞綴 ${keyModN(k)}／${max}` : "滿 8 條了") : "")
     + (k.mods.some((m) => MAP_MODS[m].q || MAP_MODS[m].r) ? b("kcDivine", "divine", "造化重骰數值", true, "掉寶加成 ×0.7–1.3") : "");
 }
 function keyCurBind(k, again) {
   const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用通貨"); return; } f(); writeSave(); }; };
   on("kcGold", () => { if (!useCur("gold")) return; k.q++; const [a, b2] = KEY_RARITY[k.q].mods; rollKeyMods(k, a + Math.floor(Math.random() * (b2 - a + 1)), { keep: true, pre: true }); sfx("good"); again(`點金符：${KEY_RARITY[k.q].n}品鑰匙（新詞綴都是前綴）`); });
   on("kcChaos", () => { if (!useCur("chaos")) return; const [a, b2] = KEY_RARITY[k.q].mods; rollKeyMods(k, a + Math.floor(Math.random() * (b2 - a + 1)), { qty: true }); delete k.ex; sfx("good"); again("混元石：詞綴全部重骰（有物品數量）"); });
-  on("kcExalt", () => { if (k.ex || !useCur("exalt")) return; const n = k.mods.length; rollKeyMods(k, n + 1, { keep: true }); k.ex = 1; sfx("arrive"); again(k.mods.length > n ? `淬靈石：多了「${MAP_MODS[k.mods[n]].n}」` : "沒有能加的詞綴了"); });
+  on("kcExalt", () => { if (keyModN(k) >= KEY_MODS_MAX || !useCur("exalt")) return; const n = k.mods.length; rollKeyMods(k, n + 1, { keep: true }); sfx("arrive"); again(k.mods.length > n ? `淬靈石：多了「${MAP_MODS[k.mods[n]].n}」` : "沒有能加的詞綴了"); });
   on("kcDivine", () => { if (!useCur("divine")) return; k.mv = {}; for (const m of k.mods) if (MAP_MODS[m].q || MAP_MODS[m].r) k.mv[m] = Math.round((0.7 + Math.random() * 0.6) * 100) / 100; sfx("good"); again(`造化玉：物品數量 +${keyQuant(k)}%、品質 +${keyRar(k)}%`); });
 }
-const keyIlTxt = (k) => { const lv = riftLv(k.tier), t = tierTop(lv); return `這層掉的裝備物品等級約 ${lv}（詞綴最高 ${tierName(t)}${t < 4 ? `，物品等級 ${TIER_LV[t + 1]} 開 ${tierName(t + 1)}` : ""}）`; };
+const keyIlTxt = (k) => { const lv = riftMobLv(k.tier), t = tierTop(lv); return `這層掉的裝備物品等級約 ${lv}（詞綴最高 ${tierName(t)}${t < 4 ? `，物品等級 ${TIER_LV[t + 1]} 開 ${tierName(t + 1)}` : ""}）`; };
 function renderRift(msg = "") {
   if (!save.w) return;
   migKeys();
@@ -359,7 +365,7 @@ function renderRift(msg = "") {
   const w = save.w, keys = save.keys.slice().sort((a, b) => b.tier - a.tier || b.q - a.q), sel = save.keys.find((k) => k.id === riftSel) || keys[0] || null;
   if (sel) riftSel = sel.id;
   const open = riftUnlocked(), camp = atCamp();
-  const list = keys.map((k) => `<button class="rkey${sel === k ? " sel" : ""}" data-rk="${k.id}" style="--c:${KEY_RARITY[k.q].c}"><b>第 ${k.tier} 層</b><span>Lv.${riftLv(k.tier)}</span><small>${KEY_RARITY[k.q].n}・<i>${"★".repeat(keyStars(k))}</i>${keyWarn(k).length ? " ⚠" : ""}</small></button>`).join("");
+  const list = keys.map((k) => `<button class="rkey${sel === k ? " sel" : ""}${keyGod(k) ? " god" : ""}" data-rk="${k.id}" style="--c:${keyGod(k) ? "#ffd84a" : KEY_RARITY[k.q].c}"><b>第 ${k.tier} 層${keyGod(k) ? "・極" : ""}</b><span>Lv.${riftMobLv(k.tier)}</span><small>${KEY_RARITY[k.q].n}・<i>${"★".repeat(keyStars(k))}</i>${keyWarn(k).length ? " ⚠" : ""}</small></button>`).join("");
   let center;
   if (RIFT) center = `<h2>秘境中</h2><p>第 ${RIFT.tier} 層・Lv.${RIFT.lv}・剩 ${RIFT.lives} 條命・秘境之力 ${Math.floor(RIFT.pow)}%</p><p class="dim">走回入口的門撤離（撿到的都帶回、鑰匙算用掉）；打倒秘境之主後王門變成出口。</p>`;
   else if (!open) center = `<h2>秘境試煉</h2><p>到<b>幽冥沼澤</b>（Lv.30）就能開秘境。</p><p class="dim">秘境是用你自己的角色進去的獨立小地圖：清怪 → 秘境之主 → 噴寶＋掉鑰匙，一路往上爬層數。</p>`;
@@ -367,9 +373,9 @@ function renderRift(msg = "") {
   else {
     const pre = sel.mods.filter((m) => MAP_MODS[m].t === "p"), suf = sel.mods.filter((m) => MAP_MODS[m].t === "s"), warn = keyWarn(sel);
     center = `<h3 style="color:${KEY_RARITY[sel.q].c}">【${KEY_RARITY[sel.q].n}】${keyName(sel)}</h3>
-      <div class="dim">怪物 Lv.${riftLv(sel.tier)}・${ZONES[riftTheme(sel.tier)].n}・危險 <span class="rstar">${"★".repeat(keyStars(sel))}${"☆".repeat(5 - keyStars(sel))}</span></div>
+      <div class="dim">怪物 Lv.${riftMobLv(sel.tier)}・${ZONES[riftTheme(sel.tier)].n}・危險 <span class="rstar">${"★".repeat(keyStars(sel))}${"☆".repeat(5 - keyStars(sel))}</span></div>
       <div class="rmods">${pre.map((m) => riftModRow(m, sel)).join("")}${suf.map((m) => riftModRow(m, sel)).join("")}${!sel.mods.length ? `<div class="dim">（凡品鑰匙沒有詞綴：點金可以加詞綴）</div>` : ""}</div>
-      <div class="rsum"><span>物品數量 <b>+${keyQuant(sel)}%</b></span><span>物品品質 <b>+${keyRar(sel)}%</b></span></div>
+      <div class="rsum"><span>詞綴 <b>${keyModN(sel)}／${KEY_MODS_MAX}</b></span><span>物品數量 <b>+${keyQuant(sel)}%</b></span><span>物品品質 <b>+${keyRar(sel)}%</b></span></div>
       <div class="dim rilv">${keyIlTxt(sel)}</div>
       ${warn.length ? `<p class="warn">⚠ 這把鑰匙有對你現在的武器（${WEAPONS[curWeapon()].n}）不利的詞綴：換一組武器再進，或先打別把</p>` : ""}
       <div class="acts">

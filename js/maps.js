@@ -31,7 +31,8 @@ const MAP_MODS = {
   ])),
 };
 const KEY_MAX = 20, RIFT_MAX = 10;
-const KEY_RARITY = [{ n: "凡", c: "#d8d2e0", mods: [0, 0] }, { n: "靈", c: "#6fb8ff", mods: [1, 2] }, { n: "玄", c: "#ffd84a", mods: [3, 4] }];
+const KEY_RARITY = [{ n: "凡", c: "#d8d2e0", mods: [0, 0] }, { n: "靈", c: "#6fb8ff", mods: [1, 2] }, { n: "玄", c: "#ffd84a", mods: [4, 6] }]; // 企劃 52：玄品 4–6 條（原本 3–4）
+const KEY_MODS_MAX = 8; // 淬靈石最多加到 8 條
 const riftLv = (tier) => (tier <= 10 ? 25 + 5 * tier : tier <= 20 ? 75 + 5 * (tier - 10) : 125 + 3 * (tier - 20)); // 1–10 層 Lv.30→75；11–20 層每層 +5（→125）；21 層以上每層 +3（企劃 16 §3-2）
 const riftCap = () => (save.w && typeof rbKilled === "function" && rbKilled("sky") ? 9999 : RIFT_MAX); // 打倒無相劍尊才沒有上限
 const keyTierFor = (lv) => (lv < 28 ? 0 : clamp(Math.round((lv - 25) / 5), 1, RIFT_MAX));
@@ -49,8 +50,12 @@ function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時�
   const pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
   if (opt.keep) { // 只補新的（點金符／淬靈石）
     const has = (m) => k.mods.includes(m) || (MAP_MODS[m].g && k.mods.some((x) => MAP_MODS[x].g === MAP_MODS[m].g));
-    const P = pre.filter((m) => !has(m)), S = suf.filter((m) => !has(m));
-    while (k.mods.length < n) { const usePre = opt.pre ? P.length > 0 : (S.length && (!P.length || Math.random() < 0.5)); const src = usePre ? P : S; if (!src.length) break; k.mods.push(pick(src)); }
+    const P = pre.filter((m) => !has(m)), S = suf.filter((m) => !has(m)), nS = () => k.mods.filter((m) => MAP_MODS[m].t === "s").length;
+    while (k.mods.length < n) {
+      const needS = nS() < Math.floor((k.mods.length + 1) / 2); // 企劃 52：後綴至少一半（加完這條之後算）
+      const usePre = needS ? false : opt.pre ? P.length > 0 : (S.length && (!P.length || Math.random() < 0.5));
+      const src = usePre && P.length ? P : S.length ? S : P; if (!src.length) break; k.mods.push(pick(src));
+    }
   } else {
     const ns = Math.ceil(n / 2), np = n - ns;
     k.mods = []; k.mv = {};
@@ -61,11 +66,13 @@ function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時�
   if (k.mods.includes("physw") && k.mods.includes("spellw")) k.mods = k.mods.filter((m) => m !== "spellw"); // 兩個護體不會同時出現
 }
 const keyMv = (k, m) => (k.mv && k.mv[m]) || 1; // 造化玉重骰的數值倍率（0.7–1.3；沒骰過＝1）
-const keyQuant = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].q || 0) * keyMv(k, m)), 0) + k.q * 10; // 物品數量 %
-const keyRar = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].r || 0) * keyMv(k, m)), 0); // 物品品質 %
+const keyQuant = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].q || 0) * keyMv(k, m)), 0) + k.q * 10 + 8 * keyModN(k); // 物品數量 %；企劃 52：每條詞綴再 +8%
+const keyRar = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].r || 0) * keyMv(k, m)), 0) + 5 * keyModN(k); // 物品品質 %；企劃 52：每條 +5%
+function keyModN(k) { return k.mods.filter((m) => MAP_MODS[m] && !MAP_MODS[m].x).length; } // 塔加成（x）不算
+const keyGod = (k) => keyModN(k) >= 7; // 7、8 條＝「極」
 const keyStars = (k) => Math.min(5, 1 + k.mods.filter((m) => MAP_MODS[m].t === "s").length + (k.tier >= 8 ? 1 : 0));
 const keyWarn = (k) => k.mods.filter((m) => MAP_MODS[m].bad && MAP_MODS[m].bad(curWeapon()));
-const keyName = (k) => `第 ${k.tier} 層秘境`;
+const keyName = (k) => `第 ${k.tier} 層秘境${keyGod(k) ? "・極" : ""}`;
 const keyCost = (k, up) => Math.round((up ? 20 : 8) * (1 + k.tier * 0.4));
 const hasMod = (m) => (typeof RIFT !== "undefined" && RIFT ? RIFT.key.mods.includes(m) : hunt && hunt.map && hunt.map.mods.includes(m));
 function addKey(k) {
