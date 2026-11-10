@@ -108,11 +108,11 @@ killMob = function (m) {
     for (let i = 0; i < (m.R ? 2 : 3); i++) wDrop({ kind: "cur", c: "chaos" }, m);
     if (Math.random() < (m.R ? 0.1 : 0.2)) wDrop({ kind: "cur", c: "divine" }, m);
     if (m.R && Math.random() < 0.05) wDrop({ kind: "cur", c: "vaal" }, m);
-    if (m.R && typeof RIFT !== "undefined" && RIFT) for (let i = 0; i < (RIFT.tier >= 10 ? 2 : 1); i++) wDrop({ kind: "cur", c: randCur() }, m); // 企劃 50 B：秘境之主多掉
+    if (m.R && typeof RIFT !== "undefined" && RIFT) wDrop({ kind: "cur", c: randCur() }, m); // 企劃 50 B：秘境之主多掉 1 個（v9.4.1 第 10 層以上也只 1 個）
     return;
   }
   if (m.hunter) { for (let i = 0; i < 2; i++) wDrop({ kind: "cur", c: randCur() }, m); if (MAT_Z[z]) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m); return; }
-  const em = (m.elite ? 5 : 1) * (typeof RIFT !== "undefined" && RIFT ? 1 + 0.05 * (RIFT.tier || 0) : 1); // v5.8.1 企劃 bot 實測後下修（11 第 8 節）；企劃 50 B：秘境每層 +5%
+  const em = (m.elite ? 5 : 1) * (typeof RIFT !== "undefined" && RIFT ? 1 + 0.03 * (RIFT.tier || 0) : 1); // v5.8.1 企劃 bot 實測後下修（11 第 8 節）；企劃 50 B：秘境每層 +3%（v9.4.1，原本 5%）
   for (const k of CUR_KEYS) if (Math.random() < CUR[k].r * zl * em * dm) wDrop({ kind: "cur", c: k }, m);
   if (MAT_Z[z]) {
     if (Math.random() < 0.2 * dm) wDrop({ kind: "mat", k: MAT_Z[z][0] }, m);
