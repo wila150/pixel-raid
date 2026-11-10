@@ -70,7 +70,7 @@ function hitFinal(m, dmg) {
     if (k > 1 || bad) floatText(m.x + 8, m.y - 20, k > 1 ? "剋" : "被剋", k > 1 ? ELE_C[e] : "#9a9a9a");
     seenHint("ke2", "「剋」：火→冰→雷→毒→火。剋牠的元素傷害 ×1.3；被牠剋（灰字「被剋」）或同元素 ×0.7。越深的地方妖獸的元素抗性越高（最多 40%）。");
   }
-  if (e === "T" && !DOT_HIT && !chainLock && Math.random() < 0.2 + 0.05 * gemLv("volt")) { // 感電：雷打中機率，4 秒受傷 +20%
+  if (e === "T" && !DOT_HIT && !chainLock && Math.random() < 0.15 + 0.03 * gemLv("volt")) { // 感電：雷打中機率，4 秒受傷 +20%（企劃 61 B：20%+5%/級 → 15%+3%/級）
     if (!(m.shockT > time)) floatText(m.x - 8, m.y - 26, "感電", "#bfe0ff");
     m.shockT = time + 4;
   }

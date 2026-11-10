@@ -12,7 +12,7 @@ const WB_LV = 22, WB_ARENA = 170, WB_EDGE = WB_ARENA + 20, WB_OUT = 3, WB_NEAR =
 function wbArena() { const m = W0 && W0.mobs.find((x) => x.boss && !x.dead && x.rb); if (!m) return null; const R = rbOf(m); return { x: R.x, y: R.y, r: WB_EDGE, m }; }
 // 區域王資料表：等級、血量、掉落都看王，不看玩家
 const RBOSS = {
-  volcano: { type: "wboss", n: "焚天石魔", lv: 22, x: ALTAR.x, y: ALTAR.y, hp: 38000, /* 企劃 41 第一版：bot 平均 DPS×50 秒 */ cool: 90, rec: 18, col: "255,80,40", bar: ["#ff8a2e", "#ff5a2a", "#ff2a1a"], shards: 20,
+  volcano: { type: "wboss", n: "焚天石魔", lv: 22, x: ALTAR.x, y: ALTAR.y, hp: 25000, /* v9.13.1：真氣變緊後不會死的 bot 平均 84 秒 → ×0.65 */ /* 企劃 41 第一版：bot 平均 DPS×50 秒 */ cool: 90, rec: 18, col: "255,80,40", bar: ["#ff8a2e", "#ff5a2a", "#ff2a1a"], shards: 20,
     where: "焚天火山北邊祭壇", loot: "4 件好裝、2 寶石、精髓 3、25% 超技能寶石、15% 王卡",
     wake: "焚天石魔甦醒了！", sleep: "焚天石魔沉回熔岩⋯⋯", p2: "石魔暴走！", p3: "元神燃燒！", addMsg: "召喚熔岩妖群！", addN: 3,
     desc: "石魔會在這裡現身，用你自己的招式打倒它；看到紅色範圍就閃開。" },
@@ -20,7 +20,7 @@ const RBOSS = {
     where: "幽冥沼澤東南深處祭壇", loot: "3 件裝備（至少 1 件玄品）、12% 傳說「萬毒蟾衣」、10% 王卡、精髓 2",
     wake: "腐骨蟾王從泥沼爬出來了！", sleep: "腐骨蟾王沉回泥沼⋯⋯", p2: "蟾王發狂！會跳了！", p3: null, addMsg: "叫來毒沼蟾！",
     desc: "紅線＝舌頭，往旁邊閃；紅圈落地會留下毒池，別站在池子裡。<br>蟾王站進毒池時受到的傷害 +25%，可以引牠進去。<br>毒屬性：帶雷元素武器打牠 +30%。" },
-  thunder: { type: "rbthunder", n: "九雷鵬王", lv: 75, x: 3600, y: 330, hp: 230000, dmgMul: 1.4, cool: 150, rec: 70, col: "150,200,255", bar: ["#a8d0ff", "#7aa8ff", "#5a80ff"], shards: 20, addType: "thawk", addN: 2, clr: 11, alt: "#262a40",
+  thunder: { type: "rbthunder", n: "九雷鵬王", lv: 75, x: 3600, y: 330, hp: 160000, /* v9.13.1：bot 平均 78 秒 → ×0.7 */ dmgMul: 1.4, cool: 150, rec: 70, col: "150,200,255", bar: ["#a8d0ff", "#7aa8ff", "#5a80ff"], shards: 20, addType: "thawk", addN: 2, clr: 11, alt: "#262a40",
     where: "雷霆峽谷北邊高地祭壇", loot: "3 件裝備（至少 1 件玄品）、12% 傳說「踏雷靴」、10% 王卡、20% 超技能寶石、精髓 2",
     wake: "九雷鵬王從雷雲裡俯衝下來！", sleep: "九雷鵬王飛回雷雲⋯⋯", p2: "鵬王狂怒！四連俯衝！", p3: null, addMsg: "叫來雷鷹！",
     desc: "紅線＝俯衝路線，一條一條往旁邊閃；白藍圈分兩批落雷，第一批打完就站進剛打完的位置。<br>60% 以下最後一衝會撞地：1.5 秒不能動、受傷 +50%，趁機打。<br>雷屬性：帶冰元素武器打牠 +30%。" },

@@ -32,11 +32,13 @@ function stormVolt(t) { // 風雷＋雷元素：每下多跳一隻（企劃 08 �
   const hr = t.hr || 22, o = W0.mobs.find((m) => !m.dead && dist(m, t) >= hr + WMOBS[m.type].r && dist(m, t) < 80);
   if (o) { bolts.push({ x: o.x, y: o.y, life: 0.2 }); chainLock = true; hitMob(o, wDmg(t.dmg || 13) * 0.6, 0, t, true); chainLock = false; }
 }
+// 企劃 61 B（v9.13.1）：寶石上限 單體 +40%、清 10 隻 +55%（固定天賦樹量）。雷跳電 25%+7%/級、50% → 20%+4%/級、25%；毒每層 10% → 5.5%
+const VOLT_P = (l) => 0.2 + l * 0.04, VOLT_D = 0.25, VENOM_D = 0.055;
 elemHit = function (m, dmg) {
   // 企劃 41 §6-1：剋制移到最後一步（dmg2.js 的 hitFinal），這裡只管冰凍／燃燒／中毒／反應
   let gi = gemLv("ice"), gf = gemLv("fire"), gd = gemLv("det"), gv = gemLv("volt"), gp = gemLv("venom");
   const ef = gemLv("efocus"); // 元素集中：有元素的招傷害提高，但不會冰凍／燃燒／中毒、不觸發反應（雷的跳電保留）
-  if (ef && (gi || gf || gv || gp)) { dmg *= 1.2 + ef * 0.05; m.expT = time + 4; /* 曝曬：受傷 +20%（dmg2.js） */ return gv && !chainLock && Math.random() < 0.25 + gv * 0.07 ? (chainZap(m, dmg * 0.5, gv >= 3 ? 2 : 1), dmg) : dmg; }
+  if (ef && (gi || gf || gv || gp)) { dmg *= 1.2 + ef * 0.05; m.expT = time + 4; /* 曝曬：受傷 +20%（dmg2.js） */ return gv && !chainLock && Math.random() < VOLT_P(gv) ? (chainZap(m, dmg * VOLT_D, gv >= 3 ? 2 : 1), dmg) : dmg; }
   if (B.uq.psnConv && (gi || gf || gv || gp || SPELL_WT[curWeapon()])) { // 萬毒蟾衣：屬性傷害全部變毒
     m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotSeed(dmg) * 0.12 * (1 + (gi + gf + gv + gp) * 0.15));
     return dmg;
@@ -58,9 +60,9 @@ elemHit = function (m, dmg) {
       W0.pbT = 0.3; const v = m.psnD * m.psn * 4; m.psn = 0; m.psnT = 0; dmg += v;
       floatText(m.x, m.y - 24, "毒爆！", "#b0ff6a", true); fxBoom(m.x, m.y, 36, "150,255,110"); burst(m.x, m.y, "#9aff6a", 16, 100, 0.4);
       chainLock = true; for (const o of W0.mobs) if (o !== m && !o.dead && dist(o, m) < 36 + WMOBS[o.type].r) hitMob(o, v * 0.6, 0, null, true); chainLock = false;
-    } else if (Math.random() < 0.25 + gv * 0.07) chainZap(m, dmg * 0.5, gv >= 3 ? 2 : 1);
+    } else if (Math.random() < VOLT_P(gv)) chainZap(m, dmg * VOLT_D, gv >= 3 ? 2 : 1);
   }
-  if (gp) { m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotSeed(dmg) * 0.1 * (1 + gp * 0.15)); }
+  if (gp) { m.psn = Math.min(5, (m.psn || 0) + 1); m.psnT = 3; m.psnD = Math.max(m.psnD || 0, dotSeed(dmg) * VENOM_D * (1 + gp * 0.15)); }
   if (gd && m.burnT > 0 && Math.random() < 0.12 + gd * 0.05) W0.fires.push({ x: m.x, y: m.y, t: 0.05, r: 28 + gd * 3, dmg: 8 + gd * 5, c: "#ff8a3d" });
   if (supOn("thunder") && !chainLock && Math.random() < 0.15) { // 雷霆萬鈞（原本用 setTimeout）
     bolts.push({ x: m.x, y: m.y, life: 0.25 });

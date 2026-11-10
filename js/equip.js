@@ -117,6 +117,8 @@ const BASE_N = {
 };
 // 詞綴不再無限長 → 同等級的玩家比 v9.2 弱（藍裝：Lv.20 ×0.74、Lv.50 ×0.69、Lv.80 ×0.61、Lv.110 ×0.58；防禦 ×0.75–0.88）。
 // 怪物血量、傷害照同樣比例縮（scratchpad t.js ?cmp 量的），打王時間才會跟 v8.5.1 差不多（企劃 44 §4 ±15%）
+const AFTER_DM = (l) => 0.3 + (l - 1) * 0.05; // 企劃 61 B（v9.13.1）：餘震 40%+7.5%/級 → 30%+5%/級（法杖單體 +52%）
+const DODGE_CAP = 0.4, HURT_IFR = 0.25; // 企劃 62 D：被一營圍住太久才死（閃避上限 50%→40%、受傷無敵 0.45→0.25 秒）
 const lerpTbl = (t, x) => { if (x <= t[0][0]) return t[0][1]; for (let i = 1; i < t.length; i++) if (x <= t[i][0]) { const [a, va] = t[i - 1], [b, vb] = t[i]; return va + ((vb - va) * (x - a)) / (b - a); } return t[t.length - 1][1]; };
 const GEAR_HP_K = [[1, 1], [22, 1.02], [50, 0.75], [75, 1.03], [110, 0.86], [130, 0.86]]; // v9.3.1 企劃 44 §9 打王 bot（最高階藍武器）
 const GEAR_DMG_K = [[1, 0.85], [20, 0.79], [80, 0.79], [110, 0.85], [130, 0.75]];
@@ -255,7 +257,7 @@ const GEMS = {
   lmp: { n: "多重投射", c: "#ffe9a0", d: (l) => `多 ${l >= 3 ? 4 : 2} 道（每道 ${l >= 3 ? 30 : 45}%）` },
   ice: { n: "元素轉化：冰", c: "#9fdcff", d: (l) => `打中會減速、${Math.round(10 * (1 + l * 0.6))}% 冰凍（冰凍的怪不能動）。一招只能一種元素` },
   fire: { n: "元素轉化：火", c: "#ff7a3a", d: (l) => `打中會燃燒；打到冰凍的怪「融化」傷害 ×2.5（${l} 級）。一招只能一種元素：用冰的招凍住，再用火的招打` },
-  volt: { n: "元素轉化：雷", c: "#c8b8ff", d: (l) => `打中 ${25 + l * 7}% 雷電跳到旁邊 ${l >= 3 ? 2 : 1} 隻（50% 傷害）；打中毒的怪「毒爆」` },
+  volt: { n: "元素轉化：雷", c: "#c8b8ff", d: (l) => `打中 ${20 + l * 4}% 雷電跳到旁邊 ${l >= 3 ? 2 : 1} 隻（25% 傷害）；打中毒的怪「毒爆」` },
   venom: { n: "元素轉化：毒", c: "#8dff6a", d: (l) => `打中疊 1 層毒（最多 5 層，持續傷害，${l} 級）；用雷打中毒的怪會「毒爆」` },
   det: { n: "引爆", c: "#ffb347", d: (l) => `打中燃燒中的怪 ${12 + l * 5}% 機率炸開` },
   // 第二版新的 15 顆
@@ -264,7 +266,7 @@ const GEMS = {
   boomer: { n: "迴旋", c: "#c8f0e0", d: () => `飛到底再飛回來，回程也能打` },
   seek: { n: "追蹤", c: "#ffe0a0", d: (l) => `飛行中慢慢轉向最近的怪（${l} 級轉得更快）` },
   enlarge: { n: "擴大", c: "#ffb070", d: (l) => `範圍 +${[0, 15, 21, 27, 34, 40][l]}%` },
-  after: { n: "餘震", c: "#e0b080", d: (l) => `0.5 秒後同一個地方再炸一次（${Math.round(40 + (l - 1) * 7.5)}%）` },
+  after: { n: "餘震", c: "#e0b080", d: (l) => `0.5 秒後同一個地方再炸一次（${Math.round(AFTER_DM(l) * 100)}%）` },
   trail: { n: "殘影", c: "#bfe6ff", d: (l) => `位移的路上留下 ${3 + l} 道會傷害的殘影` },
   rshield: { n: "護盾", c: "#9fdcff", d: (l) => `位移後 ${(1.5 + l * 0.25).toFixed(2).replace(/0$/, "")} 秒內擋下一次傷害` },
   icepath: { n: "冰徑", c: "#bfefff", d: (l) => `位移的路上結冰 ${(1.5 + l * 0.5).toFixed(1)} 秒，怪踩到變慢` },
@@ -280,8 +282,8 @@ const GEMS = {
   efocus: { n: "元素集中", c: "#d0a8ff", d: (l) => `有元素的這招傷害 +${20 + l * 5}%` },
 };
 // 企劃 21 §8-6：每顆都有代價；真氣倍率串幾顆就相乘（省元 −15%／級）
-const GEM_MP = { power: 1.2, pierce: 1.2, blood: 1.2, frost: 1.2, enlarge: 1.2, haste: 1.2, burst: 1.2, det: 1.2, seek: 1.2, trail: 1.2, rshield: 1.2, icepath: 1.2, exec: 1.4, ice: 1.2, fire: 1.2, volt: 1.2, venom: 1.2,
-  split: 1.4, volley: 1.4, chain: 1.4, focus: 1.4, efocus: 1.4, bell: 1.4, spread: 1.4, bounce: 1.4, multi: 1.4, after: 1.4, lmp: 1.7, rapid: 1.7, boomer: 1.7, totem: 2.3, trigc: 2.3, trigh: 2.3, thrift: 1 };
+const GEM_MP = { power: 1.2, pierce: 1.2, blood: 1.2, frost: 1.2, enlarge: 1.2, haste: 1.2, burst: 1.2, det: 1.2, seek: 1.2, trail: 1.2, rshield: 1.2, icepath: 1.2, exec: 1.3, ice: 1.2, fire: 1.2, volt: 1.2, venom: 1.2,
+  split: 1.3, volley: 1.3, chain: 1.3, focus: 1.3, efocus: 1.3, bell: 1.3, spread: 1.3, bounce: 1.3, multi: 1.3, after: 1.3, lmp: 1.5, rapid: 1.5, boomer: 1.5, totem: 2.3, trigc: 2.3, trigh: 2.3, thrift: 1 };
 const GEM_COST = { exec: "整個角色只能串一顆（每種輔助寶石都一樣）", split: "這招每道傷害 −10%，分出來的 50%", volley: "這招每道傷害 −10%；同一次打到同一隻怪，第 2 道起只算 50%", chain: "跳到的那隻只有 70% 傷害", lmp: "同一次打到同一隻怪，第 2 道起只算 50%", rapid: "多揮的每下傷害打折", boomer: "回程只有 40% 傷害",
   focus: "範圍 −30%", efocus: "不會冰凍、燃燒、中毒，也不會觸發融化、蒸汽、毒爆", totem: "傷害 −50%", trigc: "自動放的傷害 −20%；冷卻 1 秒", trigh: "自動放的傷害 −20%；冷卻 1 秒", bounce: "每跳一次傷害 −20%", after: "第二下傷害較低",
   spread: "要跟火元素串在同一招", bell: "只有近戰招打中才疊", thrift: "沒有" };

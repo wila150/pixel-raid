@@ -257,7 +257,7 @@ function gemGrpMig() {
 }
 function slotEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
 // 企劃 61 §A-2：同一招串的第 3 顆起，每多一顆這招傷害 ×0.92（更多，相乘；省元不算）
-const CHAIN_DM = 0.92;
+const CHAIN_DM = 0.95; // v9.13.1：0.92 時劍、弓串 5 顆只有 2 顆的 0.9 倍（企劃 61 §8 規則）
 function chainGemN(sl) { if (!save.w) return 0; let n = 0; for (const g of chainRow(sl)) if (g && gemReqOk(g) && gemFits(g, sl) && !g.startsWith("thrift:")) n++; return n; }
 const chainDmMul = (sl) => Math.round(Math.pow(CHAIN_DM, Math.max(0, chainGemN(sl) - 2)) * 100) / 100;
 function chainMpMul(sl) { // 真氣倍率：每顆相乘，省元 −15%／級

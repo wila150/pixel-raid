@@ -248,7 +248,7 @@ function worldStats() {
   b.inc += (w.lv - 1) * 0.02 + a[main] * (main === "agi" ? 0.012 : 0.03); // 企劃 41：每級 +2%、主屬性每點 +3%（敏捷 1.2%，§7 劍弓太強），都是「增加」
   b.aspd = (b.aspd || 1) * (1 + (main === "agi" ? a.agi * 0.003 : 0));
   b.spdMul *= 1 + Math.min(a.agi, AGI_SPD_PTS) * 0.005; // 企劃 24：只算前 80 點；總上限在 cap.js
-  b.dodge = Math.min(0.5, (b.dodge || 0) + a.agi * 0.004);
+  b.dodge = Math.min(DODGE_CAP, (b.dodge || 0) + a.agi * 0.004);
   b.supp = Math.min(0.6, (b.supp || 0) + a.agi * 0.003);
   for (const e of ELES) b["res" + e] = b["res" + e] || 0; // 抗性上限、地區扣抗性在 effRes 算（看當下位置）
   b.armor = (b.armor || 0) + a.str * 3 + a.vit;
@@ -634,10 +634,10 @@ function hurtW(dmg, from, kind) {
   if (p.es > 0) { // 智慧：能量護盾先扣
     const a = Math.min(p.es, dmg); p.es -= a; dmg -= a;
     burst(p.x, p.y - 3, "#9fdcff", 6, 50, 0.3);
-    if (dmg <= 0) { p.iframe = 0.45; floatText(p.x, p.y - 14, `-${a}`, "#9fdcff"); sfx("hit"); return; }
+    if (dmg <= 0) { p.iframe = HURT_IFR; floatText(p.x, p.y - 14, `-${a}`, "#9fdcff"); sfx("hit"); return; }
   }
   if (p.guardSh > 0 && p.guardT2 > 0) { const a = Math.min(p.guardSh, dmg); p.guardSh -= a; dmg -= a; if (dmg <= 0) { p.iframe = 0.3; floatText(p.x, p.y - 14, `護體 -${a}`, "#ffe08a"); return; } } // 身法：護體
-  p.hp -= dmg; p.iframe = 0.45; p.hurt = 0.2; p.hurtEv = 1;
+  p.hp -= dmg; p.iframe = HURT_IFR; p.hurt = 0.2; p.hurtEv = 1;
   floatText(p.x, p.y - 14, `-${dmg}`, eleHurt ? "#c77dff" : "#ff6b6b"); // 企劃 22 §10-3：抗性是負的那種元素＝紫色＋「抗性不足」
   if (eleHurt) { if (!p.resNegT || time - p.resNegT > 1.2) { p.resNegT = time; floatText(p.x + 18, p.y - 18, `${RES_S[eleHurt]}抗性不足`, "#c77dff"); } seenHint("resneg2", `這裡的${RES_S[eleHurt]}很痛：你的${RES_N[eleHurt]}抗性是負的（${Math.round(effRes(eleHurt) * 100)}%），被打會多扣血。去工藝台煉${BUFFS_N(eleHurt)}，或換有${RES_S[eleHurt]}抗的戒指、耳飾。`); }
   sfx("hurt"); shake = Math.max(shake, 5); flashT = 0.1; flashColor = "255,40,40";
@@ -715,7 +715,7 @@ function updateWorld(dt) {
       if (p.dashHit && p.dashSl === "q" && B.uq.zhenyue && curWeapon() === "fist" && typeof zyCrack === "function") zyCrack(p, p.dashDmg, p.dashDm); // 企劃 57 震岳碎山拳：衝拳停下地裂
       p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
       if (p.rshPend) { W0.rshT = p.rshPend; p.rshPend = 0; }
-      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * (0.4 + (l - 1) * 0.075), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
+      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * AFTER_DM(l), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
@@ -753,7 +753,7 @@ function updateWorld(dt) {
     return r;
   };
   const castLater = (t, fn) => { const sl = CUR_SL, dm = CUR_DM; wLater(t, () => { if (W0) cast(sl, fn, dm); }); };
-  const afterAt = (x, y, r, base) => { const l = gemLv("after"); if (l) W0.fires.push({ x, y, t: 0.5, r, dmg: base * (0.4 + (l - 1) * 0.075), c: "#e0b080", isAf: 1 }); }; // 餘震（瞬間範圍招）
+  const afterAt = (x, y, r, base) => { const l = gemLv("after"); if (l) W0.fires.push({ x, y, t: 0.5, r, dmg: base * AFTER_DM(l), c: "#e0b080", isAf: 1 }); }; // 餘震（瞬間範圍招）
   const moveRunes = (sl) => { // 殘影／護盾／冰徑：位移招（閃身、御劍突、衝拳…）
     const gt = gemLv("trail", sl), gs = gemLv("rshield", sl), gi = gemLv("icepath", sl);
     if (gt) { p.ghostT = 0; p.ghostN = Math.max(p.ghostN || 0, 3 + gt); p.ghostD = 4 + gt * 2; p.ghostSl = sl; }
@@ -1165,7 +1165,7 @@ function updateWorld(dt) {
     if (f.t <= 0) {
       CUR_SL = f.sl || null; CUR_DM = f.dm || 1;
       if (!f.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, f) < f.r + WMOBS[m.type].r) { hitMob(m, wDmg(f.dmg), f.kb || 40, f, true); if (f.slow) m.slowT = Math.max(m.slowT || 0, f.slow); }
-      if (f.af && !f.ghost) afs.push({ x: f.x, y: f.y, t: 0.5, r: f.r, dmg: f.dmg * (0.4 + (f.af - 1) * 0.075), c: "#e0b080", isAf: 1, sl: f.sl, dm: f.dm }); // 餘震
+      if (f.af && !f.ghost) afs.push({ x: f.x, y: f.y, t: 0.5, r: f.r, dmg: f.dmg * AFTER_DM(f.af), c: "#e0b080", isAf: 1, sl: f.sl, dm: f.dm }); // 餘震
       CUR_SL = null; CUR_DM = 1;
       if (f.ghost) { if (allyA()) fxBoom(f.x, f.y, f.r * 1.1, "255,150,60"); continue; }
       fxBoom(f.x, f.y, f.r * 1.1, f.c === "#ff8a3d" || !f.c ? "255,150,60" : f.c === "#d8c8a0" ? "230,200,150" : "255,235,170");
