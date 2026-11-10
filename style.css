@@ -1159,3 +1159,6 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
   .ov .b2head .b2mode { order: 1; flex: none; } .ov .b2head .b2tabs { order: 2; flex: 1 1 0; }
   .ov .b2head .b2eqg { order: 3; flex: 1 1 calc(100% - 150px); } .ov .b2head .b2cp { order: 4; flex: 0 0 auto; }
 }
+/* v9.8.2：行囊面板不靠 .show 動畫（截圖／rAF 沒跑時會停在半透明、往右偏 30px）；開著時遊戲按鈕藏起來 */
+.ov.k-bag, .ov.k-stash { opacity: 1 !important; transform: none !important; transition: none !important; }
+body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
