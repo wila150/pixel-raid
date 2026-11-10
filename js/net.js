@@ -142,9 +142,10 @@ function ghostCast(o, wt, c) {
     else if (c.o === "shower") for (let i = 0; i < 6; i++) W0.fires.push({ x: c.x + rand(-28, 28), y: c.y + rand(-20, 20), t: 0.3 + i * 0.07, r: 16, dmg: 0, ghost: true });
     else if (c.o === "doom") W0.fires.push({ x: c.x, y: c.y, t: 0.7, r: 26, dmg: 0, ghost: true });
     else if (c.o === "wall") { const cx = sx + Math.cos(c.a) * 34, cy = sy + Math.sin(c.a) * 34; for (let i = -2; i <= 2; i++) W0.walls && W0.walls.push({ x: cx - Math.sin(c.a) * i * 16, y: cy + Math.cos(c.a) * i * 16, t: 2, tick: 0, ghost: true }); }
-    else if (c.o === "suck" || c.o === "storm") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
-    else if (c.o === "ward") W0.tornados.push({ x: sx, y: sy, vx: 0, vy: 0, t: 3, tick: 0, orbit: 0, own: o, ghost: true });
-    else if (c.o === "throw") { const bx = sx - Math.cos(c.a) * 24, by = sy - Math.sin(c.a) * 24; W0.rings.push({ x: bx, y: by, t: 0, max: 0.3, r: 35, c: "230,200,150" }); burst(bx, by, "#d8c0a0", 10, 90, 0.4); } // 企劃 55 摔投
+    else if (c.o === "storm") { const ca = Math.cos(c.a), sa = Math.sin(c.a); for (const ph of [0, Math.PI]) W0.tornados.push({ x: sx, y: sy, vx: ca * 45, vy: sa * 45, t: 1.8, tick: 0, sc: 1.5, pur: 1, ghost: true, snake: { ca, sa, v: 60, amp: 18, w: 5, ph, age: 0 } }); } // 企劃 68 風雷
+    else if (c.o === "suck") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
+    else if (c.o === "ward") { const cen = { x: c.x, y: c.y, R: 40 }; for (let i = 0; i < 4; i++) W0.tornados.push({ x: c.x, y: c.y, vx: 0, vy: 0, t: 3, tick: 0, cen, orb: (i / 4) * Math.PI * 2, ghost: true }); } // 企劃 68 風陣：繞瞄準點
+    else if (c.o === "throw") { const bx = sx + Math.cos(c.a) * 100, by = sy + Math.sin(c.a) * 100; W0.rings.push({ x: bx, y: by, t: 0, max: 0.3, r: 35, c: "230,200,150" }); burst(bx, by, "#d8c0a0", 10, 90, 0.4); } // 企劃 55 摔投
     else if (c.o === "whirl") W0.rings.push({ x: sx, y: sy, t: 0, max: 0.6, r: 80, c: "255,70,50" });
     else if (c.o === "swal") W0.pshots.push(Object.assign(P(c.a, 260), { life: 0.45, kind: "swal" }));
     else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 30, c: "190,225,255" });

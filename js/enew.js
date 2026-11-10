@@ -14,10 +14,10 @@ const E_NEW = {
   tthrow: ["飛刀迴旋", "把大刀當成巨型迴旋鏢扔出，在前方旋轉切割後飛回，去回各打一次（大刀唯一的遠程招）"],
   curse: ["詛咒・脆弱", "身邊擴散紫黑詛咒波，不造成傷害；被波及的怪 4 秒受到的物理與元素傷害加倍（王 ×1.5），頭上紫色印記（詛咒）"],
   tslow: ["時緩", "目標一帶召喚巨大半透明時鐘領域 4 秒：裡面的怪動作、移動和敵方子彈慢 80%（王 40%）（控場）"],
-  gbell: ["金鐘罩", "吸收 30% 生命的護罩 4 秒；被打破時炸開，震退四周（防禦）"],
+  gbell: ["金鐘罩", "身邊升起金黃大鐘虛影 4 秒：吸收 30% 生命的護盾，期間受到的近戰傷害 100% 反彈給打你的怪；護盾被打破時炸開震退四周（防禦、反彈）"],
   grab: ["擒拿", "抓住最近的怪拉到面前摔在地上：大傷害＋暈 1.5 秒（王 0.5 秒、不拉）（爆發單體）"],
-  crane: ["紙鶴", "放出 3 隻紙鶴 8 秒，自己飛去找怪啄（召喚）"],
-  stealth: ["風遁", "隱身 3 秒：怪找不到你、移速 +30%；隱身中下一招傷害 ×2；進入和現身各炸一圈風（位移）"],
+  crane: ["紙鶴", "揮扇散出 8 隻發光的靈力紙鶴，在畫面上自動尋敵，撞到怪就爆裂（召喚、自動追蹤）"],
+  stealth: ["風遁", "化成一陣疾風：無敵 2 秒、移速 +50% 可任意移動；消散點和現身點各引爆一次大風壓，炸飛周圍的怪（位移、無敵）"],
 };
 const E_NEW_TAG = { trap: "pa", roar: "ab", tthrow: "pm", curse: "ab", tslow: "ab", gbell: "ab", grab: "m", crane: "pd", stealth: "vb" };
 for (const wt in E_SWAP) for (const o in E_SWAP[wt]) {
@@ -90,20 +90,19 @@ function eNewFx(k, c) {
   }
   if (k === "crane") {
     W0.cranes = (W0.cranes || []).filter((o) => o.ghost);
-    for (let i = 0; i < 3; i++) W0.cranes.push({ x: p.x, y: p.y - 10, a: (i / 3) * Math.PI * 2, t: 8, cd: 0.3 + i * 0.15, sl: CUR_SL, dm: CUR_DM, f: 0 });
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; W0.cranes.push({ x: p.x + Math.cos(a) * 10, y: p.y - 10 + Math.sin(a) * 6, a, t: 8, cd: 0.15 + i * 0.08, sl: CUR_SL, dm: CUR_DM, f: 0, boom: 1, dir: a }); } // 企劃 68：8 隻，撞到怪爆裂
     sfx("arrive"); return true;
   }
-  if (k === "stealth") {
-    W0.stealthT = 3; W0.stealthNew = 1; windPop(CUR_SL, CUR_DM);
-    for (const m of W0.mobs) if (!m.dead && !m.boss && !m.hunter && m.st === "chase") { m.st = "idle"; m.wind = 0; m.mv = null; m.q = null; m.wt = 0; }
-    for (let i = 0; i < 20; i++) { const a = rand(0, 6.28), v = rand(30, 80); particles.push({ x: p.x, y: p.y - 4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5, max: 0.5, color: "#c8ffe0", size: 2 }); }
+  if (k === "stealth") { // 企劃 68 風遁：化成疾風，無敵 2 秒、可任意移動；消散點和現身點各一個大風爆
+    W0.stealthT = 2; p.iframe = Math.max(p.iframe, 2); windPop(CUR_SL, CUR_DM);
+    for (let i = 0; i < 30; i++) { const a = rand(0, 6.28), v = rand(40, 140); particles.push({ x: p.x, y: p.y - 4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5, max: 0.5, color: i % 2 ? "#c8ffe0" : "#ffffff", size: 2 }); }
     sfx("dash"); return true;
   }
   return false;
 }
 
-// 企劃 66 D 風遁：進入和現身各一個風爆（r50、傷害 8、擊退）
-function windPop(sl, dm) { if (!W0) return; eNewHitAt(W0.x, W0.y, 50 * areaMul(sl || "e"), 8, 80, sl || "e", dm); eRing(W0.x, W0.y, 50, "200,255,224", 0.35); }
+// 企劃 68 風遁：消散點和現身點各一個大風壓（r120、傷害 8、炸飛）
+function windPop(sl, dm) { if (!W0) return; const r = 120 * areaMul(sl || "e"); eNewHitAt(W0.x, W0.y, r, 8, 220, sl || "e", dm); eRing(W0.x, W0.y, r, "200,255,224", 0.45); eRing(W0.x, W0.y, r * 0.5, "255,255,255", 0.3); shake = Math.max(shake, 6); burst(W0.x, W0.y, "#c8ffe0", 30, 220, 0.5); }
 // ───────── 4. 每幀 ─────────
 function eNewHitAt(x, y, r, base, kb, sl, dm) {
   const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = sl; CUR_DM = dm || 1;
@@ -155,11 +154,12 @@ updateWorld = function (dt) {
   if (W0.cranes && W0.cranes.length) {
     for (const c of W0.cranes) {
       c.t -= dt; c.cd -= dt; c.f += dt;
-      let tg = null, bd = 150; if (!c.ghost) for (const m of W0.mobs) if (!m.dead) { const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd && Math.hypot(m.x - c.x, m.y - c.y) < 220) { bd = d; tg = m; } }
+      let tg = c.tg && !c.tg.dead && dist(c.tg, p) < 240 ? c.tg : null, bd = c.boom ? 220 : 150; if (!c.ghost && !tg) { const taken = new Set(W0.cranes.map((o) => o !== c && o.tg)); for (const m of W0.mobs) if (!m.dead && !m.noTarget) { const d = Math.hypot(m.x - p.x, m.y - p.y) + (taken.has(m) ? 60 : 0); if (d < bd && Math.hypot(m.x - c.x, m.y - c.y) < 240) { bd = d; tg = m; } } if (c.boom) c.tg = tg; }
       c.a += dt * 3; const gx = tg ? tg.x + Math.cos(c.a * 2) * 8 : p.x + Math.cos(c.a) * 22, gy = (tg ? tg.y + Math.sin(c.a * 2) * 5 : p.y + Math.sin(c.a) * 12) - 10;
-      const dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), v = 170 * dt;
+      const dx = gx - c.x, dy = gy - c.y, d = Math.hypot(dx, dy), v = (c.boom ? 210 : 170) * dt;
       if (d > v) { c.x += (dx / d) * v; c.y += (dy / d) * v; c.dir = Math.atan2(dy, dx); } else { c.x = gx; c.y = gy; }
       if (tg && c.cd <= 0 && Math.hypot(tg.x - c.x, tg.y - 10 - c.y) < 16 + WMOBS[tg.type].r) {
+        if (c.boom) { c.t = 0; eNewHitAt(tg.x, tg.y, 20, CRANE_D, 40, c.sl, c.dm); fxBoom(tg.x, tg.y - 4, 18, "230,240,255"); burst(tg.x, tg.y - 6, "#ffffff", 10, 90, 0.35); sfx("hit"); continue; } // 企劃 68：撞到就爆裂
         c.cd = 0.45; const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = c.sl; CUR_DM = c.dm || 1;
         try { hitMob(tg, wDmg(1.8), 10, c, true); } finally { CUR_SL = s0; CUR_DM = d0; }
         particles.push({ x: tg.x, y: tg.y - 6, vx: rand(-30, 30), vy: rand(-40, -10), life: 0.3, max: 0.3, color: "#ffffff", size: 2 });
@@ -172,12 +172,6 @@ updateWorld = function (dt) {
   if (W0.ambushT > 0) W0.ambushT -= dt;
   W0.stealthNew = 0;
   return r;
-};
-// 風遁：放下一招（不是閃身、丹藥）＝出手，傷害 ×2 一下子、隱身解除
-const _skillUsedEN = skillUsed;
-skillUsed = function (k) { // eslint-disable-line no-func-assign
-  if (W0 && W0.stealthT > 0 && !W0.stealthNew && k !== "roll" && k !== "potion") { W0.stealthT = 0; windPop("e", 1); W0.ambushT = 0.6; floatText(W0.x, W0.y - 22, "伏擊 ×2", "#c8ffe0"); }
-  return _skillUsedEN.apply(this, arguments);
 };
 // 移速 +30%、戰吼護甲 +50%
 const _jobStatsEN = jobStats;

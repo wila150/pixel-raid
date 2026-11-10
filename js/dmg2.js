@@ -50,7 +50,7 @@ function mobRes(m, e) {
   else r = MOB_RES[(m.camp && m.camp.z) || zoneAt(m.x, m.y)] || 0;
   return e === "P" ? r / 2 : r;
 }
-const mobResEff = (m, e) => Math.max(0, mobRes(m, e) - ((B && B.pen && B.pen[e]) || 0)); // 穿透最低扣到 0（PoE2），不會變負
+const mobResEff = (m, e) => (typeof IGN_DEF !== "undefined" && IGN_DEF ? 0 : Math.max(0, mobRes(m, e) - ((B && B.pen && B.pen[e]) || 0))); // 穿透最低扣到 0（PoE2），不會變負
 const takenMul = (m) => 1 + (m.shockT > time ? 0.2 : 0) + (m.expT > time ? 0.2 : 0); // 感電、曝曬各 +20%（加法）
 function eleKe(m, e) { // 剋 ×1.3、被剋 ×0.7、同元素 ×0.7、物理不吃
   const me = mobEle(m); if (!e || !me) return 1;

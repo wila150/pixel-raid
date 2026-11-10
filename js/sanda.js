@@ -38,8 +38,8 @@ function ssAutoKick() {
 }
 // 摔投（world.js doSpin 呼叫；CUR_SL／CUR_DM 由 cast 設好）
 function ssThrow(p, AM, afterAt) {
-  let tg = null, bd = 50;
-  for (const m of W0.mobs) { if (m.dead || m.noTarget || m.air) continue; const d = dist(m, p) - WMOBS[m.type].r; if (d < bd) { bd = d; tg = m; } }
+  let tg = null, bd = 50; const big = (m) => m.elite || WMOBS[m.type].sz === "L" || WMOBS[m.type].heavy; // 企劃 68：先抓面前的精英或大型怪，沒有才抓一般怪
+  for (const m of W0.mobs) { if (m.dead || m.noTarget || m.air) continue; const d = dist(m, p) - WMOBS[m.type].r - (m.boss ? 0 : big(m) ? 60 : 0); if (d < bd) { bd = d; tg = m; } }
   if (tg) p.face = angTo(p, tg);
   const cs = Math.cos(p.face), sn = Math.sin(p.face);
   if (!tg) { // 前面沒怪：原地重踏
@@ -52,14 +52,14 @@ function ssThrow(p, AM, afterAt) {
     hitMob(tg, wDmg(45), 0, p, true); tg.whipU = time + 2;
     floatText(tg.x, tg.y - 30, "鞭腿", "#ffd08a"); p.ssK = 5; p.ssKT = time; p.swing = p.swingMax = 0.2; p.swingR = 26; sfx("break"); shake = Math.max(shake, 4); return;
   }
-  if (tg.elite || WMOBS[tg.type].ai === "pillar") { // 精英：過肩頂＋擊退
-    hitMob(tg, wDmg(40), 0, p, true); if (WMOBS[tg.type].ai !== "pillar") { tg.kb = 160; tg.ka = angTo(p, tg); }
+  if (WMOBS[tg.type].ai === "pillar") { // 柱子：過肩頂
+    hitMob(tg, wDmg(40), 0, p, true);
     floatText(tg.x, tg.y - 22, "過肩頂", "#ffd08a"); p.ssK = 4; p.ssKT = time; p.swing = p.swingMax = 0.16; p.swingR = 24; sfx("break"); shake = Math.max(shake, 3); return;
   }
-  // 小怪：抓起來往身後摔
-  const end = { x: p.x, y: p.y }; moveBody(end, -cs * 24, -sn * 24, WMOBS[tg.type].r);
-  tg.air = true; tg.ssAir = 1;
-  W0.ssThr = { m: tg, x0: tg.x, y0: tg.y, x1: end.x, y1: end.y, t: 0, max: 0.24, r: 35 * AM(), sl: CUR_SL, dm: CUR_DM };
+  // 企劃 68：抓起來揮一圈，砸向前方 100，落點連鎖震波打周圍
+  const end = { x: p.x, y: p.y }; moveBody(end, cs * 100, sn * 100, WMOBS[tg.type].r);
+  tg.air = true; tg.ssAir = 1; if (big(tg)) floatText(tg.x, tg.y - 24, "摔投", "#ffd08a");
+  W0.ssThr = { m: tg, x0: tg.x, y0: tg.y, x1: end.x, y1: end.y, px: p.x, py: p.y, a0: angTo(p, tg), t: 0, max: 0.5, r: THROW_R * AM(), sl: CUR_SL, dm: CUR_DM, big: big(tg) };
   p.ssK = 0; sfx("dash");
 }
 function ssLand(T) {
@@ -68,7 +68,8 @@ function ssLand(T) {
   const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = T.sl; CUR_DM = T.dm;
   try {
     const at = { x: T.x1, y: T.y1 }, l = gemLv("after", T.sl); if (l) W0.fires.push({ x: at.x, y: at.y, t: 0.5, r: T.r, dmg: 30 * (0.4 + (l - 1) * 0.075), c: "#e0b080", isAf: 1, sl: T.sl, dm: T.dm });
-    for (const o of W0.mobs) if (!o.dead && dist(o, at) < T.r + WMOBS[o.type].r) { hitMob(o, wDmg(o === m ? 50 : 30), o === m ? 0 : 70, at, true); if (!o.boss && !o.elite) o.ssStun = Math.max(o.ssStun || 0, 0.8); }
+    for (const o of W0.mobs) if (!o.dead && dist(o, at) < T.r + WMOBS[o.type].r) { hitMob(o, wDmg(o === m ? (T.px !== undefined ? 62 : 50) : 30), o === m ? 0 : 70, at, true); if (!o.boss && !o.elite) o.ssStun = Math.max(o.ssStun || 0, 0.8); }
+    if (T.px !== undefined) { const r2 = T.r * 1.8, sl = T.sl, dm = T.dm; W0.rings.push({ x: T.x1, y: T.y1, t: 0, max: 0.45, r: r2, c: "230,200,150" }); wLater(0.15, () => { if (!W0) return; const s1 = CUR_SL, d1 = CUR_DM; CUR_SL = sl; CUR_DM = dm; try { for (const o of W0.mobs) { if (o.dead) continue; const d = dist(o, at); if (d >= T.r + WMOBS[o.type].r && d < r2 + WMOBS[o.type].r) hitMob(o, wDmg(15), 90, at, true); } } finally { CUR_SL = s1; CUR_DM = d1; } burst(at.x, at.y, "#d8c0a0", 14, 160, 0.4); }); } // 企劃 68：連鎖震波（第二圈）
   } finally { CUR_SL = s0; CUR_DM = d0; }
   W0.rings.push({ x: T.x1, y: T.y1, t: 0, max: 0.3, r: T.r, c: "230,200,150" }); fxBoom(T.x1, T.y1, T.r, "230,200,150"); burst(T.x1, T.y1, "#d8c0a0", 16, 110, 0.5);
   sfx("break"); shake = Math.max(shake, 5);
@@ -103,6 +104,8 @@ updateWorld = function (dt) { // eslint-disable-line no-func-assign
     T.t += dt; const q = Math.min(1, T.t / T.max), m = T.m;
     if (m.dead) { m.air = false; p.ssThr = null; }
     else if (q >= 1) { p.ssThr = null; ssLand(T); }
+    else if (T.px !== undefined && q < 0.5) { const a = T.a0 + q * 2 * Math.PI * 2, R = Math.max(14, dist({ x: T.px, y: T.py }, { x: T.x0, y: T.y0 })); m.x = T.px + Math.cos(a) * R; m.y = T.py + Math.sin(a) * R * 0.7 - 10; m.kb = 0; p.face = a; p.swing = p.swingMax = 0.1; p.swingR = 20; } // 企劃 68：揮一圈
+    else if (T.px !== undefined) { const q2 = (q - 0.5) * 2, sx = T.px + Math.cos(T.a0) * 16, sy = T.py + Math.sin(T.a0) * 16 - 10; m.x = sx + (T.x1 - sx) * q2; m.y = sy + (T.y1 - sy) * q2 - Math.sin(q2 * Math.PI) * 40; m.kb = 0; }
     else { m.x = T.x0 + (T.x1 - T.x0) * q; m.y = T.y0 + (T.y1 - T.y0) * q - Math.sin(q * Math.PI) * 26; m.kb = 0; }
   }
   return r;

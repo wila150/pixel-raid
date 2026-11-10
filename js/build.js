@@ -4,9 +4,9 @@
 // ───────── 護身法術（保命技，V／手機下方按鈕；隨轉職解鎖，安全營地可換）─────────
 // v4.7 拿掉「選英雄」：保命技改成可以換的護身法術；舊英雄的被動改成傳說裝備（時之沙漏、萬毒蟾衣、血玉佩）
 const SAVES = {
-  rewind: { n: "時間回溯", cd: 30, job: 0, d: "回到 3 秒前的位置和生命" },
-  mist: { n: "化身霧氣", cd: 40, job: 1, d: "4 秒免疫物理傷害、移動加快" },
-  blood: { n: "血霧無敵", cd: 60, job: 2, d: "5 秒無敵，期間吸血 +10%" },
+  rewind: { n: "時間回溯", cd: 30, job: 0, d: "生命、真氣和位置倒退回 3 秒前（3 秒前比較多才回）" },
+  mist: { n: "化身霧氣", cd: 40, job: 1, d: "化成白色霧氣 3 秒：免疫一切傷害、移速 +80%，期間不能攻擊" },
+  blood: { n: "血霧無敵", cd: 60, job: 2, d: "化成血霧 5 秒無敵；穿過怪的身體時，每秒吸那隻怪最大生命 5%（王 0.5%）回給自己" },
 };
 const SAVE_KEYS = Object.keys(SAVES);
 const HERO_SAVE = { ronin: "rewind", witch: "mist", vampire: "blood" };
@@ -179,11 +179,11 @@ function heroSave() {
   if (!p || (p.saveCd || 0) > 0) { if (p) floatText(p.x, p.y - 24, `${h.n}冷卻中 ${Math.ceil(p.saveCd)} 秒`, "#cfc4dc"); return; }
   p.saveCd = h.cd;
   if (k === "rewind") {
-    const o = (p.hist && p.hist[0]) || { x: p.x, y: p.y, hp: p.hp };
-    burst(p.x, p.y, "#9fe8ff", 20, 90); p.x = o.x; p.y = o.y; p.hp = Math.max(p.hp, o.hp); p.iframe = 0.6; cam.x = p.x; cam.y = p.y;
+    const o = (p.hist && p.hist[0]) || { x: p.x, y: p.y, hp: p.hp, mp: p.mp };
+    burst(p.x, p.y, "#9fe8ff", 20, 90); p.x = o.x; p.y = o.y; p.hp = Math.max(p.hp, o.hp); if (o.mp !== undefined) p.mp = Math.max(p.mp, o.mp); // 企劃 68：真氣也回到 3 秒前 p.iframe = 0.6; cam.x = p.x; cam.y = p.y;
     W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.5, r: 50, c: "150,220,255" }); flashT = 0.15; flashColor = "150,220,255";
-  } else if (k === "mist") { p.mistT = 4; burst(p.x, p.y, "#a0ff9a", 30, 80, 0.6); }
-  else { p.invT = 5; burst(p.x, p.y, "#ff3a4a", 30, 90, 0.6); flashT = 0.12; flashColor = "200,20,40"; }
+  } else if (k === "mist") { p.mistT = 3; burst(p.x, p.y, "#ffffff", 30, 80, 0.6); } // 企劃 68：3 秒
+  else { p.invT = 5; p.bmT = 5; burst(p.x, p.y, "#ff3a4a", 30, 90, 0.6); flashT = 0.12; flashColor = "200,20,40"; }
   floatText(p.x, p.y - 30, h.n + "！", "#ffe066", true); sfx("arrive");
 }
 
@@ -238,11 +238,11 @@ function drawOrigin() {
 function heroTick(dt, inMenu) {
   const p = W0;
   p.saveCd = Math.max(0, (p.saveCd || 0) - dt); p.swT = Math.max(0, (p.swT || 0) - dt);
-  if (p.mistT > 0) { p.mistT -= dt; if (Math.random() < 0.5) particles.push({ x: p.x + rand(-8, 8), y: p.y + rand(-8, 4), vx: rand(-10, 10), vy: -15, life: 0.5, max: 0.5, color: "#9aff9a", size: 2 }); }
+  if (p.mistT > 0) { p.mistT -= dt; if (Math.random() < 0.7) particles.push({ x: p.x + rand(-9, 9), y: p.y + rand(-10, 4), vx: rand(-12, 12), vy: -12, life: 0.6, max: 0.6, color: Math.random() < 0.5 ? "#ffffff" : "#dfeee8", size: 3 }); }
   if (p.invT > 0) { p.invT -= dt; if (Math.random() < 0.5) particles.push({ x: p.x + rand(-7, 7), y: p.y + rand(-8, 4), vx: 0, vy: -20, life: 0.4, max: 0.4, color: "#ff3a4a", size: 2 }); }
   if (p.lbT > 0) p.lbT -= dt;
   p.histT = (p.histT || 0) - dt;
-  if (p.histT <= 0) { p.histT = 0.1; p.hist = p.hist || []; p.hist.push({ x: p.x, y: p.y, hp: p.hp }); if (p.hist.length > 30) p.hist.shift(); }
+  if (p.histT <= 0) { p.histT = 0.1; p.hist = p.hist || []; p.hist.push({ x: p.x, y: p.y, hp: p.hp, mp: p.mp }); if (p.hist.length > 30) p.hist.shift(); }
   originTick(dt);
   if (inMenu) return;
   for (const k of ["1", "2", "3"]) if (pressed.has(k)) switchW(+k - 1);

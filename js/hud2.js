@@ -11,7 +11,9 @@ const STATUS = [
   { k: "sure", g: "勢", c: "#ffd84a", on: (p) => p.sureT > 0, sub: (p) => p.sureT },
   { k: "lb", g: "倍", c: "#9fe8ff", on: (p) => p.lbReady || p.lbT > 0, sub: (p) => (p.lbT > 0 ? p.lbT : 0) },
   { k: "inv", g: "無", c: "#ff8a9a", on: (p) => p.invT > 0, sub: (p) => p.invT },
-  { k: "mist", g: "霧", c: "#9aff9a", on: (p) => p.mistT > 0, sub: (p) => p.mistT },
+  { k: "mist", g: "霧", c: "#e8f4f0", on: (p) => p.mistT > 0, sub: (p) => p.mistT },
+  { k: "breeze", g: "風", c: "#a0ffbe", on: (p) => p.breezeT > 0, sub: (p) => p.breezeT }, // 企劃 68 清風
+  { k: "gust", g: "疾", c: "#c8f0e0", on: (p) => p.gustN > 0 && p.gustT > time && curWeapon() === "fan", txt: (p) => `${p.gustN}`, sub: (p) => p.gustT - time }, // 企劃 68 疾風層數
   { k: "pot", g: "丹", c: "#ff9a7a", on: (p) => p.potCd > 0 && p.cds.potion > 0, sub: (p) => p.cds.potion },
 ];
 function drawStatus() {
