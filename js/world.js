@@ -720,7 +720,7 @@ function updateWorld(dt) {
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 ? 0.75 : 1) * (p.zapT > 0 ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 && !(W0.titanT > 0) ? 0.6 : 1) * (p.mistT > 0 ? 1.3 : 1) * (p.poolT > 0 && !(W0.titanT > 0) ? 0.75 : 1) * (p.zapT > 0 && !(W0.titanT > 0) ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? 0.6 : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -814,7 +814,10 @@ function updateWorld(dt) {
       p.swing = p.swingMax = 0.25; p.swingR = ta === "sweep" ? 40 : 34; sfx("break"); shake = Math.max(shake, ta === "quake" ? 4 : 2);
       HS_HEAVY = true; // 企劃 60：大刀普攻（重斬／崩山／橫掃／破甲）＝重擊停頓
       if (ta === "sweep") arcHit(40, Math.PI + 0.1, 19, 110);
-      else if (ta === "quake") arcHit(38, 1.5, 34, 150);
+      else if (ta === "quake") { arcHit(38, 1.5, 34, 150); // 企劃 66 D：往前多一條地裂波（長 50、本體 40%）
+        const c0 = Math.cos(p.face), s0 = Math.sin(p.face);
+        for (const m of W0.mobs) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y, al = dx * c0 + dy * s0, pp = Math.abs(-dx * s0 + dy * c0); if (al > 38 && al < 88 + WMOBS[m.type].r && pp < 9 + WMOBS[m.type].r) hitMob(m, wDmg(34 * 0.4), 60, p, true); }
+        for (let i = 0; i < 8; i++) particles.push({ x: p.x + c0 * (40 + i * 6) + rand(-2, 2), y: p.y + s0 * (40 + i * 6) + 3, vx: rand(-8, 8), vy: -rand(10, 30), life: 0.4, max: 0.4, color: i % 2 ? "#b08a5a" : "#e0c090", size: 2 }); }
       else if (ta === "crack") { arcHit(38, 1.5, 14.4, 110); for (const m of W0.mobs) if (!m.dead && dist(m, p) < 38 + WMOBS[m.type].r && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.5) m.armBrk = 4; }
       else arcHit(38, 1.5, 18, 110);
       HS_HEAVY = false;
@@ -873,10 +876,10 @@ function updateWorld(dt) {
     else if (wt === "fist" && tq === "throw" && typeof ssThrow === "function") ssThrow(p, AM, afterAt);
     else if (wt === "fist" && tq === "roar") {
       const rr = 58 * AM(); afterAt(p.x + Math.cos(p.face) * 24, p.y + Math.sin(p.face) * 24, rr * 0.7, 36);
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.9) { hitMob(m, wDmg(36), 170, p, true); m.slowT = Math.max(m.slowT || 0, 2); }
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.9) { hitMob(m, wDmg(36), 170, p, true); m.slowT = Math.max(m.slowT || 0, 2); if (!m.boss) m.ssStun = Math.max(m.ssStun || 0, 0.5); } // 企劃 66 D：震天多暈 0.5 秒
       W0.rings.push({ x: p.x + Math.cos(p.face) * 24, y: p.y + Math.sin(p.face) * 24, t: 0, max: 0.3, r: 40, c: "255,210,140" }); sfx("break"); shake = Math.max(shake, 5);
     }
-    else if (wt === "fan" && tq === "suck") { W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 1.6, tick: 0, pull: 80, pr: 60, hr: 30, dmg: 11, sc: 1.4 }); sfx("volley"); }
+    else if (wt === "fan" && tq === "suck") { W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 4.6, fly: 1.6, tick: 0, pull: 80, pr: 60, hr: 30, dmg: 11, sc: 1.4 }); sfx("volley"); } // 企劃 66 D 聚風：飛 1.6 秒後停住原地轉 3 秒（只吸怪）
     else if (wt === "fan" && tq === "storm") { W0.tornados.push({ x: p.x + Math.cos(p.face) * 14, y: p.y + Math.sin(p.face) * 14, vx: Math.cos(p.face) * 45, vy: Math.sin(p.face) * 45, t: 1.6, tick: 0, dmg: 10, boom: 34 }); sfx("volley"); }
     else if (wt === "fan" && tq === "ward") { W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 3, tick: 0, orbit: 0, dmg: 5.5 }); sfx("volley"); }
     else if (wt === "sword") { // 劍氣斬：三道穿透劍氣
@@ -967,7 +970,7 @@ function updateWorld(dt) {
     else if (k === "rift") { for (let i = 1; i <= 8; i++) W0.fires.push({ x: p.x + cs * i * 20, y: p.y + sn * i * 20, t: 0.05 + i * 0.05, r: 20, dmg: 34, c: "#d8c8a0" }); sfx("crit"); shake = Math.max(shake, 6); }
     else if (k === "exec") {
       const r = 60 * AM(); p.swing = p.swingMax = 0.3; p.swingR = 44;
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.2) hitMob(m, wDmg(95) * (m.hp < m.max * 0.3 ? 2 : 1), 150, p, true);
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r && Math.abs(((angTo(p, m) - F + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.2) { if (!m.boss && !m.elite && !m.hunter && m.hp < m.max * 0.3) { floatText(m.x, m.y - 20, "斬殺", "#ff6a5a", true); m.hp = Math.min(m.hp, 1); hitMob(m, wDmg(95), 150, p, true); } else hitMob(m, wDmg(95) * (m.hp < m.max * 0.3 ? 2 : 1), 150, p, true); } // 企劃 66 D：殘血一般怪直接斬殺
       sfx("break"); shake = Math.max(shake, 7); flashT = 0.06; flashColor = "255,230,200";
     }
     else if (k === "hund") { for (let i = 0; i < 12; i++) castLater(i * 0.08, () => { const tg = near(60); if (tg) p.face = angTo(p, tg); p.swing = p.swingMax = 0.08; p.swingR = 14; arcHit(26, 0.9, 9, 20); sfx("hit"); }); }
@@ -979,10 +982,10 @@ function updateWorld(dt) {
     else if (k === "array") { const ax = t ? t.x : p.x + Math.cos(F) * 60, ay = t ? t.y : p.y + Math.sin(F) * 60; W0.swArr = { x: ax, y: ay, r: 50 * AM(), t: 5, tick: 0, sl: CUR_SL, dm: CUR_DM }; W0.rings.push({ x: ax, y: ay, t: 0, max: 0.3, r: 50 * AM(), c: "200,230,255" }); sfx("arrive"); } // 企劃 66 B 劍陣：插在地上的一圈靈劍
     else if (k === "cold") {
       const L = 160, r0 = 16 * AM(); let n = 0;
-      for (const m of W0.mobs) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y, along = dx * cs + dy * sn, perp = Math.abs(-dx * sn + dy * cs); if (along > -6 && along < L + 6 && perp < r0 + WMOBS[m.type].r) { hitMob(m, wDmg(90), 60, p, true); n++; } }
+      for (const m of W0.mobs) { if (m.dead) continue; const dx = m.x - p.x, dy = m.y - p.y, along = dx * cs + dy * sn, perp = Math.abs(-dx * sn + dy * cs); if (along > -6 && along < L + 6 && perp < r0 + WMOBS[m.type].r) { hitMob(m, wDmg(90), 60, p, true); n++; if (!m.dead && Math.random() < 0.3) { m.frz = Math.max(m.frz || 0, m.boss ? 0.3 : 1); floatText(m.x, m.y - 18, "冰凍", "#bfefff"); } } } // 企劃 66 D：30% 冰凍
       for (let i = 0; i <= 16; i++) particles.push({ x: p.x + cs * i * 10, y: p.y - 3 + sn * i * 10, vx: rand(-10, 10), vy: rand(-10, 10), life: 0.45, max: 0.45, color: "#e8f6ff", size: 2 });
       moveBody(p, cs * L, sn * L, 5); p.iframe = Math.max(p.iframe, 0.3); afterAt(p.x, p.y, 30, 90);
-      sfx("crit"); shake = Math.max(shake, n ? 5 : 2); flashT = 0.05; flashColor = "220,240,255";
+      sfx("crit"); shake = Math.max(shake, n ? 5 : 2); flashT = 0.05; flashColor = "220,240,255"; W0.grayT = 0.15;
     }
     else if (k === "domain") { W0.swDom = { x: p.x, y: p.y, r: 40 * AM(), t: 5, tick: 0, sl: CUR_SL, dm: CUR_DM, fol: 1 }; sfx("arrive"); } // 企劃 66 B 劍域：跟著你走
     else if (k === "freeze") {
@@ -1093,11 +1096,13 @@ function updateWorld(dt) {
   if (W0.healZ) { const H = W0.healZ; H.t -= dt; H.fx = (H.fx || 0) - dt; if (H.fx <= 0 && dist(p, H) < H.r) { H.fx = 0.8; fxPlay("heal", 0, 0, 26, 0.4, { follow: 1 }); } if (dist(p, H) < H.r && p.hp < p.maxHp) { H.acc = (H.acc || 0) + p.maxHp * 0.03 * dt * brkMul(); if (H.acc >= 1) { const h = Math.min(Math.floor(H.acc), p.maxHp - p.hp); p.hp += h; H.acc -= Math.floor(H.acc); } } if (H.t <= 0) W0.healZ = null; }
   if (W0.wwall) { const V = W0.wwall, c = Math.cos(V.a), s2 = Math.sin(V.a); V.t -= dt;
     for (const s of W0.eshots) { const dx = s.x - V.x, dy = s.y - V.y; if (Math.abs(dx * c + dy * s2) < 10 && Math.abs(-dx * s2 + dy * c) < V.half && s.life > 0) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } }
+    for (const m of W0.mobs) { if (m.dead || m.boss || m.elite) continue; const dx = m.x - V.x, dy = m.y - V.y, al = dx * c + dy * s2; if (Math.abs(al) < 8 + WMOBS[m.type].r && Math.abs(-dx * s2 + dy * c) < V.half) { const sg = al >= 0 ? 1 : -1; moveBody(m, c * 20 * sg, s2 * 20 * sg, WMOBS[m.type].r); m.wind = 0; } } // 企劃 66 D：碰到牆的小怪被推開 20
     if (V.t <= 0) W0.wwall = null; }
   if (p.guardT2 > 0 && (p.guardT2 -= dt) <= 0) p.guardSh = 0;
   if (W0.rshT > 0) W0.rshT -= dt;
   if (W0.bellT > 0) W0.bellT -= dt;
   if (W0.decoy && (W0.decoy.t -= dt) <= 0) W0.decoy = null; // 殘影
+  if (W0.grayT > 0) W0.grayT -= dt;
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y, typeof triOf === "function" ? triOf(wt, "a") : null); }
   if (B.noRoll && act("roll", " ", "l", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
   // 身法取消動作：按空白鍵時，收招（揮砍減速）直接中斷；正在放衝刺類招式（御劍突、衝拳、斷空…）時先記住，衝完那一刻馬上閃身
@@ -1232,6 +1237,7 @@ function updateWorld(dt) {
   W0.rings = W0.rings.filter((r) => r.t < r.max);
   if (W0.guardT > 0) W0.guardT -= dt;
   if (W0.focusT > 0) W0.focusT -= dt;
+  if (W0.spinT > 0 && W0.spinK === "gale") for (const m of W0.mobs) if (!m.dead && !m.boss && !m.elite && dist(m, p) < 50 + WMOBS[m.type].r && dist(m, p) > 14) { const a = angTo(m, p); moveBody(m, Math.cos(a) * 30 * dt, Math.sin(a) * 30 * dt, WMOBS[m.type].r); } // 企劃 66 D 颶風：50 內小怪微微拉過來
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
     if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const sr = 40 * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(W0.spinK === "gale" ? 8.5 : 17) * (m.boss ? 0.8 : 1), 60, p, true); CUR_SL = null; CUR_DM = 1; sfx("dash"); }
@@ -1240,10 +1246,10 @@ function updateWorld(dt) {
     t.t -= dt; t.tick -= dt; CUR_SL = t.sl || null; CUR_DM = t.dm || 1;
     if (t.fol) { const o = t.own || p; t.x = o.x; t.y = o.y; }
     else if (t.orbit !== undefined) { const o = t.own || p; t.orbit += dt * 6; t.x = o.x + Math.cos(t.orbit) * 22; t.y = o.y + Math.sin(t.orbit) * 16; } // 風陣：繞著自己轉
-    else if (!(t.hold > 0 && t.stopT !== undefined && t.t <= t.hold)) moveBody(t, t.vx * dt, t.vy * dt, 3);
+    else if (t.fly === undefined || (t.fly -= dt) > 0) moveBody(t, t.vx * dt, t.vy * dt, 3); // 聚風：飛完停住
     if (t.orbit !== undefined && !t.ghost) for (const s of W0.eshots) if (Math.hypot(s.x - p.x, s.y - p.y) < 36) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } // 吹散敵方子彈
     if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.pr || 40) && !(t.typh && m.boss)) { const a = angTo(m, t), f = (t.pull || 40) * (t.typh && m.elite ? 0.5 : 1); if (t.typh && dist(m, t) < 18) continue; moveBody(m, Math.cos(a) * f * dt, Math.sin(a) * f * dt, WMOBS[m.type].r); }
-    if (t.tick <= 0 && !t.ghost) { t.tick = t.tk || 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg((t.dmg || 13) * (typeof TORN_K !== "undefined" ? TORN_K : 1)), 0, t, true); DOT_HIT = false; if (t.boom && wEleGem() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
+    if (t.tick <= 0 && !t.ghost && !(t.fly !== undefined && t.fly <= 0)) { t.tick = t.tk || 0.25; DOT_HIT = true; for (const m of W0.mobs) if (!m.dead && dist(m, t) < (t.hr || 22) + WMOBS[m.type].r) hitMob(m, wDmg((t.dmg || 13) * (typeof TORN_K !== "undefined" ? TORN_K : 1)), 0, t, true); DOT_HIT = false; if (t.boom && wEleGem() === "T") stormVolt(t); } // 08-A：6→13；風雷＋雷元素：每下多跳一隻
     if (t.t <= 0 && t.boom) { fxBoom(t.x, t.y, 34, "190,220,255"); bolts.push({ x: t.x, y: t.y, life: 0.25 }); shake = Math.max(shake, 4); sfx("crit"); if (!t.ghost) for (const m of W0.mobs) if (!m.dead && dist(m, t) < 34 + WMOBS[m.type].r) hitMob(m, wDmg(t.boom), 80, t, true); }
     if (Math.random() < 0.7) particles.push({ x: t.x + rand(-6, 6), y: t.y + rand(-4, 4), vx: rand(-30, 30), vy: -50, life: 0.35, max: 0.35, color: "#c8f0e0", size: 2 });
   }
@@ -1919,6 +1925,7 @@ function drawWorldHud() {
     if (btn) { const lack = !mpCan(p, WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1)); btn.style.opacity = lack ? 0.45 : 1; btn.classList.toggle("nomp", lack); } // 企劃 61：真氣不足變暗
   }
   const cnt = pad.querySelector(".count"); if (cnt) cnt.textContent = w.potions;
+  if (W0 && W0.grayT > 0) { ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H); ctx.restore(); } // 一劍光寒：黑白閃
   if (flashT > 0) { ctx.fillStyle = `rgba(${flashColor},${Math.min(0.5, flashT * 2.5)})`; ctx.fillRect(0, 0, W, H); }
 }
 

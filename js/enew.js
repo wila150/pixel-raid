@@ -10,14 +10,14 @@ const E_SWAP = { // 舊 → 新
 };
 const E_NEW = {
   trap: ["連環雷陷阱", "往前丟 3 個雷陷阱，怪踩到就爆炸並感電；8 秒沒人踩自己爆（陷阱、範圍）"],
-  roar: ["戰吼", "身邊 90 內的怪 5 秒受到傷害 +20%，而且會衝向你；你護甲 +50%（詛咒、增益）"],
+  roar: ["戰吼", "身邊 90 內的怪 5 秒受到傷害 +20%，而且會衝向你；打斷正在蓄力的招；你護甲 +50%（詛咒、增益）"],
   tthrow: ["飛刀迴旋", "把刀丟出去再飛回來，去回各打一次（大刀唯一的遠程招）"],
   curse: ["詛咒・脆弱", "目標一帶的怪 6 秒受到傷害 +25%（王 +12%），頭上紫色印記（詛咒）"],
   tslow: ["時緩", "放一個圈 4 秒：裡面的怪和敵方子彈都變得很慢（控場）"],
   gbell: ["金鐘罩", "吸收 30% 生命的護罩 4 秒；被打破時炸開，震退四周（防禦）"],
-  grab: ["擒拿", "抓住最近的怪摔在地上：大傷害＋暈 1.5 秒（王 0.5 秒）（爆發單體）"],
+  grab: ["擒拿", "抓住最近的怪拉到面前摔在地上：大傷害＋暈 1.5 秒（王 0.5 秒、不拉）（爆發單體）"],
   crane: ["紙鶴", "放出 3 隻紙鶴 8 秒，自己飛去找怪啄（召喚）"],
-  stealth: ["風遁", "隱身 3 秒：怪找不到你、移速 +30%；隱身中下一招傷害 ×2（位移）"],
+  stealth: ["風遁", "隱身 3 秒：怪找不到你、移速 +30%；隱身中下一招傷害 ×2；進入和現身各炸一圈風（位移）"],
 };
 const E_NEW_TAG = { trap: "pa", roar: "ab", tthrow: "pm", curse: "ab", tslow: "ab", gbell: "ab", grab: "m", crane: "pd", stealth: "vb" };
 for (const wt in E_SWAP) for (const o in E_SWAP[wt]) {
@@ -55,6 +55,7 @@ function eNewFx(k, c) {
   if (k === "roar") {
     const r = 90 * AM();
     for (const m of W0.mobs) if (!m.dead && dist(m, p) < r + WMOBS[m.type].r) { m.roarT = 5; hitMob(m, wDmg(14), 0, p, true); if (!m.boss && (m.st === "idle" || m.st === "home")) m.st = "chase"; }
+    for (const m of W0.mobs) if (!m.dead && m.wind > 0 && dist(m, p) < 100 + WMOBS[m.type].r) { m.wind = 0; m.atkT = Math.max(m.atkT || 0, 0.6); if (m.dv && m.dv.ph === "aim") m.dv = null; floatText(m.x, m.y - 16, "打斷", "#ffb070"); } // 企劃 66 D：打斷出招蓄力
     W0.roarT = 5; B = worldStats(); eRing(p.x, p.y, r, "255,170,90", 0.45); floatText(p.x, p.y - 22, "戰吼", "#ffb070");
     sfx("break"); shake = Math.max(shake, 5); return true;
   }
@@ -78,7 +79,7 @@ function eNewFx(k, c) {
     p.swing = p.swingMax = 0.2; p.swingR = 18;
     if (!tg) { floatText(p.x, p.y - 20, "沒抓到", "#cfc4dc"); sfx("dash"); return true; }
     p.face = angTo(p, tg);
-    if (!tg.boss) { const fx = p.x + Math.cos(p.face) * 16, fy = p.y + Math.sin(p.face) * 16; tg.x = fx; tg.y = fy; }
+    if (!tg.boss) { const fx = p.x + Math.cos(p.face) * 20, fy = p.y + Math.sin(p.face) * 20; tg.x = fx; tg.y = fy; } // 企劃 66 D：拉到面前 20
     tg.frz = Math.max(tg.frz || 0, tg.boss ? 0.5 : 1.5); tg.wind = 0; tg.mv = null;
     hitMob(tg, wDmg(75), 0, p);
     fxBoom(tg.x, tg.y + 4, 22, "230,200,150"); burst(tg.x, tg.y, "#e8c890", 18, 110, 0.45);
@@ -90,7 +91,7 @@ function eNewFx(k, c) {
     sfx("arrive"); return true;
   }
   if (k === "stealth") {
-    W0.stealthT = 3; W0.stealthNew = 1;
+    W0.stealthT = 3; W0.stealthNew = 1; windPop(CUR_SL, CUR_DM);
     for (const m of W0.mobs) if (!m.dead && !m.boss && !m.hunter && m.st === "chase") { m.st = "idle"; m.wind = 0; m.mv = null; m.q = null; m.wt = 0; }
     for (let i = 0; i < 20; i++) { const a = rand(0, 6.28), v = rand(30, 80); particles.push({ x: p.x, y: p.y - 4, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5, max: 0.5, color: "#c8ffe0", size: 2 }); }
     sfx("dash"); return true;
@@ -98,6 +99,8 @@ function eNewFx(k, c) {
   return false;
 }
 
+// 企劃 66 D 風遁：進入和現身各一個風爆（r50、傷害 8、擊退）
+function windPop(sl, dm) { if (!W0) return; eNewHitAt(W0.x, W0.y, 50 * areaMul(sl || "e"), 8, 80, sl || "e", dm); eRing(W0.x, W0.y, 50, "200,255,224", 0.35); }
 // ───────── 4. 每幀 ─────────
 function eNewHitAt(x, y, r, base, kb, sl, dm) {
   const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = sl; CUR_DM = dm || 1;
@@ -158,7 +161,7 @@ updateWorld = function (dt) {
     W0.cranes = W0.cranes.filter((c) => c.t > 0);
   }
   // 風遁
-  if (W0.stealthT > 0) { W0.stealthT -= dt; if (W0.stealthT <= 0) W0.stealthT = 0; }
+  if (W0.stealthT > 0) { W0.stealthT -= dt; if (W0.stealthT <= 0) { W0.stealthT = 0; windPop("e", 1); } }
   if (W0.ambushT > 0) W0.ambushT -= dt;
   W0.stealthNew = 0;
   return r;
@@ -166,7 +169,7 @@ updateWorld = function (dt) {
 // 風遁：放下一招（不是閃身、丹藥）＝出手，傷害 ×2 一下子、隱身解除
 const _skillUsedEN = skillUsed;
 skillUsed = function (k) { // eslint-disable-line no-func-assign
-  if (W0 && W0.stealthT > 0 && !W0.stealthNew && k !== "roll" && k !== "potion") { W0.stealthT = 0; W0.ambushT = 0.6; floatText(W0.x, W0.y - 22, "伏擊 ×2", "#c8ffe0"); }
+  if (W0 && W0.stealthT > 0 && !W0.stealthNew && k !== "roll" && k !== "potion") { W0.stealthT = 0; windPop("e", 1); W0.ambushT = 0.6; floatText(W0.x, W0.y - 22, "伏擊 ×2", "#c8ffe0"); }
   return _skillUsedEN.apply(this, arguments);
 };
 // 移速 +30%、戰吼護甲 +50%

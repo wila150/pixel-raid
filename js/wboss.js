@@ -183,7 +183,8 @@ function tkFire(m, p) {
     m.tongue = { a, t: 0.25 };
     if (along > 0 && along < 186 && perp < 12 && W0.iframe <= 0 && !W0.shield) {
       hurtW(wbDmg(m, 0.4), m);
-      if (W0.hp > 0) {
+      if (W0.hp > 0 && W0.titanT > 0) floatText(W0.x, W0.y - 20, "霸體：拉不動", "#ffbe6e"); // 企劃 66 D
+      else if (W0.hp > 0) {
         const tx = m.x + Math.cos(a) * 50, ty = m.y + Math.sin(a) * 50; W0.x = tx; W0.y = ty;
         floatText(tx, ty - 20, "被拉過去了！快閃開", "#ff8a7a", true);
         const f = 0.8 * wbFast(m);
