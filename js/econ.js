@@ -227,10 +227,10 @@ function bindEcon(again) {
   ov.querySelectorAll("[data-rcp]").forEach((b) => b.addEventListener("click", () => {
     if (!atCamp()) { again("回營地才能用"); return; }
     const r = recipe(b.dataset.rcp); if (!r || !matHas(r.need)) return;
-    if ((r.kind === "forge" || r.kind === "slot") && save.bag.length >= BAG_MAX) { again("行囊滿了"); return; }
+    if ((r.kind === "forge" || r.kind === "slot") && !bagRoomAny()) { again("行囊和倉庫都滿了"); return; }
     matUse(r.need);
-    if (r.kind === "forge") { const it = rbUnique(r.u, Math.floor(r.lv / 3) + 2); save.bag.push(it); sfx("win"); again(`鍛造成功：${it.name}`); }
-    else if (r.kind === "slot") { const it = shardItem(forgeSlot, 2); it.il = zoneIl(r.z); it.lvI = Math.round((ZONES[r.z].lv[0] + ZONES[r.z].lv[1]) / 2); it.bt = pickBt(it.lvI); setBase(it); rollAffixes(it, 4 + Math.floor(Math.random() * 2), forgeAff, true); nameItem(it); delete it.risk; save.bag.push(it); sfx("arrive"); again(`鍛造成功：${it.name}（保底 ${AFFIX[forgeAff].n}）`); }
+    if (r.kind === "forge") { const it = rbUnique(r.u, Math.floor(r.lv / 3) + 2); bagAdd(it); sfx("win"); again(`鍛造成功：${it.name}`); }
+    else if (r.kind === "slot") { const it = shardItem(forgeSlot, 2); it.il = zoneIl(r.z); it.lvI = Math.round((ZONES[r.z].lv[0] + ZONES[r.z].lv[1]) / 2); it.bt = pickBt(it.lvI); setBase(it); rollAffixes(it, 4 + Math.floor(Math.random() * 2), forgeAff, true); nameItem(it); delete it.risk; bagAdd(it); sfx("arrive"); again(`鍛造成功：${it.name}（保底 ${AFFIX[forgeAff].n}）`); }
     else if (r.kind === "pill") { const w = save.w; w.buffs = w.buffs || {}; w.buffs[r.b] = Date.now() + BUFF_MS; if (W0) { B = worldStats(); } sfx("heal"); again(`吃下${BUFFS[r.b].n}：${BUFFS[r.b].d}，30 分鐘`); }
     else if (r.kind === "key") { addKey(makeKey(keyTierFor(Math.round((ZONES[r.z].lv[0] + ZONES[r.z].lv[1]) / 2)))); sfx("arrive"); again("做好一把秘境鑰"); }
     if (W0 && W0.trackDone) delete W0.trackDone[r.id];

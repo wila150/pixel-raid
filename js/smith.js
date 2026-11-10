@@ -112,9 +112,9 @@ function bindSmith(items) {
   ov.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
     const [slot, q] = b.dataset.ex.split(":"), cost = +q === 3 ? SHARD_UNIQ : SHARD_RARE;
     if (!atCamp() || (save.shards || 0) < cost) return;
-    if (save.bag.length >= BAG_MAX) { again("行囊滿了，先賣掉一些"); return; }
-    save.shards -= cost; const ni = shardItem(slot, +q); save.bag.push(ni); writeSave(); sfx("win");
-    again(`兌換出 ${RARITY[ni.q].n}・${ni.name}！（在行囊裡）`);
+    if (!bagRoomAny()) { again("行囊和倉庫都滿了"); return; }
+    save.shards -= cost; const ni = shardItem(slot, +q); const where = bagAdd(ni); writeSave(); sfx("win");
+    again(`兌換出 ${RARITY[ni.q].n}・${ni.name}！（在${where === "bag" ? "行囊" : "倉庫"}裡）`);
   }));
   ov.querySelectorAll("[data-buysup]").forEach((b) => b.addEventListener("click", () => {
     if (!atCamp() || (save.shards || 0) < SUPER_COST) return;

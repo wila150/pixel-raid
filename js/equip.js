@@ -217,7 +217,7 @@ function uqApply(it) { // 設定傳說的固定基底＋詞綴（it.slot、it.u 
   it.resV2 = 1; return it;
 }
 const enMax = (it) => (it && it.u ? (itLv(it) < 40 ? 6 : itLv(it) < 80 ? 9 : 12) : EN_MAX); // 傳說：物品等級 <40 最多 +6、<80 +9、≥80 +12
-const BAG_MAX = 40;
+const BAG_MAX = 30; // 企劃 53：40 → 30（只算裝備；多的放營地倉庫 stash.js）
 // ───────── 強化（+1～+10，每級全部數值 +10%，越高越容易失敗，失敗只扣靈石）─────────
 const EN_MAX = 12;
 const EN_RATE = [1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.12];

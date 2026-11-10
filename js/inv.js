@@ -484,8 +484,8 @@ function bindEquip(selItem) {
   ov.querySelectorAll("[data-ex]").forEach((b) => b.addEventListener("click", () => {
     const [slot, q] = b.dataset.ex.split(":"), cost = +q === 3 ? SHARD_UNIQ : SHARD_RARE;
     if (!atCamp() || (save.shards || 0) < cost) return;
-    if (save.bag.length >= BAG_MAX) { again("行囊滿了，先賣掉一些"); return; }
-    save.shards -= cost; const it = shardItem(slot, +q); save.bag.push(it); eqSel = it.id; writeSave(); sfx("win");
+    if (!bagRoomAny()) { again("行囊和倉庫都滿了"); return; }
+    save.shards -= cost; const it = shardItem(slot, +q); if (bagAdd(it) === "bag") eqSel = it.id; writeSave(); sfx("win");
     again(`兌換出 ${RARITY[it.q].n}・${it.name}！`);
   }));
   ov.querySelectorAll("[data-ess]").forEach((b) => b.addEventListener("click", () => {

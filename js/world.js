@@ -1301,6 +1301,7 @@ function updateWorld(dt) {
     const d = dist(o, p), mag = 26 * (1 + B.magnet);
     if (o.kind !== "item" && o.kind !== "key" && o.kind !== "gem" && o.kind !== "card" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
     if (d < 10) {
+      if (o.kind === "item" && typeof bagHold === "function" && bagHold(o)) continue; // 企劃 53：行囊滿了撿不起來
       o.got = true;
       if (o.kind === "item") { if (W0.zone !== "town" && !o.safe) o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
       else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
