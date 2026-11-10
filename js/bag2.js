@@ -7,7 +7,7 @@
 // stash.js 後面載入：整個換掉 renderEquip（舊的格子版留在 inv.js 沒人叫），sellall／stash 的包裝功能在這裡重做。
 "use strict";
 let b2Tab = "eq", b2Mode = "bag", b2Q = "", b2Salv = false, b2LP = null, b2LPfired = false;
-const B2_TABS = [["eq", "裝備"], ["gem", "寶石"], ["key", "鑰匙"], ["mat", "素材與通貨"], ["pot", "丹藥"]];
+const B2_TABS = [["eq", "裝備"], ["gem", "寶石"], ["key", "鑰匙"], ["mat", "素材<span class=\"lg\">與通貨</span>"], ["pot", "丹藥"]];
 const b2Hover = () => window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 const b2Pt = () => PORTRAIT();
 // 開行囊／倉庫時鏡頭偏移（螢幕 px）：讓角色留在沒被面板蓋住的那一側中間
@@ -58,10 +58,9 @@ function b2EqBar() {
   };
   const ws = [1, 2].map((i) => { const it = typeof wsGet === "function" ? wsGet(i) : null; return `<button class="b2eqc ws" data-wsw="${i}" title="武器組 ${i + 1}${it ? "：" + it.name : ""}" style="--c:${it ? RARITY[it.q].c : "#3a3448"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b></button>`; }).join("");
   const mt = save.w.mount && typeof MOUNTS !== "undefined" && MOUNTS[save.w.mount] ? MOUNTS[save.w.mount].n : "";
-  return `<div class="b2eqbar"><div class="b2eqg">${["sword", "crown", "robe", "boots", "charm", "ring", "ear"].map(cell).join("")}${ws}<button class="b2eqc mt" data-go="char" title="坐騎（角色 → 外觀）"><small>${mt || "坐騎"}</small></button></div>
-    <div class="b2cp"><b>戰力 ${cpTxt()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}</small><button class="b2fold" data-b2="stat">${save.w.b2stat ? "收起屬性" : "屬性"}</button></div>
-    ${save.w.b2stat ? apHtml() : ""}
-    ${eqSel && eqSel.startsWith("eq:") && save.eq[eqSel.slice(3)] ? `<div class="b2det">${b2Detail(save.eq[eqSel.slice(3)], true)}</div>` : ""}</div>`;
+  return [`<div class="b2eqg">${["sword", "crown", "robe", "boots", "charm", "ring", "ear"].map(cell).join("")}${ws}<button class="b2eqc mt" data-go="char" title="坐騎（角色 → 外觀）"><small>${mt || "坐騎"}</small></button></div>`,
+    `<div class="b2cp"><b>戰力 ${cpTxt()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}</small><button class="b2fold" data-b2="stat">${save.w.b2stat ? "收起屬性" : "屬性"}</button></div>`,
+    `${save.w.b2stat ? apHtml() : ""}${eqSel && eqSel.startsWith("eq:") && save.eq[eqSel.slice(3)] ? `<div class="b2det">${b2Detail(save.eq[eqSel.slice(3)], true)}</div>` : ""}`];
 }
 const b2Prop = (p) => `<div class="b2row prop${b2Match(p.name + " " + (p.d || "")) ? "" : " dim"}${propSel === p.k ? " open" : ""}" data-prop="${p.k}" style="--c:${p.c}"><span class="b2ico">${propG(p)}</span><span class="b2mid"><b style="color:${p.c}">${p.name}</b><small>${String(p.d || "").replace(/<br>/g, "　").replace(/<[^>]+>/g, "").slice(0, 40)}</small></span><span class="b2rt"><b class="cnt">×${p.n}</b></span></div>${propSel === p.k ? `<div class="b2det"><p>${p.d}</p>${p.k.startsWith("gem:") && p.n >= 3 && +p.k.split(":")[2] < GEM_MAX ? `<div class="acts row"><button class="gmerge" data-g="${p.k.slice(4)}">3 合 1（升一級）</button></div>` : ""}</div>` : ""}`;
 const b2Sec = (t, h) => (h ? `<div class="b2sec">${t}</div>${h}` : "");
@@ -110,7 +109,8 @@ renderEquip = function (msg = "") {
     : `<div class="b2tabs">${B2_TABS.map(([k, n]) => `<button data-bt="${k}" class="${b2Tab === k ? "on" : ""}">${n}${k === "eq" ? `<small>${save.bag.length}/${BAG_MAX}</small>` : ""}</button>`).join("")}</div>`;
   const tools = st ? `<button data-b2="sorts">排序</button><button data-b2="ren">改名</button>${next ? `<button data-b2="buy" ${save.stone >= next ? "" : "disabled"}>加開第 ${S.pg.length + 1} 頁・${next}</button>` : ""}<span class="dim">點一下＝搬回行囊</span>`
     : `<button data-b2="sellall">一鍵出售</button><button data-b2="salv">一鍵分解</button>${camp ? `<button data-b2="allstash">全部送倉庫</button>` : ""}<button data-b2="auto" class="gold">一鍵換最強</button>`;
-  ov.innerHTML = `<div class="b2">${head}${st ? "" : b2EqBar()}${tabs}
+  const eb = st ? ["", "", ""] : b2EqBar();
+  ov.innerHTML = `<div class="b2"><div class="b2head${st ? " st" : ""}">${head}${tabs}${eb[0]}${eb[1]}</div>${eb[2] ? `<div class="b2extra">${eb[2]}</div>` : ""}
     <div class="b2list">${b2List()}</div>
     <div class="b2tool"><input class="b2q" type="search" placeholder="搜尋：抗、雷、攻速…" value="${b2Q.replace(/"/g, "")}">${tools}</div>
   </div><div id="b2tip" class="b2tip"></div>${ovMsg ? `<div class="toast">${ovMsg}</div>` : ""}`;
