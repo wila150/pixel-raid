@@ -428,6 +428,20 @@ const AM = () => areaMul(CUR_SL);
 const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
 let HIT_CRIT = false, DOT_HIT = false; const dotBase = (d) => d / (HIT_CRIT ? B.critDmg || 2 : 1); // DOT_HIT：這一下是持續傷害（火牆、旋風、黑洞每跳）
 let chainLock = false; // 連鎖寶石引的雷不會再引雷
+// 企劃 60：停頓（hitstop）只給「重的那一下」。持續／連打（旋風斬、颶風、DOT、拳套連拳）不停；兩次停頓間隔 ≥ HS_CD；低階模式只震不停
+let HS_HEAVY = false; const HS_CD = 0.12;
+function hsHit(crit) {
+  if (DOT_HIT || chainLock || !W0) return;
+  const heavy = HS_HEAVY;
+  if (heavy) shake = Math.max(shake, 3);
+  if (W0.spinT > 0) return; // 旋風斬／颶風／扇旋風期間不停
+  if (!heavy && curWeapon() === "fist" && CUR_SL === "a") return; // 連拳
+  if (typeof A11 !== "undefined" && A11.low) return;
+  if (W0.hsT != null && time >= W0.hsT && time - W0.hsT < HS_CD) return; // 同一次出招打 10 隻也只停一次
+  W0.hsT = time;
+  hitstop = Math.max(hitstop, heavy ? (crit ? 0.06 : 0.04) : (crit ? 0.03 : 0.02));
+}
+const hsHeavy = (fn) => { const h0 = HS_HEAVY; HS_HEAVY = true; try { return fn(); } finally { HS_HEAVY = h0; } };
 function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   if (m.dead || m.air) return;
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
@@ -467,7 +481,8 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
     floatText(m.x, m.y - 10 - i * 7, crit ? `${fmtN(dmg)}!` : fmtN(dmg), crit ? (dmg * L > m.max * 0.5 ? "#ff4a3a" : "#ffd84a") : L > 1 ? "#ffe9c0" : "#ffffff", crit);
     const f = floaters[floaters.length - 1], a = (from ? angTo(from, m) : rand(-Math.PI, Math.PI)) + rand(-0.6, 0.6); f.vx = Math.cos(a) * (crit ? 55 : 30) * (L > 1 ? 0.3 : 1); f.vy = -(crit ? 75 : 55) * (L > 1 ? 0.6 : 1); f.num = true; f.age = -i * 0.03;
   }
-  if (!quiet) { sfx(crit ? "crit" : "hit"); hitstop = Math.max(hitstop, crit ? 0.05 : 0.025); }
+  if (!quiet) sfx(crit ? "crit" : "hit");
+  if (!quiet || HS_HEAVY) hsHit(crit);
   burst(m.x, m.y, crit ? "#ffd84a" : "#ffb070", crit ? 10 : 5, 60);
   fxHit(m.x + rand(-2, 2), m.y - 2 + rand(-2, 2), crit, WPN_FX[curWeapon()]);
   if (m.mod === "召喚" && !m.summoned && m.hp > 0 && m.hp < m.max * 0.5) {
@@ -686,7 +701,7 @@ function updateWorld(dt) {
       if (p.dashHit && p.dashSl === "q" && B.uq.zhenyue && curWeapon() === "fist" && typeof zyCrack === "function") zyCrack(p, p.dashDmg, p.dashDm); // 企劃 57 震岳碎山拳：衝拳停下地裂
       p.dashHit = null; p.dashDmg = 0; p.ghostN = 0; p.ghostD = 0; p.ghostSl = null; p.iceN = 0;
       if (p.rshPend) { W0.rshT = p.rshPend; p.rshPend = 0; }
-      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * (0.4 + (l - 1) * 0.075), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
+      if (p.land) { const L = p.land; p.land = null; CUR_SL = L.sl || null; CUR_DM = L.dm || 1; { const l = gemLv("after"); if (l) W0.fires.push({ x: p.x, y: p.y, t: 0.5, r: L.r, dmg: L.dmg * (0.4 + (l - 1) * 0.075), c: "#e0b080", isAf: 1, sl: L.sl, dm: L.dm }); } for (const m of W0.mobs) if (!m.dead && dist(m, p) < L.r + WMOBS[m.type].r) hsHeavy(() => hitMob(m, wDmg(L.dmg) * (m.boss ? 0.8 : 1), 100, p, true)); W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: L.r, c: "230,200,150" }); fxBoom(p.x, p.y, L.r, "230,200,150"); shake = Math.max(shake, 5); sfx("break"); CUR_SL = null; CUR_DM = 1; }
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
@@ -781,23 +796,25 @@ function updateWorld(dt) {
     } else if (wt === "blade") { // 重斬：慢但很寬
       const ta = triOf("blade", "a"), t = near(55); if (t) p.face = angTo(p, t);
       p.swing = p.swingMax = 0.25; p.swingR = ta === "sweep" ? 40 : 34; sfx("break"); shake = Math.max(shake, ta === "quake" ? 4 : 2);
+      HS_HEAVY = true; // 企劃 60：大刀普攻（重斬／崩山／橫掃／破甲）＝重擊停頓
       if (ta === "sweep") arcHit(40, Math.PI + 0.1, 19, 110);
       else if (ta === "quake") arcHit(38, 1.5, 34, 150);
       else if (ta === "crack") { arcHit(38, 1.5, 14.4, 110); for (const m of W0.mobs) if (!m.dead && dist(m, p) < 38 + WMOBS[m.type].r && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 1.5) m.armBrk = 4; }
       else arcHit(38, 1.5, 18, 110);
+      HS_HEAVY = false;
       if (B.uq.wave) shoot(p.face, { v: 220, life: 0.55, dmg: 10, kind: "sword", pierce: true, kb: 30 });
     } else if (wt === "fist") { // 連拳：超快、超近
       const ta = triOf("fist", "a"), t = near(ta === "qi" ? 70 : 40); if (t) p.face = angTo(p, t);
       p.swing = p.swingMax = 0.08; p.swingR = 14; sfx("hit"); W0.guardT = 0.4; // 連拳期間受傷 −15%
       if (B.uq.zhenyue && (W0.zyN = ((W0.zyN || 0) + 1) % 3) === 0 && typeof zyQuake === "function") zyQuake(p, AM()); // 企劃 57 震岳碎山拳：每 3 拳震地
       if (ta === "lean") { const cx = p.x + Math.cos(p.face) * 14, cy = p.y + Math.sin(p.face) * 14, lr = 24 * AM(); for (const m of W0.mobs) if (!m.dead && Math.hypot(m.x - cx, m.y - cy) < lr + WMOBS[m.type].r) hitMob(m, wDmg(10), 40, p); W0.rings.push({ x: cx, y: cy, t: 0, max: 0.15, r: lr, c: "255,210,140" }); afterAt(cx, cy, lr, 10); }
-      else if (ta === "inch") { if (W0.inchWt !== wt) { W0.inchWt = wt; W0.inchN = 0; } const big = (W0.inchN = ((W0.inchN || 0) + 1) % 5) === 0; arcHit(big ? 26 : 22, 0.8, big ? 13.5 : 4.2, big ? 170 : 30); if (big) { shake = Math.max(shake, 3); sfx("break"); } }
+      else if (ta === "inch") { if (W0.inchWt !== wt) { W0.inchWt = wt; W0.inchN = 0; } const big = (W0.inchN = ((W0.inchN || 0) + 1) % 5) === 0; HS_HEAVY = big; arcHit(big ? 26 : 22, 0.8, big ? 13.5 : 4.2, big ? 170 : 30); HS_HEAVY = false; if (big) { shake = Math.max(shake, 3); sfx("break"); } }
       else if (ta === "qi") shoot(p.face, { v: 220, life: 0.25, dmg: 4.2, kind: "qi", pierce: false, kb: 20 });
       else if (ta === "sanshou") { // 企劃 55 散手：直拳、勾拳、掃腿、側踹 4 段循環（2 秒沒出手或換武器從第 1 段）
         if (W0.ssWt !== wt || time - (W0.ssT || -99) > 2) W0.ssN = 0; W0.ssWt = wt; W0.ssT = time;
         const rk = W0.ssRollK; W0.ssRollK = 0; const n = rk ? 4 : (W0.ssN = ((W0.ssN || 0) % 4) + 1), S = SS_SEG[n]; if (rk) W0.ssN = 0; // v9.9.2：閃身後下一拳直接側踹（不算一套，之後從第 1 段）
         let hit = 0; p.ssK = n; p.ssKT = time; p.swing = p.swingMax = n >= 3 ? 0.16 : 0.09; p.swingR = n >= 3 ? S[0] : 14;
-        for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d < S[0] * AM() + WMOBS[m.type].r && diff < S[1]) { hitMob(m, wDmg(S[2] * (rk ? SS_ROLL_K : 1)), S[3], p); hit++; if (n === 3) m.slowT = Math.max(m.slowT || 0, 1); } }
+        for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d < S[0] * AM() + WMOBS[m.type].r && diff < S[1]) { HS_HEAVY = n === 4; hitMob(m, wDmg(S[2] * (rk ? SS_ROLL_K : 1)), S[3], p); HS_HEAVY = false; hit++; if (n === 3) m.slowT = Math.max(m.slowT || 0, 1); } }
         if (n === 4) { sfx("break"); shake = Math.max(shake, 2); if (hit && !rk && typeof shiAdd === "function") shiAdd(1, "set"); }
       }
       else arcHit(22, 0.8, 5, 30);
@@ -831,7 +848,7 @@ function updateWorld(dt) {
     else if (wt === "blade" && tq === "gale") { W0.spinT = 1.5; W0.spinTick = 0; W0.spinK = "gale"; sfx("volley"); }
     else if (wt === "blade" && tq === "whirl") {
       const wr = 55 * AM(); afterAt(p.x, p.y, wr, 76);
-      for (const m of W0.mobs) if (!m.dead && dist(m, p) < wr + WMOBS[m.type].r) { if (!m.boss) { const a = angTo(m, p), d = dist(m, p) * 0.6; moveBody(m, Math.cos(a) * d, Math.sin(a) * d, WMOBS[m.type].r); } hitMob(m, wDmg(76) * (m.boss ? 0.8 : 1), 0, p, true); }
+      for (const m of W0.mobs) if (!m.dead && dist(m, p) < wr + WMOBS[m.type].r) { if (!m.boss) { const a = angTo(m, p), d = dist(m, p) * 0.6; moveBody(m, Math.cos(a) * d, Math.sin(a) * d, WMOBS[m.type].r); } hsHeavy(() => hitMob(m, wDmg(76) * (m.boss ? 0.8 : 1), 0, p, true)); }
       W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.3, r: wr, c: "255,220,170" }); sfx("break"); shake = Math.max(shake, 4);
     }
     else if (wt === "blade" && tq === "leap") { p.roll = t && dist(p, t) < 90 ? clamp(dist(p, t) / 250, 0.08, 0.28) : 0.28; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.3); p.land = { r: 40, dmg: 55 }; sfx("dash"); }

@@ -10,12 +10,9 @@ let b2Tab = "eq", b2Mode = "bag", b2Q = "", b2Salv = false, b2LP = null, b2LPfir
 const B2_TABS = [["eq", "裝備"], ["gem", "寶石"], ["key", "鑰匙"], ["mat", "素材<span class=\"lg\">與通貨</span>"], ["pot", "丹藥"]];
 const b2Hover = () => window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 const b2Pt = () => PORTRAIT();
-// 開行囊／倉庫時鏡頭偏移（螢幕 px）：讓角色留在沒被面板蓋住的那一側中間
-function bagCamOff() {
-  if (ovKind !== "bag" && ovKind !== "stash") return [0, 0];
-  if (b2Pt()) return [0, H * 0.31];
-  return [Math.max(360, W * 0.45) / 2, 0];
-}
+// v9.12 企劃 59：行囊改回全螢幕（左邊角色穿著、右邊清單），鏡頭不用再偏
+function bagCamOff() { return [0, 0]; }
+let b3Pop = null; // 剛穿上的部位（格子跳一下）
 // 最重要 2 條詞綴（照戰力權重×數值）
 function b2Top2(it) {
   const ks = Object.keys(it.aff || {}).filter((k) => AFFIX[k]).sort((a, b) => it.aff[b] * (AFFIX[b].w || 1) - it.aff[a] * (AFFIX[a].w || 1));
@@ -49,7 +46,29 @@ function b2Detail(sel, acts) {
       <button data-go="smith">鐵匠鋪 ›</button>${CARD_SLOTS.includes(sel.slot) ? `<button data-go="cards">插卡 ›</button>` : ""}</div>` : ""}
   </div>`;
 }
-// 裝備欄：7 個部位＋武器組 2、3＋坐騎（兩排小圖）
+// v9.12 企劃 59：左欄紙娃娃——角色大圖，左排 武器／佩／戒指／耳飾、右排 冠／袍／靴／坐騎、角色下面 武器組 2、3
+function b3Doll(selIt) {
+  const cmpK = selIt && !SLOT_KEYS.some((k) => save.eq[k] === selIt) ? selIt.slot : null;
+  const cell = (k) => {
+    const it = save.eq[k];
+    if (!slotOpen(k)) return `<span class="b2eqc lock" title="${SLOTS[k].n}（${slotLockTxt(k)}）"><small>${SLOTS[k].n}</small><i>🔒</i><small>${slotLockTxt(k)}</small></span>`;
+    return `<button class="b2eqc${it ? " has" : ""}${eqSel === "eq:" + k ? " sel" : ""}${cmpK === k ? " cmp" : ""}${b3Pop === k ? " pop" : ""}" data-eq="${k}" title="${it ? it.name : SLOTS[k].n}" style="--c:${it ? RARITY[it.q].c : "#5a5068"}">${it ? itemIcon(it) + (it.en ? `<i class="en">+${it.en}</i>` : "") : ""}<small class="sn">${SLOTS[k].n}</small></button>`;
+  };
+  const ws = [1, 2].map((i) => { const it = typeof wsGet === "function" ? wsGet(i) : null; return `<button class="b2eqc ws${it ? " has" : ""}" data-wsw="${i}" title="武器組 ${i + 1}${it ? "：" + it.name : ""}" style="--c:${it ? RARITY[it.q].c : "#3a3448"}">${it ? itemIcon(it) : ""}<b>${i + 1}</b><small class="sn">武器組</small></button>`; }).join("");
+  const mt = save.w.mount && typeof MOUNTS !== "undefined" && MOUNTS[save.w.mount] ? MOUNTS[save.w.mount].n : "";
+  let cmp = "";
+  if (cmpK) { const now = totalCP(), nx = typeof cpIf === "function" ? cpIf(selIt) : now, d = nx - now, F = typeof fmtN === "function" ? fmtN : (x) => x; cmp = `<div class="b3cmp">穿上後戰力 ${F(now)} → <b class="${d > 0 ? "up" : d < 0 ? "down" : "same"}">${F(nx)}</b></div>`; }
+  if (b3Pop) setTimeout(() => { b3Pop = null; }, 300); // 0.3 秒內重畫也保留跳一下
+  return `<div class="b3doll">
+    <div class="b3col">${["sword", "charm", "ring", "ear"].map(cell).join("")}</div>
+    <div class="b3hb"><div class="b3hero"><img src="${typeof heroURL === "function" ? heroURL() : ""}" alt=""></div>${cmp}<div class="b3ws">${ws}</div></div>
+    <div class="b3col">${["crown", "robe", "boots"].map(cell).join("")}<button class="b2eqc mt" data-go="char" title="坐騎（角色 → 外觀）"><small>${mt || "坐騎"}</small><small class="sn">坐騎</small></button></div>
+  </div>
+  <div class="b3cp"><b>戰力 ${cpTxt()}</b><small>靈石 ${save.stone}・碎屑 ${save.shards || 0}</small><button class="b2fold" data-b2="stat">${save.w.b2stat ? "收起屬性" : "屬性"}</button></div>
+  ${save.w.b2stat ? `<div class="b3stat">${apHtml()}</div>` : ""}
+  ${eqSel && eqSel.startsWith("eq:") && save.eq[eqSel.slice(3)] ? `<div class="b3card"><button class="b3x" data-b2="cardx" aria-label="關閉">✕</button>${b2Detail(save.eq[eqSel.slice(3)], true)}</div>` : ""}`;
+}
+// 舊版（v9.8）表頭小格，沒人叫了
 function b2EqBar() {
   const cell = (k) => {
     const it = save.eq[k];
@@ -109,16 +128,19 @@ renderEquip = function (msg = "") {
     : `<div class="b2tabs">${B2_TABS.map(([k, n]) => `<button data-bt="${k}" class="${b2Tab === k ? "on" : ""}">${n}${k === "eq" ? `<small>${save.bag.length}/${BAG_MAX}</small>` : ""}</button>`).join("")}</div>`;
   const tools = st ? `<button data-b2="sorts">排序</button><button data-b2="ren">改名</button>${next ? `<button data-b2="buy" ${save.stone >= next ? "" : "disabled"}>加開第 ${S.pg.length + 1} 頁・${next}</button>` : ""}<span class="dim">點一下＝搬回行囊</span>`
     : `<button data-b2="sellall">一鍵出售</button><button data-b2="salv">一鍵分解</button>${camp ? `<button data-b2="allstash">全部送倉庫</button>` : ""}<button data-b2="auto" class="gold">一鍵換最強</button>`;
-  const eb = st ? ["", "", ""] : b2EqBar();
-  ov.innerHTML = `<div class="b2"><div class="b2head${st ? " st" : ""}">${head}${tabs}${eb[0]}${eb[1]}</div>${eb[2] ? `<div class="b2extra">${eb[2]}</div>` : ""}
+  const selIt = !st && eqSel && !String(eqSel).startsWith("eq:") ? save.bag.find((x) => x.id === eqSel) : null;
+  const bagL = st ? `<div class="b3lh"><b>行囊 ${save.bag.length}／${BAG_MAX}</b><small>點一下＝送到倉庫</small></div><div class="b2list">${save.bag.length ? save.bag.slice().sort((a, b) => b.q - a.q || itemCP(b) - itemCP(a)).map((it) => b2Row(it, "bs")).join("") : `<p class="dim b2empty">行囊是空的</p>`}</div>` : "";
+  ov.innerHTML = `<div class="b2 b3${st ? " st" : ""}"><div class="b3l">${st ? bagL : b3Doll(selIt)}</div>
+    <div class="b3r"><div class="b3head">${head}${tabs}</div>
     <div class="b2list">${b2List()}</div>
-    <div class="b2tool"><input class="b2q" type="search" placeholder="搜尋：抗、雷、攻速…" value="${b2Q.replace(/"/g, "")}">${tools}</div>
+    <div class="b2tool"><input class="b2q" type="search" placeholder="搜尋：抗、雷、攻速…" value="${b2Q.replace(/"/g, "")}">${tools}</div></div>
   </div><div id="b2tip" class="b2tip"></div>${ovMsg ? `<div class="toast">${ovMsg}</div>` : ""}`;
   ovMsg = "";
+  if (typeof cpRoll !== "undefined" && cpRoll) { const { a, b } = cpRoll; cpRoll = null; const el = ov.querySelector(".b3cp b"); if (el) { el.classList.add("cproll"); if (b < a) el.classList.add("down"); const t0 = performance.now(), F = typeof fmtN === "function" ? fmtN : (x) => Math.round(x); const step = (t) => { if (!el.isConnected) return; const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3); el.textContent = `戰力 ${F(a + (b - a) * e)}${k >= 1 ? `（${b > a ? "+" : "−"}${F(Math.abs(b - a))}）` : ""}`; if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); } }
   if (sellOpen) { ov.insertAdjacentHTML("beforeend", sellPopHtml()); sellBind(); }
   if (b2Salv) { ov.insertAdjacentHTML("beforeend", salvPopHtml()); b2SalvBind(); }
   b2Bind();
-  const w = save.w; if (w && w.created && !w.b2Hint) { w.b2Hint = 1; writeSave(); if (typeof say === "function") say("行囊改成右邊的清單：點一下看說明（電腦滑鼠移過去就看得到），長按直接穿上；下面可以搜尋、出售、分解", "#ffe9a8"); }
+  const w = save.w; if (w && w.created && !w.b2Hint) { w.b2Hint = 1; writeSave(); if (typeof say === "function") say("行囊：左邊是身上穿的，右邊是清單。點一下看說明（電腦滑鼠移過去就看得到），長按直接穿上；下面可以搜尋、出售、分解", "#ffe9a8"); }
 };
 function b2SalvBind() {
   const pop = ov.querySelector(".salvpop"); if (!pop) return;
@@ -146,17 +168,18 @@ function b2Bind() {
   ov.querySelectorAll(".b2row[data-id]").forEach((r) => {
     const side = r.dataset.s, id = r.dataset.id, it = side === "s" ? findS(id) : findB(id); if (!it) return;
     if (side === "b") {
-      r.addEventListener("pointerdown", () => { b2LPfired = false; clearTimeout(b2LP); b2LP = setTimeout(() => { b2LPfired = true; if (!equipItem(it)) { again(`${SLOTS[it.slot].n}格要${slotLockTxt(it.slot)}`); return; } eqSel = null; again(`穿上了 ${it.name}`); }, 450); });
+      r.addEventListener("pointerdown", () => { b2LPfired = false; clearTimeout(b2LP); b2LP = setTimeout(() => { b2LPfired = true; if (!equipItem(it)) { again(`${SLOTS[it.slot].n}格要${slotLockTxt(it.slot)}`); return; } eqSel = null; b3Pop = it.slot; again(`穿上了 ${it.name}`); }, 450); });
       for (const ev of ["pointerup", "pointerleave", "pointercancel"]) r.addEventListener(ev, () => clearTimeout(b2LP));
       r.addEventListener("contextmenu", (e) => e.preventDefault());
     }
     r.addEventListener("click", () => {
       if (b2LPfired) { b2LPfired = false; return; }
       sfx("click");
+      if (side === "bs") { if (inWset(it)) { sfx("bad"); again("武器組的不能搬"); return; } if (stashPut(it, stPage) < 0) { sfx("bad"); again("倉庫滿了"); return; } save.bag.splice(save.bag.indexOf(it), 1); writeSave(); again(`${it.name} → 倉庫`); return; }
       if (side === "s") { if (save.bag.length >= BAG_MAX) { sfx("bad"); again("行囊滿了"); return; } const P = stashSt().pg[stPage]; P.splice(P.indexOf(it), 1); save.bag.push(it); writeSave(); again(`${it.name} → 行囊`); return; }
       propSel = null; eqSel = eqSel === it.id ? null : it.id; again();
     });
-    if (tip && b2Hover() && !b2Pt()) {
+    if (tip && side === "b" && b2Hover() && !b2Pt()) {
       r.addEventListener("mouseenter", () => { tip.innerHTML = b2Detail(it, false); tip.classList.add("on"); });
       r.addEventListener("mouseleave", () => tip.classList.remove("on"));
     }
@@ -168,9 +191,10 @@ function b2Bind() {
   // 選中物品的按鈕
   const sel = eqSel && (eqSel.startsWith("eq:") ? save.eq[eqSel.slice(3)] : findB(eqSel));
   const on = (k, f) => ov.querySelectorAll(`[data-b2="${k}"]`).forEach((e) => (e.onclick = (ev) => { ev.stopPropagation(); sfx("click"); f(); }));
+  on("cardx", () => { eqSel = null; again(); });
   on("stat", () => { save.w.b2stat = save.w.b2stat ? 0 : 1; writeSave(); again(); });
   if (sel) {
-    on("equip", () => { if (!equipItem(sel)) { again(`${SLOTS[sel.slot].n}格要${slotLockTxt(sel.slot)}`); return; } eqSel = null; again(`穿上了 ${sel.name}`); });
+    on("equip", () => { if (!equipItem(sel)) { again(`${SLOTS[sel.slot].n}格要${slotLockTxt(sel.slot)}`); return; } eqSel = null; b3Pop = sel.slot; again(`穿上了 ${sel.name}`); });
     on("unequip", () => { if (save.bag.length >= BAG_MAX) { again("行囊滿了"); return; } save.bag.push(sel); delete save.eq[sel.slot]; eqSel = null; writeSave(); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(); });
     on("sell", () => { if (sel.lock) return; ungem(sel); save.stone += sellPrice(sel); save.bag = save.bag.filter((b) => b !== sel); eqSel = null; writeSave(); again(`賣掉 ${sel.name}，靈石 +${sellPrice(sel)}`); });
     on("lock", () => { if (sel.lock) delete sel.lock; else sel.lock = 1; writeSave(); again(sel.lock ? `${sel.name} 鎖定了（不會被賣、被分解）` : `${sel.name} 解鎖了`); });

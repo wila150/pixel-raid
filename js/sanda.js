@@ -33,7 +33,7 @@ function shiFin(sl) {
 function ssAutoKick() {
   const p = W0; if (!p || !shiOn()) return;
   const S = SS_SEG[4], s0 = CUR_SL, d0 = CUR_DM; CUR_SL = "a"; CUR_DM = 1;
-  try { const R = S[0] * areaMul("a"); for (const m of W0.mobs) { if (m.dead) continue; const diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (dist(m, p) < R + WMOBS[m.type].r && diff < S[1]) hitMob(m, wDmg(S[2] * 3), S[3], p); } } finally { CUR_SL = s0; CUR_DM = d0; }
+  try { const R = S[0] * areaMul("a"); for (const m of W0.mobs) { if (m.dead) continue; const diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (dist(m, p) < R + WMOBS[m.type].r && diff < S[1]) hsHeavy(() => hitMob(m, wDmg(S[2] * 3), S[3], p)); } } finally { CUR_SL = s0; CUR_DM = d0; }
   p.ssK = 4; p.ssKT = time; p.swing = p.swingMax = 0.16; p.swingR = S[0]; sfx("break"); shake = Math.max(shake, 3);
 }
 // 摔投（world.js doSpin 呼叫；CUR_SL／CUR_DM 由 cast 設好）
