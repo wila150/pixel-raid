@@ -144,6 +144,7 @@ function ghostCast(o, wt, c) {
     else if (c.o === "wall") { const cx = sx + Math.cos(c.a) * 34, cy = sy + Math.sin(c.a) * 34; for (let i = -2; i <= 2; i++) W0.walls && W0.walls.push({ x: cx - Math.sin(c.a) * i * 16, y: cy + Math.cos(c.a) * i * 16, t: 2, tick: 0, ghost: true }); }
     else if (c.o === "suck" || c.o === "storm") W0.tornados.push({ x: sx, y: sy, vx: Math.cos(c.a) * 45, vy: Math.sin(c.a) * 45, t: 1.6, tick: 0, ghost: true });
     else if (c.o === "ward") W0.tornados.push({ x: sx, y: sy, vx: 0, vy: 0, t: 3, tick: 0, orbit: 0, own: o, ghost: true });
+    else if (c.o === "throw") { const bx = sx - Math.cos(c.a) * 24, by = sy - Math.sin(c.a) * 24; W0.rings.push({ x: bx, y: by, t: 0, max: 0.3, r: 35, c: "230,200,150" }); burst(bx, by, "#d8c0a0", 10, 90, 0.4); } // 企劃 55 摔投
     else if (c.o === "whirl") W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 55, c: "255,220,170" });
     else if (c.o === "swal") for (let i = -1; i <= 1; i++) W0.pshots.push(Object.assign(P(c.a + i * 0.15, 300), { life: 0.6, kind: "arrow" }));
     else W0.rings.push({ x: sx, y: sy, t: 0, max: 0.3, r: 30, c: "190,225,255" });

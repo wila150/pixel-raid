@@ -422,7 +422,7 @@ const KC_WIN = 4; // 連斬：4 秒內殺下一隻才接得上
 const kcBonus = () => Math.min(0.3, Math.floor((W0.kc || 0) / 5) * 0.02); // 每 5 連斬傷害 +2%，最多 +30%
 const eAspd = () => (W0 && W0.swDom && dist(W0, W0.swDom) < W0.swDom.r ? 1.2 : 1) * (W0 && W0.dragT > 0 ? 1.4 : 1); // 企劃 35：劍域、化龍
 const wDmg = (base) => { const fc = gemLv("focus"); return (typeof hitBase === "function" ? hitBase(base) : base) * B.atk * (W0.titanT > 0 ? 1.2 : 1) * (B.zen ? 1 + Math.floor(W0.combatT / 10) * 0.05 : 1) * (1 + 0.1 * gemLv("power")) * (1 + kcBonus()) * (CUR_DM || 1) * (fc ? 1.25 + 0.05 * fc : 1) * (typeof skgDmg === "function" ? skgDmg(CUR_SL) : 1); };
-const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1) * (typeof trAreaX === "function" ? trAreaX() : 1); }; // 擴大／集中；天賦樹刀魂、萬法
+const areaMul = (sl) => { const e = gemLv("enlarge", sl), f = gemLv("focus", sl); return (1 + (e ? [0, 0.15, 0.21, 0.27, 0.34, 0.4][Math.min(5, e)] : 0)) * (f ? 0.7 : 1) * (typeof trAreaX === "function" ? trAreaX() : 1) * ((W0 && W0.shiAM) || 1); }; // 擴大／集中；天賦樹刀魂、萬法
 const AM = () => areaMul(CUR_SL);
 const brkMul = () => (1 - 0.2 * ((W0 && W0.brk) || 0)) * ((W0 && W0.healMul) || 1); // 破體：每層吸血、回血 −20%；healMul：秘境詞綴
 let HIT_CRIT = false, DOT_HIT = false; const dotBase = (d) => d / (HIT_CRIT ? B.critDmg || 2 : 1); // DOT_HIT：這一下是持續傷害（火牆、旋風、黑洞每跳）
@@ -786,6 +786,13 @@ function updateWorld(dt) {
       if (ta === "lean") { const cx = p.x + Math.cos(p.face) * 14, cy = p.y + Math.sin(p.face) * 14, lr = 24 * AM(); for (const m of W0.mobs) if (!m.dead && Math.hypot(m.x - cx, m.y - cy) < lr + WMOBS[m.type].r) hitMob(m, wDmg(10), 40, p); W0.rings.push({ x: cx, y: cy, t: 0, max: 0.15, r: lr, c: "255,210,140" }); afterAt(cx, cy, lr, 10); }
       else if (ta === "inch") { if (W0.inchWt !== wt) { W0.inchWt = wt; W0.inchN = 0; } const big = (W0.inchN = ((W0.inchN || 0) + 1) % 5) === 0; arcHit(big ? 26 : 22, 0.8, big ? 13.5 : 4.2, big ? 170 : 30); if (big) { shake = Math.max(shake, 3); sfx("break"); } }
       else if (ta === "qi") shoot(p.face, { v: 220, life: 0.25, dmg: 4.2, kind: "qi", pierce: false, kb: 20 });
+      else if (ta === "sanshou") { // 企劃 55 散手：直拳、勾拳、掃腿、側踹 4 段循環（2 秒沒出手或換武器從第 1 段）
+        if (W0.ssWt !== wt || time - (W0.ssT || -99) > 2) W0.ssN = 0; W0.ssWt = wt; W0.ssT = time;
+        const n = W0.ssN = ((W0.ssN || 0) % 4) + 1, S = SS_SEG[n];
+        let hit = 0; p.ssK = n; p.ssKT = time; p.swing = p.swingMax = n >= 3 ? 0.16 : 0.09; p.swingR = n >= 3 ? S[0] : 14;
+        for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p), diff = Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI); if (d < S[0] * AM() + WMOBS[m.type].r && diff < S[1]) { hitMob(m, wDmg(S[2]), S[3], p); hit++; if (n === 3) m.slowT = Math.max(m.slowT || 0, 1); } }
+        if (n === 4) { sfx("break"); shake = Math.max(shake, 2); if (hit && typeof shiAdd === "function") shiAdd(1, "set"); }
+      }
       else arcHit(22, 0.8, 5, 30);
     } else { // 風刃：飛出去再飛回來，穿透
       const ta = triOf("fan", "a"), t = near(ta === "gust" ? 200 : 150); if (t) p.face = angTo(p, t);
@@ -822,6 +829,7 @@ function updateWorld(dt) {
     else if (wt === "blade" && tq === "leap") { p.roll = t && dist(p, t) < 90 ? clamp(dist(p, t) / 250, 0.08, 0.28) : 0.28; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.3); p.land = { r: 40, dmg: 55 }; sfx("dash"); }
     else if (wt === "fist" && tq === "chain") { p.roll = 0.18; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); p.dashDmg = 25; p.dash2T = 1; sfx("dash"); }
     else if (wt === "fist" && tq === "tiger") { const tg = near(130) || t; if (tg) p.face = p.rollDir = angTo(p, tg); else p.rollDir = p.face; p.roll = tg ? clamp((dist(p, tg) - 6) / 250, 0.06, 0.5) : 0.18; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); p.dashDmg = 54; sfx("dash"); }
+    else if (wt === "fist" && tq === "throw" && typeof ssThrow === "function") ssThrow(p, AM, afterAt);
     else if (wt === "fist" && tq === "roar") {
       const rr = 58 * AM(); afterAt(p.x + Math.cos(p.face) * 24, p.y + Math.sin(p.face) * 24, rr * 0.7, 36);
       for (const m of W0.mobs) if (!m.dead && dist(m, p) < rr + WMOBS[m.type].r && Math.abs(((angTo(p, m) - p.face + Math.PI * 3) % (Math.PI * 2)) - Math.PI) < 0.9) { hitMob(m, wDmg(36), 170, p, true); m.slowT = Math.max(m.slowT || 0, 2); }
@@ -964,7 +972,9 @@ function updateWorld(dt) {
       if (!old) { sfx("arrive"); seenHint("totem", "法壇：這招會自己朝附近的怪放；再按一次可以把法壇搬到腳下"); }
       return true;
     }
-    const r = manual && sl === "e" ? cast(sl, () => ultFx(false)) : cast(sl, SLFX[sl]);
+    const fin = manual && (sl === "q" || sl === "e") && typeof shiFin === "function" && shiFin(sl); // 企劃 55：勢滿 5 層，這招是終結技（傷害 ×1.6、範圍 ×1.3）
+    if (fin) W0.shiAM = 1.3;
+    let r; try { r = manual && sl === "e" ? cast(sl, () => ultFx(false), fin ? 1.6 : 1) : cast(sl, SLFX[sl], fin ? 1.6 : 1); } finally { W0.shiAM = 0; }
     if (manual) {
       const gm = gemLv("multi", sl); if (gm && Math.random() < 0.25 + gm * 0.1) W0["rc" + sl] = 0.2; // 連發
       const gr = gemLv("rapid", sl); if (gr) W0.rapidQ = { sl, n: 2, t: 0.1, dm: 0.65 + gr * 0.02 }; // 連打

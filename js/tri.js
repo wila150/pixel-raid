@@ -57,11 +57,13 @@ const TRI = {
       { k: "lean", n: "鐵山靠", d: "出拳速度一半，但每拳打一小圈範圍（清怪）" },
       { k: "inch", n: "寸勁", d: "每第 5 拳 ×3、擊退強（單體、打王）" },
       { k: "qi", n: "氣功波", d: "每拳射一顆短氣彈（距離 55、傷害 85%），不用貼臉" },
+      { k: "sanshou", n: "散手", d: "直拳、勾拳、掃腿（緩速）、側踹（擊退）4 段循環；會累積「勢」，滿 5 層下一個 Q／E 變終結技（拳腳摔混著打）" },
     ],
     q: [
       { k: "chain", n: "連環衝", d: "衝完 1 秒內再按 Q 可以再衝一次，不扣真氣（清怪、連續位移）" },
       { k: "tiger", n: "虎撲", d: "自動衝到最近的怪身上，傷害較高（單體）" },
       { k: "roar", n: "震天", d: "不衝；前方大範圍擊退＋緩速 2 秒（控場、保命）" },
+      { k: "throw", n: "摔投", d: "抓前面的小怪往身後摔（落地範圍傷害、暈 0.8 秒）；精英改過肩頂、王改鞭腿（王受傷 +10% 2 秒）" },
     ],
   },
   fan: {
@@ -97,6 +99,8 @@ const TRI_E = {
 for (const wt in TRI_E) TRI[wt].e = TRI_E[wt];
 // 開放等級（第 i 張卡）；E＝Lv.5
 const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], e: [20, 35, 55, 70, 85, 100], r: [25, 45, 60, 15, 35, 50] };
+const TRI_LV_X = { fist: { a: [25], q: [45] } }; // 企劃 55：拳套第 4 個選項（散手、摔投）；其他武器不動
+const triLvAt = (wt, l, i) => { const L = TRI_LV[l]; if (i < L.length) return L[i]; const x = TRI_LV_X[wt] && TRI_LV_X[wt][l]; return (x && x[i - L.length]) || 999; };
 const E_LV = 5;
 const TRI_LAYER_N = { a: "普攻", q: "Q 招", e: "E 招", r: "身法" };
 const triList = (wt, l) => (l === "r" ? TRI.r : TRI[wt] && TRI[wt][l]) || null;
@@ -111,7 +115,7 @@ function triMig() { // 舊存檔：三選一選過的直接當已開
   w.triV = 1;
 }
 const triOwnKey = (wt, l, k) => (l === "r" ? "r:" + k : `${wt}:${l}:${k}`);
-function triNeed(wt, l, k) { const L = triList(wt, l); const i = L ? L.findIndex((o) => o.k === k) : -1; return i < 0 ? 999 : TRI_LV[l][i]; }
+function triNeed(wt, l, k) { const L = triList(wt, l); const i = L ? L.findIndex((o) => o.k === k) : -1; return i < 0 ? 999 : triLvAt(wt, l, i); }
 function triOpen(wt, l, k) {
   if (!save.w) return false; triMig();
   return wLv() >= triNeed(wt, l, k) || (save.w.triOwn || []).includes(triOwnKey(wt, l, k));
@@ -127,7 +131,7 @@ const triName = (wt, l) => { const v = triOf(wt, l), L = triList(wt, l); return 
 function triNew() {
   const w = save.w; if (!w) return [];
   const seen = w.triSeen || 1, lv = wLv(), wt = curWeapon(), out = [];
-  for (const l of ["a", "q", "e", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (TRI_LV[l][i] > seen && TRI_LV[l][i] <= lv) out.push(o.n); }); }
+  for (const l of ["a", "q", "e", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (triLvAt(wt, l, i) > seen && triLvAt(wt, l, i) <= lv) out.push(o.n); }); }
   if (E_LV > seen && E_LV <= lv) out.push(WSKILLS[wt].ult[0]);
   return out;
 }
@@ -156,7 +160,7 @@ const SK_TAG = {
   staff: { a: { base: "p", split: "p", frost: "p", burst: "pa" }, q: { base: "a", shower: "a", doom: "a", wall: "da" }, e: { freeze: "a", tstorm: "ad", hole: "a", base: "a", blizz: "ad", chainl: "p", inferno: "da" } },
   bow: { a: { base: "p", tri3: "p", home: "p", snipe: "p" }, q: { base: "p", rain: "a", refr: "p", swal: "vp" }, e: { blast: "pa", turret: "p", pierce9: "p", base: "p", barr: "p", seekr: "p", star: "a" } },
   blade: { a: { base: "m", sweep: "m", quake: "m", crack: "m" }, q: { base: "md", gale: "md", whirl: "ma", leap: "va" }, e: { fury: "ma", blades: "a", titan: "b", base: "a", cyclone: "md", rift: "a", exec: "m" } },
-  fist: { a: { base: "m", lean: "ma", inch: "m", qi: "p" }, q: { base: "vm", chain: "vm", tiger: "vm", roar: "a" }, e: { palm: "a", thous: "ad", dragf: "b", base: "a", hund: "m", dragon: "va", gong: "p" } },
+  fist: { a: { base: "m", lean: "ma", inch: "m", qi: "p", sanshou: "ma" }, q: { base: "vm", chain: "vm", tiger: "vm", roar: "a", throw: "ma" }, e: { palm: "a", thous: "ad", dragf: "b", base: "a", hund: "m", dragon: "va", gong: "p" } },
   fan: { a: { base: "p", twin: "p", gust: "p", spring: "p" }, q: { base: "d", suck: "d", storm: "da", ward: "d" }, e: { healz: "b", petal: "d", wwall: "b", base: "a", typh: "d", bloom: "p", zephyr: "d" } },
 };
 const R_TAG = { base: "v", ghost: "v", surge: "v", wave: "v", blink: "v", pull: "a", guard: "b" };
@@ -305,7 +309,7 @@ function renderTri(msg = "") {
     const L = triList(wt, l);
     let base = l === "a" ? ws.attack[0] : l === "q" ? ws.spin[0] : l === "e" ? ws.ult[0] : "閃身", bd = TRI_BASE_D[l] || "原本的 E 招";
     const over = l === "q" && slotSkill("q") === "over" ? `<p class="sub">目前被傳說／超技能改寫的 Q 取代，選了也不會生效</p>` : "";
-    const idx = (L || []).map((o, i) => [o, TRI_LV[l][i]]).sort((a, b) => a[1] - b[1]);
+    const idx = (L || []).map((o, i) => [o, triLvAt(wt, l, i)]).sort((a, b) => a[1] - b[1]);
     let first = [card(l, "", base, bd, 1)];
     if (l === "e") { // 企劃 35：原本的 E 永遠一格；起源（四轉）、傳說專屬各自另一格
       const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small>${k === "base" && lv >= E_LV ? skgBar(skgKey(wt, "e", "base")) : ""}</button>`;
@@ -379,7 +383,7 @@ setInterval(() => {
   if (W0.triLv === undefined) { W0.triLv = lv; return; }
   if (lv > W0.triLv) {
     const wt = curWeapon(), got = [];
-    for (const l of ["a", "q", "e", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (TRI_LV[l][i] > W0.triLv && TRI_LV[l][i] <= lv) got.push(o.n); }); }
+    for (const l of ["a", "q", "e", "r"]) { const L = triList(wt, l); if (L) L.forEach((o, i) => { if (triLvAt(wt, l, i) > W0.triLv && triLvAt(wt, l, i) <= lv) got.push(o.n); }); }
     if (E_LV > W0.triLv && E_LV <= lv) { got.push(WSKILLS[wt].ult[0]); applyWeapon(); setPadLabels(true); }
     W0.triLv = lv;
     if (got.length) (typeof notice === "function" ? notice(`可以買新技能「${got.join("、")}」了（營地 → 技能 → 技能商人）`, "#ffe066") : floatText(W0.x, W0.y - 40, `可以買新技能「${got.join("、")}」`, "#ffe066", true));

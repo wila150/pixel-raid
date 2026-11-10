@@ -41,7 +41,7 @@ function skgMig() {
   const w = save.w; if (!w || !w.created || w.skgV) return 0;
   const S = skgStore(), lv = w.lv || 1, own = w.triOwn || []; let n = 0;
   const give = (key) => { if (!S[key]) { S[key] = { lv: 1, xp: 0 }; n++; } };
-  for (const wt in TRI) { if (wt === "r") continue; for (const l of ["a", "q", "e"]) (triList(wt, l) || []).forEach((o, i) => { if (TRI_LV[l][i] <= lv || own.includes(triOwnKey(wt, l, o.k))) give(skgKey(wt, l, o.k)); }); }
+  for (const wt in TRI) { if (wt === "r") continue; for (const l of ["a", "q", "e"]) (triList(wt, l) || []).forEach((o, i) => { if (triLvAt(wt, l, i) <= lv || own.includes(triOwnKey(wt, l, o.k))) give(skgKey(wt, l, o.k)); }); }
   TRI.r.forEach((o, i) => { if (TRI_LV.r[i] <= lv || own.includes("r:" + o.k)) give("r:" + o.k); });
   w.skgV = 1; return n;
 }
@@ -108,7 +108,7 @@ function renderSkShop(msg = "") {
     for (const l of ["a", "q", "e"]) {
       rows.push(`<div class="trihead"><b>${L2[l]}</b></div>`);
       line(skgKey(wt, l, "base"), skIco(wt, l, "", "tico"), l === "a" ? ws.attack[0] : l === "q" ? ws.spin[0] : ws.ult[0], `原本的${L2[l]}（免費）`, l === "e" ? E_LV : 1, 0);
-      (triList(wt, l) || []).map((o, i) => [o, TRI_LV[l][i]]).sort((a, b) => a[1] - b[1]).forEach(([o, need]) => line(skgKey(wt, l, o.k), skIco(wt, l, o.k, "tico"), o.n, o.d, need, need * SKG_PRICE));
+      (triList(wt, l) || []).map((o, i) => [o, triLvAt(wt, l, i)]).sort((a, b) => a[1] - b[1]).forEach(([o, need]) => line(skgKey(wt, l, o.k), skIco(wt, l, o.k, "tico"), o.n, o.d, need, need * SKG_PRICE));
     }
   }
   const tip = `<p class="sub">技能商人：等級到了就能用靈石買那顆<b>技能寶石</b>（需要等級 ×${SKG_PRICE} 靈石），買過永久擁有、三個角色共用。技能寶石放在技能鏈上，打怪會分到經驗、最高 20 級：每級傷害 +${Math.round(SKG_DMG * 100)}%，每 5 級冷卻 −${Math.round(SKG_CD * 100)}%；等級上限＝角色等級÷5＋4。${camp ? "" : `<b style="color:#ff9a7a">要回到安全營地才能買。</b>`}　靈石 ${Math.floor(save.stone).toLocaleString()}</p>`;
