@@ -151,7 +151,7 @@ function tjTick(m, dt) {
 const _hitMobM = hitMob;
 hitMob = function (m, dmg, kb, from, quiet) {
   if (m && !m.dead && !m.air) {
-    if (m.tj && m.tj.includes("iron")) arguments[1] = dmg * 0.7;
+    if (Array.isArray(m.tj) && m.tj.includes("iron")) arguments[1] = dmg * 0.7;
     if (ksOn("shayi") && W0.ksK > 0) arguments[1] = arguments[1] * (1 + 0.03 * W0.ksK);
     if (ksOn("jianyi") && !quiet) W0.mp = Math.min(B.maxMp, W0.mp + 2); // 原本每下 +1，共 3
     if (m.elite && eHas(m, "雷擊") && !(m.zapCd > 0) && Math.random() < 0.2) {
@@ -216,7 +216,7 @@ drawCamps = function () {
   if (m) {
     ctx.strokeStyle = `rgba(255,90,200,${0.4 + 0.3 * Math.sin(time * 6)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(m.x, m.y + 4, 30, 15, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 2; ctx.strokeStyle = "rgba(20,10,20,0.9)";
-    const t = `天劫・${m.tj.map((x) => TJ_MODS[x].n).join("・")}`; ctx.strokeText(t, m.x, m.y - 46); ctx.fillStyle = "#ff9ae0"; ctx.fillText(t, m.x, m.y - 46);
+    const t = Array.isArray(m.tj) ? `天劫・${m.tj.map((x) => TJ_MODS[x].n).join("・")}` : "天劫"; ctx.strokeText(t, m.x, m.y - 46); ctx.fillStyle = "#ff9ae0"; ctx.fillText(t, m.x, m.y - 46);
   }
 };
 
@@ -229,7 +229,7 @@ updateWorld = function (dt) {
     if (m.dead) continue;
     if (!m.emk) eliteRoll(m);
     if (m.elite && (m.mod2 || ELITE_NEW.includes(m.mod))) eliteTick(m, dt);
-    if (m.tj) tjTick(m, dt);
+    if (Array.isArray(m.tj)) tjTick(m, dt); // 天劫秘境的秘境之主 m.tj＝true（不是陣列），不跑天劫王詞綴
   }
   const w = save.w;
   if (!ksOn("kuang") || !w) return _updateWorldMind.apply(this, arguments);

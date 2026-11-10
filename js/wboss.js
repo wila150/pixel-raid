@@ -87,7 +87,7 @@ function updateWBoss(m, dt, p) {
       burst(n.x, n.y, `rgb(${R.col})`, 14, 80);
     }
   }
-  const spdMul = (m.slowT > 0 ? 0.6 : 1) * (m.phase >= 2 ? 1.25 : 1);
+  const spdMul = (m.slowT > 0 ? 0.6 : 1) * (m.phase >= 2 ? 1.25 : 1) * (m.spdMul || 1); // m.spdMul：天命祭壇（fate.js）
   if (m.air) return; // 蟾躍：在空中
   const AI = RB_AI[m.rb || "volcano"];
   if (AI.tick && AI.tick(m, dt, p)) return;
