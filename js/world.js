@@ -884,7 +884,7 @@ function updateWorld(dt) {
       const r = 55 * AM();
       for (const m of W0.mobs) if (!m.dead && dist(m, p) < r) hitMob(m, wDmg(12), 160, p, true);
       W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r, c: "160,255,190" });
-      sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6);
+      sfx("heal"); burst(p.x, p.y, "#a0ffbe", 24, 100, 0.6); fxPlay("heal", 0, 0, 32, 0.45, { follow: 1 });
     }
     return true;
   };
@@ -945,7 +945,7 @@ function updateWorld(dt) {
     else if (k === "palm") { W0.fires.push({ x: p.x + cs * 38, y: p.y + sn * 38, t: 0.12, r: 42, dmg: 66, c: "#ffd08a", kb: 200 }); p.swing = p.swingMax = 0.15; p.swingR = 20; sfx("break"); shake = Math.max(shake, 6); }
     else if (k === "thous") { for (let i = 0; i < 15; i++) { const d = rand(20, 75), sd = rand(-26, 26); W0.fires.push({ x: p.x + cs * d - sn * sd, y: p.y + sn * d + cs * sd, t: 0.15 + i * 0.1, r: 16, dmg: 12, c: "#ffd08a", kb: 20 }); } sfx("volley"); }
     else if (k === "dragf") { W0.dragT = 5; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.4, r: 26, c: "120,230,200" }); floatText(p.x, p.y - 20, "化龍", "#7ee6c8"); sfx("arrive"); }
-    else if (k === "healz") { W0.healZ = { x: p.x, y: p.y, r: 40 * AM(), t: 4 }; sfx("heal"); }
+    else if (k === "healz") { W0.healZ = { x: p.x, y: p.y, r: 40 * AM(), t: 4 }; sfx("heal"); fxPlay("heal", 0, 0, 32, 0.45, { follow: 1 }); }
     else if (k === "petal") { for (let i = 0; i < 10; i++) castLater(i * 0.2, () => { const t2 = near(90); if (t2) p.face = angTo(p, t2); arcHit(70, 0.6, 7.2, 10); for (let j = 0; j < 4; j++) { const a = p.face + rand(-0.6, 0.6), v = rand(90, 160); particles.push({ x: p.x, y: p.y - 3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, max: 0.45, color: j % 2 ? "#ffc0d8" : "#fff0f6", size: 2 }); } }); sfx("volley"); }
     else if (k === "wwall") { W0.wwall = { x: p.x + cs * 28, y: p.y + sn * 28, a: F, t: 4, half: 32 * AM() }; sfx("volley"); }
     else if (k === "zephyr") { W0.tornados = W0.tornados.filter((o) => !(o.orbit !== undefined && o.zep && !o.ghost)); W0.tornados.push({ x: p.x, y: p.y, vx: 0, vy: 0, t: 5, tick: 0, orbit: 0, dmg: 5, zep: 1 }); sfx("volley"); }
@@ -1017,7 +1017,7 @@ function updateWorld(dt) {
   if (W0.swDom) { const D = W0.swDom; D.t -= dt; D.tick -= dt; if (D.tick <= 0) { D.tick = 0.5; CUR_SL = D.sl || "e"; CUR_DM = D.dm || 1; for (const m of W0.mobs) if (!m.dead && dist(m, D) < D.r + WMOBS[m.type].r) hitMob(m, wDmg(4), 0, D, true); CUR_SL = null; CUR_DM = 1; } if (D.t <= 0) W0.swDom = null; }
   if (W0.titanT > 0) W0.titanT -= dt;
   if (W0.dragT > 0) W0.dragT -= dt;
-  if (W0.healZ) { const H = W0.healZ; H.t -= dt; if (dist(p, H) < H.r && p.hp < p.maxHp) { H.acc = (H.acc || 0) + p.maxHp * 0.03 * dt * brkMul(); if (H.acc >= 1) { const h = Math.min(Math.floor(H.acc), p.maxHp - p.hp); p.hp += h; H.acc -= Math.floor(H.acc); } } if (H.t <= 0) W0.healZ = null; }
+  if (W0.healZ) { const H = W0.healZ; H.t -= dt; H.fx = (H.fx || 0) - dt; if (H.fx <= 0 && dist(p, H) < H.r) { H.fx = 0.8; fxPlay("heal", 0, 0, 26, 0.4, { follow: 1 }); } if (dist(p, H) < H.r && p.hp < p.maxHp) { H.acc = (H.acc || 0) + p.maxHp * 0.03 * dt * brkMul(); if (H.acc >= 1) { const h = Math.min(Math.floor(H.acc), p.maxHp - p.hp); p.hp += h; H.acc -= Math.floor(H.acc); } } if (H.t <= 0) W0.healZ = null; }
   if (W0.wwall) { const V = W0.wwall, c = Math.cos(V.a), s2 = Math.sin(V.a); V.t -= dt;
     for (const s of W0.eshots) { const dx = s.x - V.x, dy = s.y - V.y; if (Math.abs(dx * c + dy * s2) < 10 && Math.abs(-dx * s2 + dy * c) < V.half && s.life > 0) { s.life = 0; burst(s.x, s.y, "#c8f0e0", 5, 50, 0.3); } }
     if (V.t <= 0) W0.wwall = null; }
@@ -1063,7 +1063,7 @@ function updateWorld(dt) {
   if ((potKey || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
     w.potions--; W0.potCd = bossHitNow() ? 6 : 0; if (W0.potCd) p.cds.potion = W0.potCd; // 打區域王：丹藥冷卻 6 秒（企劃 13：不能站著吃招靠丹藥硬撐）
     const heal = Math.min(Math.round(p.maxHp * 0.4 * B.potionMul), p.maxHp - p.hp); p.hp += heal;
-    floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); sfx("heal"); writeSave();
+    floatText(p.x, p.y - 16, `+${heal}`, "#7dff8a"); burst(p.x, p.y, "#7dff8a", 12, 40); fxPlay("heal", 0, 0, 28, 0.4, { follow: 1 }); sfx("heal"); writeSave();
     if (W0.potCd) seenHint("potCd", "打區域王時丹藥要冷卻 6 秒，靠躲招撐住！");
   }
 
@@ -1549,7 +1549,10 @@ function renderWorld() {
   for (const o of W0.orbs) { if (o.x === undefined) continue; ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.a); glow(0, 0, 7, "150,210,255", 0.5); ctx.fillStyle = "#e8f4ff"; ctx.fillRect(-5, -1, 9, 2); ctx.fillStyle = "#ffd84a"; ctx.fillRect(-6, -2, 2, 4); ctx.restore(); }
   for (const s of W0.pshots) {
     ctx.globalAlpha = s.ghost ? allyA() : 1;
-    if (s.kind === "sword") { // 劍氣：月牙＋拖尾
+    if (s.kind === "sword" && fxLoop("qi", s.x, s.y, 30, s.a)) {}
+    else if (s.kind === "orb" && fxLoop("orb", s.x, s.y, 24, s.a)) {}
+    else if (s.kind === "fireball" && fxLoop("fball", s.x, s.y, 28, s.a)) {}
+    else if (s.kind === "sword") { // 劍氣：月牙＋拖尾
       drawTrail(s, "160,210,255", 5);
       ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.translate(s.x, s.y); ctx.rotate(s.a);
       ctx.strokeStyle = "rgba(160,210,255,0.6)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(-4, 0, 8, -1.1, 1.1); ctx.stroke();
@@ -1573,7 +1576,7 @@ function renderWorld() {
     ctx.strokeStyle = `rgba(255,120,40,${0.4 + 0.4 * Math.sin(time * 30)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r, f.r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
     const my = f.y - f.t * 160, mx = f.x + f.t * 40; // 隕火從右上斜斜落下
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = "rgba(255,140,40,0.5)"; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(mx + 10, my - 30); ctx.lineTo(mx, my); ctx.stroke(); ctx.restore();
-    glow(mx, my, 9, "255,150,50", 0.9); ctx.fillStyle = "#fff0a0"; ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill();
+    if (!fxLoop("fball", mx, my, f.big ? 40 : 26, 1.816)) { glow(mx, my, 9, "255,150,50", 0.9); ctx.fillStyle = "#fff0a0"; ctx.beginPath(); ctx.arc(mx, my, 2.5, 0, Math.PI * 2); ctx.fill(); }
   }
   if (W0.spinT > 0) { // 旋風斬：兩圈刀光
     ctx.save(); ctx.globalCompositeOperation = "lighter"; const a0 = time * 25;

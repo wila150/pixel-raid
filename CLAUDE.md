@@ -397,4 +397,9 @@
   - 昇華（企劃 42 §8）：一劍光寒爆傷 15、天劍 1.08、天機算盡 −10%、萬法歸宗 1.2、箭聖 1.12、連珠／疾劍攻速 6、金剛怒目 1.5%／上限 15%；法王 聚焰／雷霆萬鈞改 `fireX`／`thunX`：那招元素（`slotEle`，沒有看 `wEle`）是火／雷就更多 8%，打燃燒／感電再 ×1.06。
   - v8.8.1：企劃 ERR_LOG 抓到 inv.js `drawOrb` 收到 NaN（剛進世界前 2 幀，我這邊重現不出來）：非數字當 0、座標壞掉不畫，第一次記一筆 `drawOrb f=… hp=…/maxHp en es mp` 到 ERR_LOG 好追是誰。
   - 測試 scratchpad `pr/t.js ?us`（手動呼叫 `frame` 時要把 requestAnimationFrame 換成空函式，不然每呼叫一次多一條迴圈）：重複進秘境被擋、秘境中解除＝撤離、壞地圖重建、冷卻、野外 3 秒、render 每幀丟錯 → 迴圈不停＋HUD＋小框、按鈕修好 NaN 血、update 丟錯不停、設定按鈕、回報文字，沒有 JS 錯誤。
-- **下一項：36**，然後、35（企劃 46 武器組專屬天賦點：每 6 級 1 點、只在拿那組時生效、要連主樹已點格子、核心／玉槽只能用主樹點、天賦樹分頁 主樹｜組 1｜2｜3、營地免費重置；打王比 v8.6 超過 +10% 就改每 8 級；**跟昇華一起設計點數來源**），再 33、34（企劃 44 裝備基底，另有 41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留）。
+- **v9.0 新圖示＋攻擊特效播放器（總表第 36 項，企劃 45、47 §6），11/10**：切圖 scratchpad `cut/cut.js`（node＋pngjs，固定格子切；這台沒有 PIL）。
+  - 圖集：`ic_tree.png` 接在原本 33 格後面：重要天賦（`duomo fire…fan t_a`、`t_p…qi`，招式類型 key 是 `t_a` 不是 `a`）、核心 `yuangui budong tiegu xunlei hundun`、天賦玉 `jw1–jw4 xinghe guiyuan wanxiang`（sprites.js `jwIk(j)`）；新類 `ui`（`ic_ui.png`，原圖檔名 fx_c.png）：`tide tree smith rift more card quest book rank altar set`。`ICO_VER` 9.0。奪魔不再借 mp 圖。
+  - 用在：天賦樹格子、玉槽（tree3.js `trJwDraw` 有圖就畫圖）、玉清單 `.jwico`、行囊 `jw:` 道具、怪潮祭品 `cur:tide`、快捷列天賦／鐵匠／秘境（`qIco` `.qico2`）、右側列（hud3.js `RAIL_IK` `.rlico`）。
+  - 特效 `img/fx.png`（每格 96、每列最多 6 格，黑底不去背）：art.js `FXS`（slash bslash hit crit fire ice thun psn qi orb fball heal）、`fxSheet(g,k,格,x,y,大小,角度)`（`lighter` 疊、開平滑）、`fxLoop`（投射物循環）、`fxPlay(k,x,y,大小,秒,{follow})`→`fxs` 的 `k:"spr"`。`fxHit`／`fxBoom`（`boomEle(顏色)`：綠＝毒、偏白藍＝雷、淡藍＝冰、橘紅＝火；金色、紫色黑洞照舊用畫的）、`drawSlash` 劍／大刀（圖的刀光朝右上，旋轉 face＋45°）、world.js 劍氣／法球／火球／隕石、清風／迴風陣／丹藥回血 `fxPlay("heal")`。圖沒載好時全部退回原本程式畫的。
+  - 測試 scratchpad `pr/t.js ?fx ?tree ?rail ?slash`（Edge headless 截圖），沒有 JS 錯誤。
+- **下一項：35（企劃 46 武器組專屬天賦點：每 6 級 1 點、只在拿那組時生效、要連主樹已點格子、核心／玉槽只能用主樹點、天賦樹分頁 主樹｜組 1｜2｜3、營地免費重置；打王比 v8.6 超過 +10% 就改每 8 級；**跟昇華一起設計點數來源**），再 33、34（企劃 44 裝備基底，另有 41 §8-1 大招傷害效用、cap.js 攻速溢出改進 b.inc、33 加 Step 5a 主動降抗＋mobArmor 預留）。

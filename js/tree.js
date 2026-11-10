@@ -442,7 +442,7 @@ function trDraw() {
     g.strokeStyle = sel ? "#ffffff" : on ? "#fff1b0" : inP ? "#fff3c0" : av ? "#f4f0e6" : N.t === "ks" ? "#8a4a7a" : N.t === "note" ? "#8a7440" : "#5a5446";
     g.stroke();
     if (rr >= 7 && (N.t === "note" || N.t === "ks" || N.t === "start")) { // 使用者畫的圖示（企劃 31）
-      const ik = N.t === "note" ? (N.th === "duomo" ? "mp" : N.th) : N.t === "ks" ? N.ks : "s" + N.sec, s2 = rr * (N.t === "ks" ? 2.3 : 2.1);
+      const ik = N.t === "note" ? N.th : N.t === "ks" ? N.ks : "s" + N.sec, s2 = rr * (N.t === "ks" ? 2.3 : 2.1);
       if (!icoHas("tree", ik)) { const nm = N.t === "note" ? (TR_TH[N.th] ? TR_TH[N.th].n : "") : N.t === "ks" ? trNodeName(N) : ""; if (nm) { g.font = `bold ${Math.round(rr * 1.05)}px 'Noto Sans TC', sans-serif`; g.textAlign = "center"; g.fillStyle = on ? "#3a2a10" : N.t === "ks" ? "#ffb8ea" : "#ffe9a0"; g.globalAlpha = on || inP || av || sel ? 1 : 0.7; g.fillText(nm[0], x, y + rr * 0.38); g.globalAlpha = 1; } }
       else { g.globalAlpha = on || inP || av || sel ? 1 : 0.55; icoDraw(g, "tree", ik, x - s2 / 2, y - s2 / 2, s2, s2); g.globalAlpha = 1; if (on) { g.lineWidth = Math.max(1.2, 2 * Math.min(1.3, z)); g.strokeStyle = "#fff1b0"; g.beginPath(); g.arc(x, y, s2 / 2, 0, Math.PI * 2); g.stroke(); } }
     }

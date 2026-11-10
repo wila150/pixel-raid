@@ -229,7 +229,7 @@ function trJwAct(nid, has) {
   if (!has) return "";
   const cur = jwSock()[nid], L = jwList().filter((x) => x.id !== cur).sort((x, y) => jwVal(y) - jwVal(x));
   let h = cur ? `<button class="trb" id="jwOut">拿下來</button>` : "";
-  if (L.length) h += `<div class="jwlist">${L.slice(0, 16).map((j) => { const w = jwWhere(j.id); return `<div class="jwrow"><b style="color:${jwColor(j)}">${jwName(j)}</b><small>${jwTxt(j).join("、")}${w ? "（鑲在別格）" : ""}</small><button class="trb gold" data-jwput="${j.id}">${cur ? "換上" : "鑲上"}</button>${w ? "" : `<button class="trb" data-jwsell="${j.id}">賣 ${jwPrice(j)}</button>`}</div>`; }).join("")}</div>`;
+  if (L.length) h += `<div class="jwlist">${L.slice(0, 16).map((j) => { const w = jwWhere(j.id); return `<div class="jwrow">${ico("tree", jwIk(j), "jwico")}<b style="color:${jwColor(j)}">${jwName(j)}</b><small>${jwTxt(j).join("、")}${w ? "（鑲在別格）" : ""}</small><button class="trb gold" data-jwput="${j.id}">${cur ? "換上" : "鑲上"}</button>${w ? "" : `<button class="trb" data-jwsell="${j.id}">賣 ${jwPrice(j)}</button>`}</div>`; }).join("")}</div>`;
   else if (!cur) h += `<small class="dim">還沒有天賦玉</small>`;
   return h;
 }
@@ -258,7 +258,8 @@ function trJwDraw(g, N, x, y, rr, on, av, inP, sel) {
   hex(rr); g.fillStyle = on ? "#3a3020" : inP ? "#6a5a30" : "#1c1a16"; g.fill();
   g.lineWidth = Math.max(1.5, (sel ? 3.5 : 2.5) * Math.min(1.3, trView.z));
   g.strokeStyle = sel ? "#ffffff" : on ? "#ffd25a" : inP ? "#fff3c0" : av ? "#f4f0e6" : "#7a6a4a"; g.stroke();
-  if (j) { hex(rr * 0.6); g.fillStyle = jwColor(j); g.globalAlpha = on ? 1 : 0.5; g.fill(); g.globalAlpha = 1; g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 1; g.stroke(); }
+  if (j && rr >= 6 && icoHas("tree", jwIk(j))) { g.globalAlpha = on ? 1 : 0.55; icoDraw(g, "tree", jwIk(j), x - rr * 0.95, y - rr * 0.95, rr * 1.9, rr * 1.9); g.globalAlpha = 1; }
+  else if (j) { hex(rr * 0.6); g.fillStyle = jwColor(j); g.globalAlpha = on ? 1 : 0.5; g.fill(); g.globalAlpha = 1; g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 1; g.stroke(); }
   else { hex(rr * 0.5); g.strokeStyle = on ? "#ffd25a" : "#5a5446"; g.lineWidth = 1; g.setLineDash([3, 3]); g.stroke(); g.setLineDash([]); }
 }
 // ── 行囊道具分頁：看得到天賦玉 ──

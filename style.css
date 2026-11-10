@@ -1037,3 +1037,8 @@ body.fz-s .ov .col, body.fz-s .screen .panel, body.fz-s #updCard { zoom: 0.9; }
 #stuckAsk .exbox { width: min(88vw, 340px); padding: 18px 18px 14px; border-radius: 12px; border: 1px solid rgba(159, 232, 255, 0.5); background: rgba(12, 16, 24, 0.96); color: var(--txt); text-align: center; }
 #stuckAsk h3 { margin: 0 0 6px; color: #cfeeff; font-size: 17px; } #stuckAsk p { margin: 0 0 12px; color: var(--dim); font-size: 13px; }
 #stuckAsk .acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+/* v9.0 新圖示（總表第 36 項） */
+.qbtn .qico2 { width: 22px; height: 22px; }
+#railR .rlb .rlico { width: 62%; height: 62%; margin-top: -2px; }
+#railR .rlb .rlico + small { margin-top: -1px; }
+.jwrow .jwico { width: 22px; height: 22px; margin-right: 4px; }

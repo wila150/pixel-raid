@@ -271,9 +271,31 @@ const itemIcon = (it) => `<img class="icon" src="${iconURL(it.slot === "sword" ?
 // ───────── 特效 ─────────
 let fxs = [];
 function fxAdd(o) { o.t = 0; fxs.push(o); if (fxs.length > 220) fxs.shift(); }
-const fxHit = (x, y, crit, c) => fxAdd({ k: "hit", x, y, max: crit ? 0.22 : 0.14, s: crit ? 11 : 7, a: rand(0, Math.PI), c: crit ? "255,230,120" : c || "255,255,255" });
+// v9.0 特效播放器（總表第 36 項，企劃 47）：img/fx.png 每格 96、加亮疊（黑色自動透明）
+const FXS = { slash: [0, 6], bslash: [1, 6], hit: [2, 4], crit: [3, 4], fire: [4, 6], ice: [5, 6], thun: [6, 6], psn: [7, 6], qi: [8, 4], orb: [9, 4], fball: [10, 4], heal: [11, 4] };
+const FX_IMG = new Image(); FX_IMG.src = `img/fx.png?v=${typeof ICO_VER !== "undefined" ? ICO_VER : 1}`;
+const fxReady = () => FX_IMG.complete && FX_IMG.naturalWidth > 0;
+function fxSheet(g, k, i, x, y, s, a, al) {
+  const d = FXS[k]; if (!d || !fxReady() || !(s > 0) || !isFinite(x) || !isFinite(y)) return false;
+  i = Math.max(0, Math.min(d[1] - 1, i | 0));
+  g.save(); g.globalCompositeOperation = "lighter"; g.imageSmoothingEnabled = true; if (al != null) g.globalAlpha *= al;
+  g.translate(x, y); if (a) g.rotate(a);
+  g.drawImage(FX_IMG, i * 96, d[0] * 96, 96, 96, -s / 2, -s / 2, s, s); g.restore(); return true;
+}
+const fxLoop = (k, x, y, s, a, al) => fxSheet(ctx, k, Math.floor((typeof time !== "undefined" ? time : performance.now() / 1000) * 16) % FXS[k][1], x, y, s, a, al);
+function fxPlay(k, x, y, z, max, o) { if (!fxReady()) return false; fxAdd(Object.assign({ k: "spr", s: k, x, y, z, max }, o || {})); return true; }
+const fxHeal = (x, y) => fxPlay("heal", x, y - 8, 28, 0.4);
+// 爆炸顏色 → 哪一種元素圖（金色、紫色黑洞照舊用畫的）
+function boomEle(c) {
+  const [r, g, b] = String(c).split(",").map(Number);
+  if (g > r + 40 && g > b) return "psn";
+  if (b >= r && b >= g) return r > g + 20 ? "" : r >= 185 ? "thun" : "ice";
+  if (r >= 240 && g <= 190) return "fire";
+  return "";
+}
+const fxHit = (x, y, crit, c) => fxPlay(crit ? "crit" : "hit", x, y, crit ? 24 : 15, crit ? 0.22 : 0.16) || fxAdd({ k: "hit", x, y, max: crit ? 0.22 : 0.14, s: crit ? 11 : 7, a: rand(0, Math.PI), c: crit ? "255,230,120" : c || "255,255,255" });
 const fxPuff = (x, y, big) => { for (let i = 0; i < (big ? 7 : 4); i++) fxAdd({ k: "puff", x: x + rand(-5, 5), y: y + rand(-4, 2), vy: -rand(8, 20), max: rand(0.35, 0.6), s: rand(3, big ? 8 : 5) }); fxAdd({ k: "soul", x, y, max: 0.6 }); };
-const fxBoom = (x, y, r, c = "255,150,60") => { fxAdd({ k: "boom", x, y, r, max: 0.32, c }); fxAdd({ k: "scorch", x, y, r: r * 0.7, max: 1.6 }); };
+const fxBoom = (x, y, r, c = "255,150,60") => { const e = boomEle(c), z = Math.max(18, r * 1.6); if (!(e && fxPlay(e, x, y - (e === "thun" || e === "psn" ? z * 0.28 : 0), z, 0.36))) fxAdd({ k: "boom", x, y, r, max: 0.32, c }); fxAdd({ k: "scorch", x, y, r: r * 0.7, max: 1.6 }); };
 const fxCast = (c) => fxAdd({ k: "cast", follow: true, max: 0.3, c });
 function updateWFx(dt) {
   for (const f of fxs) { f.t += dt; if (f.vy) f.y += f.vy * dt; }
@@ -290,6 +312,7 @@ function drawFxOver() { // 畫在最上面：命中火花、爆炸、煙
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const f of fxs) {
     const q = f.t / f.max;
+    if (f.k === "spr") { const n = FXS[f.s][1], fl = f.follow && typeof W0 !== "undefined"; fxSheet(ctx, f.s, Math.floor(q * n), fl ? W0.x : f.x, fl ? W0.y - 8 : f.y, f.z, f.a || 0); continue; }
     if (f.k === "hit") { // 十字星芒
       const s = f.s * (0.6 + q * 0.8);
       ctx.fillStyle = `rgba(${f.c},${1 - q})`;
@@ -313,6 +336,10 @@ function drawFxOver() { // 畫在最上面：命中火花、爆炸、煙
 function drawSlash(p, wt) {
   if (!(p.swing > 0)) return;
   const max = p.swingMax || 0.2, q = 1 - p.swing / max, R = p.swingR || 22, c = WPN_FX[wt] || "220,240,255";
+  if ((wt === "sword" || wt === "blade") && fxReady()) { // 圖的刀光朝右上（−45°）
+    const z = R * (wt === "blade" ? 2.5 : 2.2), d = R * 0.6;
+    fxSheet(ctx, wt === "blade" ? "bslash" : "slash", Math.floor(Math.min(0.999, q) * 6), p.x + Math.cos(p.face) * d, p.y - 2 + Math.sin(p.face) * d, z, p.face + Math.PI / 4); return;
+  }
   const half = wt === "blade" ? 1.5 : wt === "fist" ? 0.6 : 1.1, a0 = p.face - half, a1 = a0 + half * 2 * Math.min(1, q * 1.6 + 0.15);
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   const w = wt === "blade" ? 9 : wt === "fist" ? 5 : 7;

@@ -696,7 +696,7 @@ function drawStarMap(cv) {
 // 企劃 26 §3：右上只留 7 顆最常用＋「⋯更多」（卡片、任務、手冊、聊天、排行、設定）
 const QUICK = [["bag", "行囊", "I"], ["ap", "角色", "C"], ["skill", "技能", "N"], ["tree", "天賦", "P"], ["smith", "鐵匠", "B"], ["rift", "秘境", ""], ["map", "星盤", "M"], ["more", "更多", ""]];
 const quickEl = document.getElementById("quick");
-const qIco = (k) => { const ik = k === "map" ? "tp" : k; return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "tree" ? '<b class="qglyph">天</b>' : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : k === "smith" ? '<b class="qglyph">鍛</b>' : k === "more" ? '<b class="qglyph">⋯</b>' : ""; };
+const qIco = (k) => { const ik = k === "map" ? "tp" : k; if ((k === "tree" || k === "smith" || k === "rift" || k === "more") && typeof icoHas === "function" && icoHas("ui", k)) return ico("ui", k, "qico2"); return typeof UI_ICON !== "undefined" && UI_ICON[ik] ? uiIcon(ik) : k === "social" ? "💬" : k === "tree" ? '<b class="qglyph">天</b>' : k === "skill" ? '<b class="qglyph">技</b>' : k === "quest" ? '<b class="qglyph">任</b>' : k === "rift" ? '<b class="qglyph">秘</b>' : k === "smith" ? '<b class="qglyph">鍛</b>' : k === "more" ? '<b class="qglyph">⋯</b>' : ""; };
 quickEl.innerHTML = QUICK.map(([k, n, key]) => `<button class="qbtn" data-q="${k}" aria-label="${n}" title="${n}${key ? "（" + key + "）" : ""}">${qIco(k)}<small>${n}</small></button>`).join("");
 quickEl.querySelectorAll(".qbtn").forEach((b) => b.addEventListener("click", () => {
   const m = b.dataset.q;

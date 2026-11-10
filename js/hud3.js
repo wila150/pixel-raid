@@ -16,8 +16,9 @@ const cmEl = document.createElement("div"); cmEl.id = "chatMini"; cmEl.className
 cmEl.innerHTML = `<button class="cmT" aria-label="收起或展開聊天">▾</button><div class="cmL"></div>`;
 document.body.appendChild(cmEl);
 const railEl = document.createElement("div"); railEl.id = "railR"; railEl.className = "hidden";
+const RAIL_IK = { cards: "card", quest: "quest", book: "book", rank: "rank", altar: "altar", menu: "set" };
 const RAIL = [["cards", "卡片", "卡"], ["quest", "任務", "任"], ["book", "手冊", "冊"], ["rank", "排行", "榜"], ["altar", "祭壇", "壇"], ["menu", "設定", "設"]];
-railEl.innerHTML = `<button class="rlH" aria-label="收起或展開右側按鈕">▶</button><div class="rlB">${RAIL.map(([k, n, g]) => `<button class="rlb" data-rl="${k}" aria-label="${n}"><b>${g}</b><small>${n}</small></button>`).join("")}</div>`;
+railEl.innerHTML = `<button class="rlH" aria-label="收起或展開右側按鈕">▶</button><div class="rlB">${RAIL.map(([k, n, g]) => `<button class="rlb" data-rl="${k}" aria-label="${n}">${ico("ui", RAIL_IK[k], "rlico") || `<b>${g}</b>`}<small>${n}</small></button>`).join("")}</div>`;
 document.body.appendChild(railEl);
 { const f = document.getElementById("chatfeed"); if (f) f.classList.add("hidden"); } // 舊的左下聊天流不用了
 
