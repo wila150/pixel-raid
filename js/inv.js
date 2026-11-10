@@ -384,7 +384,7 @@ function renderEquip(msg = "") {
   if (selItem) {
     const worn = eqSel.startsWith("eq:"), cur = save.eq[selItem.slot], diff = itemCP(selItem) - itemCP(cur);
     right = `<div class="cmp-item">
-      <div class="ilvl">物品等級 ${itLv(selItem)}${selItem.bt ? `・基底第 ${selItem.bt} 階` : ""}</div>
+      <div class="ilvl">物品等級 ${itLv(selItem)}${selItem.bt ? `・基底第 ${selItem.bt} 階` : ""}<br><small>${tierNote(selItem)}</small></div>
       <div class="big-ico" style="--c:${RARITY[selItem.q].c}">${itemIcon(selItem)}</div>
       <h3 style="color:${RARITY[selItem.q].c}">${dispName(selItem)}</h3>
       <small>${RARITY[selItem.q].n}・${selItem.slot === "sword" ? `${WEAPONS[wtOf(selItem)].n}（${WEAPONS[wtOf(selItem)].job}）` : SLOTS[selItem.slot].n}・物品等級 ${itLv(selItem)}${selItem.risk ? '・<span class="risk">未帶回</span>' : ""}</small>

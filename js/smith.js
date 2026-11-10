@@ -14,7 +14,7 @@ function smListHtml(items) {
   if (!items.length) return `<p class="dim">沒有裝備</p>`;
   return `<div class="smlist">${items.map((it, i) => `<button class="smit${it === smSel ? " sel" : ""}" data-si="${i}" style="--c:${RARITY[it.q].c}" title="${it.name}"><span class="smico">${itemIcon(it)}${it.en ? `<i>+${it.en}</i>` : ""}</span><span class="smn"><b>${dispName(it)}</b><small>${smWorn(it) ? "身上・" : ""}${it.slot === "sword" ? WEAPONS[wtOf(it)].n : SLOTS[it.slot].n}・戰 ${itemCP(it)}</small></span></button>`).join("")}</div>`;
 }
-const smHead = (it) => `<div class="smhead"><div class="big-ico" style="--c:${RARITY[it.q].c}">${itemIcon(it)}</div><div><h3 style="color:${RARITY[it.q].c}">${dispName(it)}</h3><small>${RARITY[it.q].n}・物品等級 ${itLv(it)}・戰力 ${itemCP(it)}${smWorn(it) ? "・穿在身上" : ""}</small></div></div>`;
+const smHead = (it) => `<div class="smhead"><div class="big-ico" style="--c:${RARITY[it.q].c}">${itemIcon(it)}</div><div><h3 style="color:${RARITY[it.q].c}">${dispName(it)}</h3><small>${RARITY[it.q].n}・物品等級 ${itLv(it)}・戰力 ${itemCP(it)}${smWorn(it) ? "・穿在身上" : ""}<br>${tierNote(it)}</small></div></div>`;
 const smCampLine = (camp) => (camp ? "" : `<p class="warn">在野外可以看、比較；回到安全營地（傳送點、青雲城）才能動手</p>`);
 // 精煉：一顆主要按鈕
 function smEnHtml(it, camp) {

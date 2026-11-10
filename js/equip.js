@@ -151,6 +151,7 @@ for (const k in AFF_T) { const t = AFF_T[k], st = AFFIX[k].dec ? 0.1 : 1; for (l
 const tierTop = (lv) => { let t = 0; for (let i = 0; i < 5; i++) if (TIER_LV[i] <= lv) t = i; return t; }; // 這個物品等級最高能到的階（index）
 function pickTier(lv, top) { const n = tierTop(lv); if (top) return n; let r = Math.random() * TIER_W.slice(0, n + 1).reduce((a, b) => a + b, 0); for (let i = 0; i <= n; i++) if ((r -= TIER_W[i]) < 0) return i; return n; }
 const tierName = (i) => `T${5 - i}`;
+const tierNote = (it) => { if (it.u) return "傳說：數值固定"; const t = tierTop(itLv(it)); return `詞綴最高 ${tierName(t)}${t < 4 ? `（${TIER_LV.slice(t + 1).map((l, i) => `物品等級 ${l} 開 ${tierName(t + 1 + i)}`).join("、")}）` : ""}`; }; // 企劃 50 C
 // 這條詞綴的值落在哪一階（顯示用、搬家用）；超過 T1（渡劫）算 T1
 function affTierIdx(k, v) { const t = AFF_T[k]; if (!t) return -1; let r = 0; for (let i = 0; i < 5; i++) if (v >= t[i][0] - 1e-9) r = i; return r; }
 const RARITY = [

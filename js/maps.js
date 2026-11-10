@@ -42,18 +42,27 @@ function makeKey(tier, q = null) {
   rollKeyMods(k, a + Math.floor(Math.random() * (b - a + 1)));
   return k;
 }
-function rollKeyMods(k, n) { // 一半前綴一半後綴（單數時後綴多一條）
+function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時後綴多一條）；opt.pre＝只加前綴（通貨點金）、opt.qty＝保證有物品數量（通貨混元），opt.keep＝保留原本的詞綴只補到 n 條
   const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
   const grp = {}; suf = suf.filter((m) => { const g = MAP_MODS[m].g; if (!g) return true; (grp[g] = grp[g] || []).push(m); return false; }); // 同一組（四種元素）只留一條，機率跟一般詞綴一樣
   for (const g in grp) suf.push(grp[g][Math.floor(Math.random() * grp[g].length)]);
-  const ns = Math.ceil(n / 2), np = n - ns, pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
-  k.mods = [];
-  for (let i = 0; i < ns; i++) k.mods.push(pick(suf));
-  for (let i = 0; i < np; i++) k.mods.push(pick(pre));
+  const pick = (arr) => arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
+  if (opt.keep) { // 只補新的（點金符／淬靈石）
+    const has = (m) => k.mods.includes(m) || (MAP_MODS[m].g && k.mods.some((x) => MAP_MODS[x].g === MAP_MODS[m].g));
+    const P = pre.filter((m) => !has(m)), S = suf.filter((m) => !has(m));
+    while (k.mods.length < n) { const usePre = opt.pre ? P.length > 0 : (S.length && (!P.length || Math.random() < 0.5)); const src = usePre ? P : S; if (!src.length) break; k.mods.push(pick(src)); }
+  } else {
+    const ns = Math.ceil(n / 2), np = n - ns;
+    k.mods = []; k.mv = {};
+    if (opt.qty && n > 0) { k.mods.push("qty"); pre.splice(pre.indexOf("qty"), 1); }
+    for (let i = 0; i < ns && k.mods.length < n; i++) k.mods.push(pick(suf));
+    for (let i = 0; i < np && k.mods.length < n; i++) k.mods.push(pick(pre));
+  }
   if (k.mods.includes("physw") && k.mods.includes("spellw")) k.mods = k.mods.filter((m) => m !== "spellw"); // 兩個護體不會同時出現
 }
-const keyQuant = (k) => k.mods.reduce((s, m) => s + (MAP_MODS[m].q || 0), 0) + k.q * 10; // 物品數量 %
-const keyRar = (k) => k.mods.reduce((s, m) => s + (MAP_MODS[m].r || 0), 0); // 物品品質 %
+const keyMv = (k, m) => (k.mv && k.mv[m]) || 1; // 造化玉重骰的數值倍率（0.7–1.3；沒骰過＝1）
+const keyQuant = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].q || 0) * keyMv(k, m)), 0) + k.q * 10; // 物品數量 %
+const keyRar = (k) => k.mods.reduce((s, m) => s + Math.round((MAP_MODS[m].r || 0) * keyMv(k, m)), 0); // 物品品質 %
 const keyStars = (k) => Math.min(5, 1 + k.mods.filter((m) => MAP_MODS[m].t === "s").length + (k.tier >= 8 ? 1 : 0));
 const keyWarn = (k) => k.mods.filter((m) => MAP_MODS[m].bad && MAP_MODS[m].bad(curWeapon()));
 const keyName = (k) => `第 ${k.tier} 層秘境`;

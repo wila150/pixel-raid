@@ -328,10 +328,29 @@ openStarMap = function () { if (RIFT) { if (ovKind) ovClose(); floatText(W0.x, W
 
 // ───────── 秘境畫面（覆蓋層 k-rift）─────────
 let riftSel = null;
-function riftModRow(m) {
-  const M = MAP_MODS[m], bad = M.bad && M.bad(curWeapon());
-  return `<div class="rmod ${M.t}">${M.t === "p" ? "✦" : "☠"} ${M.n}${bad ? ` <b class="rbad">⚠ 不適合你的流派</b>` : ""}</div>`;
+function riftModRow(m, k) {
+  const M = MAP_MODS[m], bad = M.bad && M.bad(curWeapon()), mv = k ? keyMv(k, m) : 1;
+  const val = mv !== 1 && (M.q || M.r) ? ` <small class="rmv">（掉寶加成 ×${mv.toFixed(2)}）</small>` : "";
+  return `<div class="rmod ${M.t}">${M.t === "p" ? "✦" : "☠"} ${M.n}${val}${bad ? ` <b class="rbad">⚠ 不適合你的流派</b>` : ""}</div>`;
 }
+// 企劃 50 A：通貨用在鑰匙上（靈石版不動）
+function keyCurBtns(k, camp) {
+  if (k.cor) return "";
+  const b = (id, c, label, ok, sub) => `<button id="${id}" class="curb" style="--cc:${CUR[c].c}" ${camp && ok && curN(c) > 0 ? "" : "disabled"}>${label}<small>${CUR[c].n} ${curN(c)}${sub ? "・" + sub : ""}</small></button>`;
+  const max = KEY_RARITY[k.q].mods[1];
+  return (k.q < 2 ? b("kcGold", "gold", "點金", true, "新詞綴一定是前綴") : "")
+    + (k.q > 0 ? b("kcChaos", "chaos", "混元重骰", true, "保證有物品數量") : "")
+    + (k.q === 2 ? b("kcExalt", "exalt", "淬靈加詞綴", !k.ex && k.mods.length < max + 1, k.ex ? "已經加過" : "可以超過上限 1 條") : "")
+    + (k.mods.some((m) => MAP_MODS[m].q || MAP_MODS[m].r) ? b("kcDivine", "divine", "造化重骰數值", true, "掉寶加成 ×0.7–1.3") : "");
+}
+function keyCurBind(k, again) {
+  const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用通貨"); return; } f(); writeSave(); }; };
+  on("kcGold", () => { if (!useCur("gold")) return; k.q++; const [a, b2] = KEY_RARITY[k.q].mods; rollKeyMods(k, a + Math.floor(Math.random() * (b2 - a + 1)), { keep: true, pre: true }); sfx("good"); again(`點金符：${KEY_RARITY[k.q].n}品鑰匙（新詞綴都是前綴）`); });
+  on("kcChaos", () => { if (!useCur("chaos")) return; const [a, b2] = KEY_RARITY[k.q].mods; rollKeyMods(k, a + Math.floor(Math.random() * (b2 - a + 1)), { qty: true }); delete k.ex; sfx("good"); again("混元石：詞綴全部重骰（有物品數量）"); });
+  on("kcExalt", () => { if (k.ex || !useCur("exalt")) return; const n = k.mods.length; rollKeyMods(k, n + 1, { keep: true }); k.ex = 1; sfx("arrive"); again(k.mods.length > n ? `淬靈石：多了「${MAP_MODS[k.mods[n]].n}」` : "沒有能加的詞綴了"); });
+  on("kcDivine", () => { if (!useCur("divine")) return; k.mv = {}; for (const m of k.mods) if (MAP_MODS[m].q || MAP_MODS[m].r) k.mv[m] = Math.round((0.7 + Math.random() * 0.6) * 100) / 100; sfx("good"); again(`造化玉：物品數量 +${keyQuant(k)}%、品質 +${keyRar(k)}%`); });
+}
+const keyIlTxt = (k) => { const lv = riftLv(k.tier), t = tierTop(lv); return `這層掉的裝備物品等級約 ${lv}（詞綴最高 ${tierName(t)}${t < 4 ? `，物品等級 ${TIER_LV[t + 1]} 開 ${tierName(t + 1)}` : ""}）`; };
 function renderRift(msg = "") {
   if (!save.w) return;
   migKeys();
@@ -349,15 +368,17 @@ function renderRift(msg = "") {
     const pre = sel.mods.filter((m) => MAP_MODS[m].t === "p"), suf = sel.mods.filter((m) => MAP_MODS[m].t === "s"), warn = keyWarn(sel);
     center = `<h3 style="color:${KEY_RARITY[sel.q].c}">【${KEY_RARITY[sel.q].n}】${keyName(sel)}</h3>
       <div class="dim">怪物 Lv.${riftLv(sel.tier)}・${ZONES[riftTheme(sel.tier)].n}・危險 <span class="rstar">${"★".repeat(keyStars(sel))}${"☆".repeat(5 - keyStars(sel))}</span></div>
-      <div class="rmods">${pre.map(riftModRow).join("")}${suf.map(riftModRow).join("")}${!sel.mods.length ? `<div class="dim">（凡品鑰匙沒有詞綴：點金可以加詞綴）</div>` : ""}</div>
+      <div class="rmods">${pre.map((m) => riftModRow(m, sel)).join("")}${suf.map((m) => riftModRow(m, sel)).join("")}${!sel.mods.length ? `<div class="dim">（凡品鑰匙沒有詞綴：點金可以加詞綴）</div>` : ""}</div>
       <div class="rsum"><span>物品數量 <b>+${keyQuant(sel)}%</b></span><span>物品品質 <b>+${keyRar(sel)}%</b></span></div>
+      <div class="dim rilv">${keyIlTxt(sel)}</div>
       ${warn.length ? `<p class="warn">⚠ 這把鑰匙有對你現在的武器（${WEAPONS[curWeapon()].n}）不利的詞綴：換一組武器再進，或先打別把</p>` : ""}
       <div class="acts">
         <button id="rgo" class="gold" ${camp ? "" : "disabled"}>開啟秘境<small>${camp ? "在營地原地站 3 秒" : "要在安全營地才能開"}</small></button>
         ${sel.q < 2 ? `<button id="rup" ${save.stone >= keyCost(sel, true) ? "" : "disabled"}>點金<small>多詞綴・${keyCost(sel, true)} 靈石</small></button>` : ""}
         ${sel.q > 0 ? `<button id="rroll" ${save.stone >= keyCost(sel, false) ? "" : "disabled"}>洗練<small>重骰詞綴・${keyCost(sel, false)} 靈石</small></button>` : ""}
         <button id="rdel" class="red">丟掉</button>
-      </div>`;
+      </div>
+      ${sel.cor ? "" : `<div class="acts kcur">${keyCurBtns(sel, camp)}</div><p class="dim">通貨版比靈石版好：點金符加的一定是好處、混元保證有物品數量、淬靈能超過上限、造化追高數值（要在營地）</p>`}`;
   }
   const right = `<div class="winhead">規則</div>
     <p>・<b>3 條命</b>：死掉從入口重來，未帶回的裝備掉一半在屍體旁（跑回去撿得回來）。</p>
@@ -377,5 +398,6 @@ function renderRift(msg = "") {
   on("rgo", () => { const e = riftOpen(sel); if (e) { sfx("bad"); again(e); return; } sfx("click"); ovClose(); });
   on("rup", () => { const c = keyCost(sel, true); if (save.stone < c) return; save.stone -= c; sel.q++; const [a, b2] = KEY_RARITY[sel.q].mods; rollKeyMods(sel, a + Math.floor(Math.random() * (b2 - a + 1))); writeSave(); sfx("good"); again(`點金成功：${KEY_RARITY[sel.q].n}品鑰匙`); });
   on("rroll", () => { const c = keyCost(sel, false); if (save.stone < c) return; save.stone -= c; const [a, b2] = KEY_RARITY[sel.q].mods; rollKeyMods(sel, a + Math.floor(Math.random() * (b2 - a + 1))); writeSave(); sfx("good"); again("詞綴重骰了"); });
+  keyCurBind(sel, again);
   on("rdel", () => { save.keys = save.keys.filter((k) => k !== sel); riftSel = null; writeSave(); sfx("click"); again("丟掉了"); });
 }

@@ -108,10 +108,11 @@ killMob = function (m) {
     for (let i = 0; i < (m.R ? 2 : 3); i++) wDrop({ kind: "cur", c: "chaos" }, m);
     if (Math.random() < (m.R ? 0.1 : 0.2)) wDrop({ kind: "cur", c: "divine" }, m);
     if (m.R && Math.random() < 0.05) wDrop({ kind: "cur", c: "vaal" }, m);
+    if (m.R && typeof RIFT !== "undefined" && RIFT) for (let i = 0; i < (RIFT.tier >= 10 ? 2 : 1); i++) wDrop({ kind: "cur", c: randCur() }, m); // 企劃 50 B：秘境之主多掉
     return;
   }
   if (m.hunter) { for (let i = 0; i < 2; i++) wDrop({ kind: "cur", c: randCur() }, m); if (MAT_Z[z]) wDrop({ kind: "mat", k: MAT_Z[z][1] }, m); return; }
-  const em = m.elite ? 5 : 1; // v5.8.1 企劃 bot 實測後下修（11 第 8 節）
+  const em = (m.elite ? 5 : 1) * (typeof RIFT !== "undefined" && RIFT ? 1 + 0.05 * (RIFT.tier || 0) : 1); // v5.8.1 企劃 bot 實測後下修（11 第 8 節）；企劃 50 B：秘境每層 +5%
   for (const k of CUR_KEYS) if (Math.random() < CUR[k].r * zl * em * dm) wDrop({ kind: "cur", c: k }, m);
   if (MAT_Z[z]) {
     if (Math.random() < 0.2 * dm) wDrop({ kind: "mat", k: MAT_Z[z][0] }, m);
@@ -150,15 +151,16 @@ function dropDraw(o) {
 }
 
 // ───────── 通貨打造（行囊右欄選了裝備）─────────
+const lowTierTxt = (it) => (!it.u && it.q >= 2 && itLv(it) < 55 ? `這件最高只骰得到 ${tierName(tierTop(itLv(it)))}` : ""); // 企劃 50 C
 function curBtns(it, camp) {
   if (it.cor) return "";
   const b = (id, k, label, ok, sub) => `<button id="${id}" ${camp && ok && curN(k) > 0 ? "" : "disabled"} style="--cc:${CUR[k].c}" class="curb">${label}<small>${CUR[k].n} ${curN(k)}${sub ? "・" + sub : ""}</small></button>`;
   const cap = AFF_CAP[it.q] || 0, cnt = { p: 0, s: 0 }; for (const k in it.aff || {}) if (AFFIX[k]) cnt[AFFIX[k].t] = (cnt[AFFIX[k].t] || 0) + 1;
   const room = cnt.p < cap || cnt.s < cap;
   return (!it.u && it.q < 2 ? b("cGold", "gold", "點金", true) : "")
-    + (!it.u && it.q >= 1 ? b("cChaos", "chaos", "混元重骰", true) : "")
+    + (!it.u && it.q >= 1 ? b("cChaos", "chaos", "混元重骰", true, lowTierTxt(it)) : "")
     + (!it.u && it.q === 2 ? b("cExalt", "exalt", "淬靈加詞綴", room, room ? "" : "沒空位") : "")
-    + (it.q >= 1 && Object.keys(it.aff || {}).length ? b("cDivine", "divine", "造化重骰數值", true) : "")
+    + (it.q >= 1 && Object.keys(it.aff || {}).length ? b("cDivine", "divine", "造化重骰數值", true, it.u ? "固定範圍" : lowTierTxt(it)) : "")
     + b("cVaal", "vaal", "渡劫", true)
     + (!it.u && !it.mir ? b("cMirror", "mirror", "太虛鏡複製", save.bag.length < BAG_MAX) : "");
 }
@@ -173,7 +175,7 @@ function bindCur(it, again) {
     if (!pool.length) { again("沒有空位了"); return; }
     const k = pool[Math.floor(Math.random() * pool.length)]; it.aff[k] = rollAffVal(k, itLv(it)); done("exalt", `淬靈：多了「${AFFIX[k].n}」`, "arrive");
   });
-  on("cDivine", () => { if (!curN("divine")) return; for (const k in it.aff) if (AFFIX[k] && AFF_T[k]) it.aff[k] = rollAffVal(k, itLv(it)); done("divine", "造化：數值重骰了"); });
+  on("cDivine", () => { if (!curN("divine")) return; const F = it.u && UQ_FIX[it.u]; for (const k in it.aff) { if (!AFFIX[k] || !AFF_T[k] || it.jie === k) continue; if (F) { if (!F.aff[k]) continue; const [lo, hi] = F.aff[k], v = lo + Math.random() * (hi - lo); it.aff[k] = AFFIX[k].dec ? Math.round(v * 10) / 10 : Math.round(v); } else it.aff[k] = rollAffVal(k, itLv(it)); } done("divine", "造化：數值重骰了"); }); // 傳說只在自己的固定範圍裡骰
   on("cVaal", () => {
     if (!curN("vaal")) return; const r = Math.random();
     if (r < 0.25) { it.cor = 1; done("vaal", "渡劫：什麼都沒發生（已渡劫，不能再改）", "click"); }
