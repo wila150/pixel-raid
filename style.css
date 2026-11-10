@@ -1285,3 +1285,5 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .gpput { padding: 6px 18px; font-size: 13px; font-weight: bold; background: #6a5320; color: #ffe9a0; border: 1px solid #ffd84a; border-radius: 6px; }
 .ov .gpno { color: #ff9a7a; }
 .ov .gmg { justify-content: flex-start; } .ov .gmg span { color: #ffe9a0; } .ov .gmg i { margin-left: auto; font-style: normal; color: #9a90a8; font-size: 11px; }
+/* 企劃 66 A：技能卡元素小字 */
+.tricard .eletag { font-style: normal; font-size: 11px; font-weight: bold; margin-left: 2px; }

@@ -58,11 +58,14 @@ function eleKe(m, e) { // 剋 ×1.3、被剋 ×0.7、同元素 ×0.7、物理不
   if (ELE_BEATS[me] === e || e === me) return 0.7;
   return 1;
 }
+const SK_ELE_RES = 0.5, SK_ELE_K = 1.1;
 function hitFinal(m, dmg) {
   const e = wEle();
   dmg *= takenMul(m);
   if (!e) return dmg;
-  dmg *= 1 - mobResEff(m, e);
+  const bi = typeof wEleGem === "function" && !wEleGem(); // 企劃 66 A：招式自帶元素（沒串元素寶石）只吃一半抗性、傷害 ×1.1（不然深區比物理弱 25–40%）
+  dmg *= 1 - mobResEff(m, e) * (bi ? SK_ELE_RES : 1);
+  if (bi) dmg *= SK_ELE_K;
   const k = eleKe(m, e); dmg *= k;
   if (k !== 1 && !(m.keT > time)) {
     m.keT = time + 0.6;
@@ -70,7 +73,7 @@ function hitFinal(m, dmg) {
     if (k > 1 || bad) floatText(m.x + 8, m.y - 20, k > 1 ? "剋" : "被剋", k > 1 ? ELE_C[e] : "#9a9a9a");
     seenHint("ke2", "「剋」：火→冰→雷→毒→火。剋牠的元素傷害 ×1.3；被牠剋（灰字「被剋」）或同元素 ×0.7。越深的地方妖獸的元素抗性越高（最多 40%）。");
   }
-  if (e === "T" && !DOT_HIT && !chainLock && Math.random() < 0.15 + 0.03 * gemLv("volt")) { // 感電：雷打中機率，4 秒受傷 +20%（企劃 61 B：20%+5%/級 → 15%+3%/級）
+  if (e === "T" && wEleGem() === "T" && !DOT_HIT && !chainLock && Math.random() < 0.15 + 0.03 * gemLv("volt")) { // 感電：雷打中機率，4 秒受傷 +20%（企劃 61 B：20%+5%/級 → 15%+3%/級）
     if (!(m.shockT > time)) floatText(m.x - 8, m.y - 26, "感電", "#bfe0ff");
     m.shockT = time + 4;
   }

@@ -19,6 +19,7 @@ function drawEleTag(x, y, e) { // 怪名後面的元素小圖示
 
 // ───────── 武器元素：剋制環 火→冰→雷→毒→火（被剋 +30%、同屬性 −30%）─────────
 const ELE_BEATS = { F: "W", W: "T", T: "P", P: "F" };
+const wEleGem = () => (typeof slotGemEle === "function" ? slotGemEle(CUR_SL || "a") : itemEle(save.eq.sword)); // 企劃 66 A：只看串的寶石（感電等狀態要寶石）
 const wEle = () => (typeof slotEle === "function" ? slotEle(CUR_SL || "a") : itemEle(save.eq.sword)); // 第二版：看正在放的那一招（沒有就看普攻）
 const mobEle = (m) => m.ele || (WMOBS[m.type] && WMOBS[m.type].ele) || null; // m.ele：秘境「元素加持」
 function chainZap(m, amt, n) { // 雷：跳到旁邊 n 隻（不會再連鎖）

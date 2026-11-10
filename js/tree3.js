@@ -72,7 +72,7 @@ hitFinal = function (m, dmg) {
   const sh0 = m.shockT > time;
   let r = _hitFinalT3.apply(this, arguments);
   if (!save.w || !W0) return r;
-  if (!DOT_HIT && !chainLock && trN("thun") && wEle() === "T" && !(m.shockT > time) && Math.random() < 0.15) { floatText(m.x - 8, m.y - 26, "感電", "#bfe0ff"); m.shockT = time + 4; }
+  if (!DOT_HIT && !chainLock && trN("thun") && wEleGem() === "T" && !(m.shockT > time) && Math.random() < 0.15) { floatText(m.x - 8, m.y - 26, "感電", "#bfe0ff"); m.shockT = time + 4; }
   if (sh0 && trN("thun2")) r *= 1.1;
   return r;
 };

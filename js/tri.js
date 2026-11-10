@@ -255,7 +255,18 @@ function gemGrpMig() {
   }
   w.gemGrp = 1; return n;
 }
-function slotEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
+// 企劃 66 A：招式自帶元素（名字有元素的才有）。串元素寶石＝轉化成那個元素；自帶元素不送燃燒／冰凍／感電／中毒（那些還是要串寶石）
+const SK_ELE = {
+  sword: { e: { base: "T", cold: "W" } },
+  staff: { a: { frost: "W", burst: "F" }, q: { base: "F", shower: "F", doom: "F", wall: "F" }, e: { base: "W", tstorm: "T", chainl: "T", inferno: "F" } },
+  bow: { e: { blast: "F", trap: "T" } },
+  fist: { e: { dragf: "F" } },
+  fan: { q: { storm: "T" } },
+};
+function skEleOf(wt, sl, k) { const T = SK_ELE[wt] && SK_ELE[wt][sl]; return (T && T[k || "base"]) || null; }
+function skEle(sl, wt = curWeapon()) { if (!sl || sl === "r") return null; return skEleOf(wt, sl, slotSkill(sl, wt)); }
+function slotEle(sl) { return slotGemEle(sl) || skEle(sl); }
+function slotGemEle(sl) { let best = null, bl = 0; for (const g of chainRow(sl)) { if (!g || !gemReqOk(g)) continue; const [k, l] = g.split(":"); if (ELE_GEM[k] && +l > bl && gemFits(g, sl)) { bl = +l; best = ELE_GEM[k]; } } return best; }
 // 企劃 61 §A-2：同一招串的第 3 顆起，每多一顆這招傷害 ×0.92（更多，相乘；省元不算）
 const CHAIN_DM = 0.95; // v9.13.1：0.92 時劍、弓串 5 顆只有 2 顆的 0.9 倍（企劃 61 §8 規則）
 function chainGemN(sl) { if (!save.w) return 0; let n = 0; for (const g of chainRow(sl)) if (g && gemReqOk(g) && gemFits(g, sl) && !g.startsWith("thrift:")) n++; return n; }
@@ -373,13 +384,20 @@ function triMergeGem(g, again, relist) {
   save.gems[g] -= 3; if (!save.gems[g]) delete save.gems[g]; const ng = `${k}:${+l + 1}`; addGem(ng); sfx("arrive"); writeSave();
   if (triPick && relist) { relist(); notice(`合成出 ${gemName(ng)}！`); } else again(`合成出 ${gemName(ng)}！`);
 }
+// 技能卡名字旁的元素小字：自帶元素；正在用的那招串了別的元素寶石 →「（轉成雷）」
+function eleTag(l, k, on) {
+  if (l === "r") return "";
+  const wt = curWeapon(), e = skEleOf(wt, l, k), g = on ? slotGemEle(l) : null, t = (x, s) => `<i class="eletag" style="color:${ELE_C[x]}">${s}</i>`;
+  if (g && g !== e) return t(g, `（${e ? ELE_N[e] + "→" : ""}轉成${ELE_N[g]}）`);
+  return e ? t(e, ELE_N[e]) : "";
+}
 function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy(), ws = WSKILLS[wt];
   if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
   const card = (l, k, n, d, need) => {
     const cur = (triOf(wt, l) || "") === k, open = !k || triOpen(wt, l, k), key = skgKey(wt, l, k), buy = k && !open && !skgHas(key);
     const lockTxt = buy ? `${lv >= need ? "" : `Lv.${need} `}可在營地技能商人購買・${(need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${need} 開放`;
-    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${l}" data-tk="${k}" ${buy ? `data-shop="${l === "r" ? "r" : wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${l === "e" && !k && (jobLv() >= 4 || curUq()) ? "" : skIco(wt, l, k, "tico")}${n}</b><small>${open ? d : lockTxt}</small>${open ? skgBar(key) : ""}</button>`;
+    return `<button class="tricard${cur ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${l}" data-tk="${k}" ${buy ? `data-shop="${l === "r" ? "r" : wt}"` : ""} ${(open && !cur) || buy ? "" : "disabled"}><b>${l === "e" && !k && (jobLv() >= 4 || curUq()) ? "" : skIco(wt, l, k, "tico")}${n}${eleTag(l, k, cur)}</b><small>${open ? d : lockTxt}</small>${open ? skgBar(key) : ""}</button>`;
   };
   const row = (l) => {
     const L = triList(wt, l);
@@ -389,13 +407,14 @@ function renderTri(msg = "") {
     let first = [card(l, "", base, bd, 1)];
     if (l === "e") { // 企劃 35：原本的 E 永遠一格；起源（四轉）、傳說專屬各自另一格
       const cur = slotSkill("e"), ec = (k, n, d, ic) => `<button class="tricard${cur === k ? " on" : ""}${lv < E_LV ? " lock" : ""}" data-tl="e" data-tk="${k}" ${cur === k || lv < E_LV ? "disabled" : ""}><b>${ic}${n}</b><small>${lv < E_LV ? `🔒 Lv.${E_LV} 開放` : d}</small>${k === "base" && lv >= E_LV ? skgBar(skgKey(wt, "e", "base")) : ""}</button>`;
-      first = [ec("base", ws.ult[0], "原本的 E 招", skIco(wt, "e", "", "tico"))];
+      first = [ec("base", ws.ult[0] + eleTag("e", "base", cur === "base"), "原本的 E 招", skIco(wt, "e", "", "tico"))];
       if (curUq()) first.push(ec("uq", WUQ[curUq()][0], "傳說武器的專屬 E 招", ""));
       if (jobLv() >= 4) first.push(ec("origin", "起源覺醒", "四轉：全螢幕時停的起源大招（不能串輔助）", ""));
     }
     const cards = first.concat(idx.map(([o, need]) => card(l, o.k, o.n, o.d, need))).join("");
     const tags = [...slotTags(l)].map((t) => TAG_N[t]).join("・"), mm = chainMpMul(l);
-    const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
+    const se = l === "r" ? null : slotEle(l);
+    const sub = `${l === "r" ? "全部武器共用" : WEAPONS[wt].n + "的技能"}・標籤：${tags}${se ? `・元素：<b style="color:${ELE_C[se]}">${ELE_N[se]}</b>` : ""}${(() => { const n = chainGemN(l), dm = chainDmMul(l); return n ? `・串 ${n} 顆：傷害 ×${dm}・真氣 ×${mm}` : ""; })()}`;
     return `<div class="trirow"><div class="trihead"><b>${TRI_LAYER_N[l]}</b><small>${sub}</small></div>${over}<div class="tricards c4">${cards}</div>${chainCells(l)}</div>`;
   };
   return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="trilist"><p class="sub">技能要有<b>技能寶石</b>才能用（原本的招免費，其他到營地「技能商人」買），點卡片換招${why ? `：<b style="color:#ff9a7a">${why}</b>` : "（營地隨時、野外脫戰 3 秒）"}。招式下面的格子串<b>輔助寶石</b>，只影響那一招；0 轉 1 格、每轉多 1 格。每顆都有代價，真氣倍率串幾顆就相乘。</p>${row("a")}${row("q")}${row("e")}${row("r")}</div>${gemPopHtml()}`;
