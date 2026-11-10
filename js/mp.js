@@ -15,14 +15,15 @@ worldStats = function () {
 };
 // 打中回真氣：先進蓄水池，每秒最多放出真氣上限的 20%
 function mpLeech(n) {
-  if (!W0 || !B || !(B.maxMp > 0) || !(n > 0)) return;
+  if (!W0 || !B || !(B.maxMp > 0) || !(n > 0) || W0.dryT > 0) return; // 企劃 70：乾涸時吸藍不收
   W0.mpPool = Math.min(B.maxMp * MP_POOL_MAX, (W0.mpPool || 0) + n);
 }
 const _updateWorldMp = updateWorld;
 updateWorld = function (dt) {
   const r = _updateWorldMp.apply(this, arguments);
   const p = W0;
-  if (p && p.mpPool > 0) {
+  if (p && p.dryT > 0 && dt > 0) p.dryT = Math.max(0, p.dryT - dt); // 企劃 70 A
+  if (p && p.mpPool > 0 && !(p.dryT > 0)) { // 乾涸時池子也不放
     if (!(B.maxMp > 0)) p.mpPool = 0;
     else { const g = Math.min(p.mpPool, B.maxMp * LEECH_CAP * dt, B.maxMp - p.mp); if (g > 0) { p.mp += g; p.mpPool -= g; } if (p.mp >= B.maxMp - 1e-6) p.mpPool = Math.min(p.mpPool, B.maxMp * 0.1); }
   }

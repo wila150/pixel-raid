@@ -35,7 +35,9 @@ const _hurtW683 = hurtW;
 hurtW = function (dmg, from, kind) { // eslint-disable-line no-func-assign
   const p = W0, G = p && p.guardT2 > 0 && W0.gbell;
   const can = G && from && from.type && WMOBS[from.type] && !from.dead && from.hp !== undefined && (kind || "phys") === "phys" && !(p.iframe > 0) && !(p.invT > 0) && !(p.mistT > 0) && !(p.shield > 0);
+  const hp0 = p ? p.hp : 0;
   const r = _hurtW683.apply(this, arguments);
+  if (p && p.wu && p.hp < hp0 && !(W0.titanT > 0) && !(W0.gbell && p.guardT2 > 0)) wuBreak(p); // 企劃 70 C：前搖被打中扣到血
   if (can && !from.dead) {
     const s0 = CUR_SL, d0 = CUR_DM; CUR_SL = G.sl || "e"; CUR_DM = G.dm || 1;
     try { hitMob(from, dmg, 60, p, true); } finally { CUR_SL = s0; CUR_DM = d0; }
@@ -45,6 +47,16 @@ hurtW = function (dmg, from, kind) { // eslint-disable-line no-func-assign
   return r;
 };
 
+// 企劃 70 C：打斷前搖：延遲的傷害取消、冷卻只算 1 秒、再扣這招真氣 50%
+function wuBreak(p) {
+  const U = p.wu; p.wu = null; (W0.wuDead = W0.wuDead || new Set()).add(U.tok);
+  W0.fires = W0.fires.filter((f) => f.wu !== U.tok);
+  if (U.k === "cold") W0.grayT = 0; if (U.k === "tstorm") W0.emBall = null; if (U.k === "nova") W0.novaP = null;
+  if (p.cds[U.key] > 1) p.cds[U.key] = 1;
+  const c = Math.round(U.mp * 0.5); if (c > 0) { if (p.mp < c) { p.mp = 0; mpDry(p); } else mpPay(p, c); }
+  popWord(p, "被打斷", "#ff9a7a"); burst(p.x, p.y + 4, "#ffe0a0", 16, 110, 0.4); sfx("bad");
+  if (typeof seenHint === "function") seenHint("wubreak", "大招蓄力的時候被打到會被打斷（冷卻只算 1 秒，但會多扣真氣）。先閃開、開霸體或金鐘罩再放。");
+}
 // ───────── 每幀 ─────────
 const _updateWorld683 = updateWorld;
 updateWorld = function (dt) { // eslint-disable-line no-func-assign
@@ -52,6 +64,7 @@ updateWorld = function (dt) { // eslint-disable-line no-func-assign
   if (!W0 || !(dt > 0) || state !== "world") return r;
   const p = W0;
   for (const m of W0.mobs) if (m.shredT > 0) m.shredT -= dt;
+  if (p.wu && (p.wu.t -= dt) <= 0) p.wu = null; // 企劃 70 C 前搖
   if (W0.breezeT > 0) { W0.breezeT -= dt; if (Math.random() < 0.4) { const a = rand(0, 6.28); particles.push({ x: p.x + Math.cos(a) * 12, y: p.y - 2 + Math.sin(a) * 6, vx: -Math.sin(a) * 40, vy: Math.cos(a) * 20 - 10, life: 0.4, max: 0.4, color: "#bfffd0", size: 1.5 }); } }
   if (W0.gustN > 0 && !(W0.gustT > time)) W0.gustN = 0;
   // 氣功炮：衝擊波往前推，經過的怪全部打到
@@ -103,6 +116,7 @@ updateWorld = function (dt) { // eslint-disable-line no-func-assign
 // ───────── 畫面 ─────────
 function sk683Draw() {
   const g = ctx, T = typeof time !== "undefined" ? time : 0;
+  if (W0.wu) { const U = W0.wu, q = 1 - U.t / U.max, c = `rgb(255,${Math.round(255 - 40 * q)},${Math.round(255 - 175 * q)})`; g.save(); g.strokeStyle = "rgba(0,0,0,0.45)"; g.lineWidth = 4; g.beginPath(); g.ellipse(W0.x, W0.y + 5, 14, 6, 0, 0, Math.PI * 2); g.stroke(); g.strokeStyle = c; g.lineWidth = 2.5; g.beginPath(); g.ellipse(W0.x, W0.y + 5, 14, 6, 0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * q); g.stroke(); g.restore(); } // 企劃 70 C：腳下蓄力圈（白→金）
   for (const G of W0.gongs || []) { // 氣功炮：藍白巨型衝擊波（弧形波面＋拖尾）
     const ca = Math.cos(G.a), sa = Math.sin(G.a), fx = G.x + ca * G.d, fy = G.y + sa * G.d, A = Math.min(1, (G.L - G.d) / 80);
     g.save(); g.globalCompositeOperation = "lighter"; g.translate(fx, fy); g.rotate(G.a);

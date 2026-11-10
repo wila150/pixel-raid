@@ -71,7 +71,7 @@ hitMob = function (m, dmg, kb, from, quiet) {
   finally {
     W0.critAdd = ca0; B.critDmg = cd0;
     if (W0.lastCrit !== lc0 && trN("crit")) { if (!(W0.trCritT > time)) popWord(W0, "靈犀", "#ffd84a"); W0.trCritT = time + 2; }
-    if (trN("duomo") && B.maxMp > 0) {
+    if (trN("duomo") && B.maxMp > 0 && !(W0.dryT > 0)) { // 企劃 70：乾涸時奪魔不回
       const dealt = Math.max(0, hp0 - Math.max(0, m.hp));
       if (W0.trDmSec !== Math.floor(time) || W0.trDmGot == null) { W0.trDmSec = Math.floor(time); W0.trDmGot = 0; }
       const g = Math.min(dealt * 0.01, B.maxMp * 0.1 - W0.trDmGot);

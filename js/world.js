@@ -623,7 +623,21 @@ let chillHit = false; // 冰靈的冰彈打中時設成 true
 // 天賦樹「血魔法」：招式改花生命（1 真氣＝1% 最大生命），不會花到死
 const atkMpNow = () => Math.round(WSKILL.attack.mpS * Math.max(0.07, WSKILL.attack.cd / ((B.aspd || 1) * eAspd())) * 10) / 10; // 企劃 61：這一下普攻要花的真氣
 const mpCan = (p, c) => (B.bloodMagic ? !c || p.hp > (c * p.maxHp) / 100 : p.mp >= c);
-function mpPay(p, c) { if (!c) return; if (B.bloodMagic) { p.hp -= Math.round((c * p.maxHp) / 100); p.hurt = 0.1; } else p.mp -= c; }
+function mpPay(p, c) { if (!c) return; if (B.bloodMagic) { p.hp -= Math.round((c * p.maxHp) / 100); p.hurt = 0.1; } else { p.mp -= c; if (p.mp < 1) mpDry(p); } }
+// 企劃 70 A：真氣用到 <1 的那一刻乾涸 1.5 秒：移速 ×0.7、吸藍全部停（自然回復照常）
+const DRY_T = 1.5;
+// 企劃 70 B：旋風斬類（大刀 Q 原本／颶風／大迴旋／斷空）按住才一直轉；超過原本秒數後每秒扣藍＝基礎每秒×(1＋已按住秒數)×CH_MUL
+let CH_MUL = 0.75; // bot：Lv.100 大刀沒寶石滿真氣按住約 6 秒乾涸（1＝5.0 秒、0.65＝6.5 秒）
+const CH_SPIN = new Set([null, undefined, "gale", "whirl", "leap"]);
+const SLOT_KEY = { a: "attack", q: "spin", e: "ult" };
+const slotHeld = (sl) => { if (typeof inMenu !== "undefined" && inMenu) return false; if (sl === "a") return keys.has("j") || mouse.down || padHeld.has("attack"); if (sl === "q") return keys.has("k") || keys.has("x") || keys.has("q") || padHeld.has("spin"); if (sl === "e") return keys.has("e") || keys.has("u") || padHeld.has("ult"); return false; };
+// 企劃 70 C：前搖（按下到主傷害出來中間）被打中扣到血 → 打斷、冷卻只算 1 秒、再扣這招真氣 50%
+const WU_T = { doom: 1.0, judg: 0.6, nova: 0.6, tstorm: 0.35, cold: 0.3 };
+function mpDry(p) {
+  if (B.bloodMagic) return; p.mp = Math.max(0, p.mp);
+  if (!(W0.dryT > 0)) { popWord(p, "真氣乾涸", "#8aa0c8"); if (typeof seenHint === "function") seenHint("mpdry", "真氣用光會乾涸 1.5 秒：走得慢、吸不到真氣。看著藍色那圈出手。"); }
+  W0.dryT = DRY_T;
+}
 function hurtW(dmg, from, kind) {
   const p = W0;
   if (p.shield > 0 || safeAt(p.x, p.y)) return; // 太極護罩、營地結界：完全不受傷
@@ -733,7 +747,7 @@ function updateWorld(dt) {
     }
     if (Math.random() < 0.6) particles.push({ x: p.x, y: p.y + 5, vx: 0, vy: -10, life: 0.3, max: 0.3, color: "#8fa7ff", size: 2 });
   } else {
-    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 && !(W0.titanT > 0) ? 0.6 : 1) * (p.mistT > 0 ? 1.8 : 1) * (W0.breezeT > 0 ? 1.5 : 1) * (p.poolT > 0 && !(W0.titanT > 0) ? 0.75 : 1) * (p.zapT > 0 && !(W0.titanT > 0) ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? (W0.spinK === "whirl" ? 0.4 : 0.6) : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
+    const spd = 85 * B.spdMul * (p.swing > 0 ? 0.6 : 1) * (p.chillT > 0 && !(W0.titanT > 0) ? 0.6 : 1) * (p.mistT > 0 ? 1.8 : 1) * (W0.breezeT > 0 ? 1.5 : 1) * (W0.dryT > 0 ? 0.7 : 1) * (p.poolT > 0 && !(W0.titanT > 0) ? 0.75 : 1) * (p.zapT > 0 && !(W0.titanT > 0) ? 0.5 : 1) * (W0.spinT > 0 && W0.spinK !== "gale" ? (W0.spinK === "whirl" ? 0.4 : 0.6) : 1) * (typeof mountMul === "function" ? mountMul() : 1) * (typeof trSpdMul === "function" ? trSpdMul() : 1);
     moveBody(p, mx * spd * dt, my * spd * dt, 5);
   }
   // 熔岩會燙
@@ -766,7 +780,7 @@ function updateWorld(dt) {
     }
     return r;
   };
-  const castLater = (t, fn) => { const sl = CUR_SL, dm = CUR_DM; wLater(t, () => { if (W0) cast(sl, fn, dm); }); };
+  const castLater = (t, fn) => { const sl = CUR_SL, dm = CUR_DM, tok = W0.wuTok; wLater(t, () => { if (W0 && !(tok && W0.wuDead && W0.wuDead.has(tok))) cast(sl, fn, dm); }); }; // 企劃 70 C：前搖被打斷就不打出來
   const afterAt = (x, y, r, base) => { const l = gemLv("after"); if (l) W0.fires.push({ x, y, t: 0.5, r, dmg: base * AFTER_DM(l), c: "#e0b080", isAf: 1 }); }; // 餘震（瞬間範圍招）
   const moveRunes = (sl) => { // 殘影／護盾／冰徑：位移招（閃身、御劍突、衝拳…）
     const gt = gemLv("trail", sl), gs = gemLv("rshield", sl), gi = gemLv("icepath", sl);
@@ -1059,7 +1073,12 @@ function updateWorld(dt) {
     return true;
   };
   // 企劃 69 B：放某一格＝跑那格裡那招原本那類的程式（TRI_OVR 讓 triOf／slotSkill 認得是哪招）
-  const runSlot = (sl, manual) => { const pk = slotPick(wt, sl), o0 = TRI_OVR; TRI_OVR = pk; try { return pk.c === "a" ? atkFx() : pk.c === "q" ? doSpin() : ultFx(!manual); } finally { TRI_OVR = o0; } };
+  const runSlot = (sl, manual) => {
+    const pk = slotPick(wt, sl), o0 = TRI_OVR, wu = manual && WU_T[pk.k] ? WU_T[pk.k] : 0, f0 = W0.fires.length; TRI_OVR = pk;
+    if (wu) W0.wuTok = (W0.wuN = (W0.wuN || 0) + 1);
+    try { return pk.c === "a" ? atkFx() : pk.c === "q" ? doSpin() : ultFx(!manual); }
+    finally { TRI_OVR = o0; if (wu) { const tok = W0.wuTok; for (let i = f0; i < W0.fires.length; i++) W0.fires[i].wu = tok; W0.wu = { tok, t: wu, max: wu, key: SLOT_KEY[sl], mp: (WSKILL[SLOT_KEY[sl]] && WSKILL[SLOT_KEY[sl]].mp) || 0, k: pk.k }; W0.wuTok = 0; } }
+  };
   const SLFX = { a: () => runSlot("a"), q: () => runSlot("q"), e: () => runSlot("e") };
   const slotCast = (sl, manual) => { // 手動出招：法壇、連發、連打
     const tl = sl === "a" || sl === "q" ? gemLv("totem", sl) : 0;
@@ -1073,7 +1092,8 @@ function updateWorld(dt) {
     }
     const fin = manual && (sl === "q" || sl === "e") && typeof shiFin === "function" && shiFin(sl); // 企劃 55：勢滿 5 層，這招是終結技（傷害 ×1.6、範圍 ×1.3）
     if (fin) W0.shiAM = 1.3;
-    let r; try { r = cast(sl, () => runSlot(sl, manual), fin ? 1.6 : 1); } finally { W0.shiAM = 0; }
+    const sp0 = W0.spinT || 0; let r; try { r = cast(sl, () => runSlot(sl, manual), fin ? 1.6 : 1); } finally { W0.shiAM = 0; }
+    if (manual && W0.spinT > sp0 && CH_SPIN.has(W0.spinK) && wt === "blade") { W0.chOn = true; W0.chSl = sl; W0.chT = 0; W0.chT0 = W0.spinT; W0.chBase = ((WSKILL[SLOT_KEY[sl]] && WSKILL[SLOT_KEY[sl]].mp) || 0) / Math.max(0.3, W0.spinT); } // 企劃 70 B：開始引導
     if (manual) {
       const gm = gemLv("multi", sl); if (gm && Math.random() < 0.25 + gm * 0.1) W0["rc" + sl] = 0.2; // 連發
       const gr = gemLv("rapid", sl); if (gr) W0.rapidQ = { sl, n: 2, t: 0.1, dm: 0.65 + gr * 0.02 }; // 連打
@@ -1290,6 +1310,10 @@ function updateWorld(dt) {
   if (W0.guardT > 0) W0.guardT -= dt;
   if (W0.focusT > 0) W0.focusT -= dt;
   if (W0.spinT > 0 && W0.spinK === "gale") for (const m of W0.mobs) if (!m.dead && !m.boss && !m.elite && dist(m, p) < 50 + WMOBS[m.type].r && dist(m, p) > 14) { const a = angTo(m, p); moveBody(m, Math.cos(a) * 30 * dt, Math.sin(a) * 30 * dt, WMOBS[m.type].r); } // 企劃 66 D 颶風：50 內小怪微微拉過來
+  if (W0.chOn) { // 企劃 70 B：按住才繼續轉，超過原本秒數每秒扣藍越來越多
+    if (!(W0.spinT > 0) || !slotHeld(W0.chSl)) W0.chOn = false;
+    else { W0.chT += dt; if (W0.chT >= W0.chT0 && W0.spinT <= dt * 1.5) { const c = W0.chBase * (1 + W0.chT) * CH_MUL * dt; if (!B.bloodMagic && p.mp < c) { W0.chOn = false; mpDry(p); } else { mpPay(p, c); W0.spinT = dt * 2; } } }
+  }
   if (W0.spinT > 0) { // 旋風斬
     W0.spinT -= dt; W0.spinTick -= dt;
     if (W0.spinTick <= 0) { W0.spinTick = 0.15; CUR_SL = W0.spinSl || null; CUR_DM = W0.spinDm || 1; const K = W0.spinK, sr = (K === "whirl" ? WHIRL_R : 40) * areaMul(CUR_SL); for (const m of W0.mobs) if (!m.dead && dist(m, p) < sr + WMOBS[m.type].r) hitMob(m, wDmg(K === "gale" ? 8.5 : K === "whirl" ? WHIRL_D : K === "leap" ? LEAP_D : 17) * (m.boss ? 0.8 : 1), 60, p, true);

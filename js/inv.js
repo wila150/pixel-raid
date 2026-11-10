@@ -136,7 +136,7 @@ function drawOrbs() {
     }
     ctx.restore();
   }
-  drawOrb(ex, ey, R, ef, "#3a78e8", "#0a1848", "rgba(140,180,255,0.6)");
+  { const dry = p.dryT > 0, fl = dry && Math.sin(time * 14) > 0; drawOrb(ex, ey, R, ef, dry ? (fl ? "#6a7488" : "#4a5468") : "#3a78e8", dry ? "#1a1e28" : "#0a1848", dry ? "rgba(160,170,190,0.6)" : "rgba(140,180,255,0.6)"); } // 企劃 70：乾涸變灰閃
   if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#d8e4ff";
     ctx.fillText(`${Math.floor(p.mp || 0)}`, ex, ey + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a8b8d8"; ctx.fillText(`/ ${B.maxMp}`, ex, ey + 12);
