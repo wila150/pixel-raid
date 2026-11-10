@@ -52,7 +52,7 @@ hitMob = function (m, dmg, kb, from, quiet) {
   if (B.eleOne && !e) f *= 0.8;
   if (DOT_HIT) { if (trN("t_d")) f *= TR3_MORE; }
   else for (const t of new Set(tags)) if (TR3_TAG[t] && trN(TR3_TAG[t])) f *= TR3_MORE;
-  if (trN("ice2") && (m.frz > 0 || m.slowT > 0)) f *= 1.15;
+  if (trN("ice2") && (m.frz > 0 || m.slowT > 0)) f *= 1.1;
   if (trN("psn2") && m.psn > 0 && m.psnT > 0) f *= 1.12;
   if (trN("qi") && B.maxMp > 0 && W0.mp >= B.maxMp * 0.8) f *= 1.08;
   if (!quiet && !DOT_HIT && curWeapon() === "fist" && trN("fst")) {

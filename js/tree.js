@@ -33,7 +33,7 @@ const TR_TH = {
   supp: { s: { supp: 3 }, n: "護體", e: { supp: 8 } },
   duomo: { s: { mpr: 10 }, n: "奪魔", e: { mpr: 15, mp: 20 } }, // 第二版：取代藍區一個吐納
   // 企劃 42 A：元素（各 2 群）
-  fire: { s: { fire: 5 }, n: "烈焰", e: { fire: 12 } }, fire2: { s: { fire: 4 }, n: "燎原", e: { fire: 8, ta: 3 } },
+  fire: { s: { fire: 6 }, n: "烈焰", e: { fire: 15 } }, fire2: { s: { fire: 5 }, n: "燎原", e: { fire: 10, ta: 3 } },
   ice: { s: { ice: 5 }, n: "寒冰", e: { ice: 12 } }, ice2: { s: { ice: 4 }, n: "凍土", e: { ice: 8, armor: 10 } },
   thun: { s: { thun: 5 }, n: "奔雷", e: { thun: 12 } }, thun2: { s: { thun: 4 }, n: "雷殛", e: { thun: 8, crit: 1 } },
   psn: { s: { chaos: 5 }, n: "劇毒", e: { chaos: 12 } }, psn2: { s: { chaos: 4 }, n: "腐骨", e: { chaos: 8, td: 3 } },
@@ -54,7 +54,7 @@ const TR_SP = {
   mp: "真氣低於 20% 時，回復速度 ×2", leech: "吸血可以超過生命上限，最多 10% 變成血盾（3 秒沒補就消失）", res: "被元素打到後 3 秒，那個元素抗性 +15%（上限可到 80%）",
   loot: "精英有 10% 多掉 1 件裝備", supp: "法術壓制成功時回 2% 生命", duomo: "打中時回造成傷害 1% 的真氣（每秒最多真氣上限 10%）",
   // 企劃 42（效果在 tree3.js）
-  fire: "燃燒時間 +30%", fire2: "燃燒中的敵人死掉時，火會燒到旁邊 2 隻", ice: "冰凍時間 +40%", ice2: "打冰凍、變慢的敵人傷害 +15%",
+  fire: "燃燒時間 +30%", fire2: "燃燒中的敵人死掉時，火會燒到旁邊 2 隻", ice: "冰凍時間 +40%", ice2: "打冰凍、變慢的敵人傷害 +10%",
   thun: "感電機率 +15%", thun2: "感電的敵人受到你的傷害再 +10%", psn: "毒最多疊到 8 層（原本 5 層）", psn2: "打中毒的敵人傷害 +12%",
   swd: "拿劍時：打中有 15% 再砍一下（60% 傷害）", bow: "拿弓時：每次射擊多 1 道箭（70% 傷害）", stf: "拿法杖時：傷害更多 10%",
   bld: "拿大刀時：範圍 +20%", fst: "拿拳套時：攻速 +10%；連續打同一隻每下 +1%（最多 +10%，換目標歸零）", fan: "拿扇時：旋風、火牆這類持續招存在時間 +30%",
@@ -284,6 +284,7 @@ function trValue(N, main) {
       : ({ atk: 2.2, crit: 3.2, cdmg: 0.55, aspd: main === "agi" ? 2.2 : 2.6, spd: 0.5, hp: 1.2, armor: 0.2, dodge: 1.2, supp: 0.6, es: main === "wis" ? 0.35 : 0.1, mp: 0.08, mpr: 0.15, leech: 9, res: 0.8, loot: 0.15, tp: 1.1, tm: 1.1, ta: 1.0, td: 0.7, tv: 0.5, ...TR_EV }[k] || 0) * x * (k[0] === "t" && k.length === 2 && !trTagUse(k) ? 0 : 1);
   }
   if (N.t === "note" && typeof trNoteVal === "function") v += trNoteVal(N.th);
+  if (TR_PREF && N.th && TR_PREF.includes(N.th)) v += N.t === "note" ? 30 : 12; // treeRecommendFor：指定主題優先
   return v;
 }
 let TR_EV = {};
@@ -293,6 +294,9 @@ function trEleVal() { // 推薦路線：只看這把武器普攻／Q 的元素
   for (const sl of ["a", "q"]) { let e = null; try { e = slotEle(sl); } catch (x) {} if (e && M[e]) o[M[e]] += 0.8; }
   return o;
 }
+let TR_PREF = null;
+// 照主題點（給企劃 bot／測試）：treeRecommendFor(["fire", "fire2", "t_d"])＝先往這些天賦群點，其他照推薦路線
+function treeRecommendFor(ths) { TR_PREF = ths; try { treeRecommend(); } finally { TR_PREF = null; } }
 function treeRecommend() {
   const T = treeSt(); if (!T.s) { T.s = trWStart(); T.n = [T.s]; }
   const main = TR_WMAIN[curWeapon()] || "agi"; TR_EV = trEleVal();
