@@ -1823,7 +1823,7 @@ function renderWorld() {
 }
 // 企劃 71：PixelLab 8 方向圖（img/mob/<key>.png＝8 格橫條：東、東南、南、西南、西、西北、北、東北），有圖的怪才換，沒載好照舊用舊圖；換色怪不拿新圖 recolor
 const MOB_SPR_ROT = { jianling: 1 };
-const MOB_SPR_KEYS = ["bonewolf", "crow", "frostwolf", "golem", "guardian", "hunter", "icewisp", "imp", "lava", "shield", "skyfox", "tgolem", "treant", "twisp", "witch", "wolf", "yeti"], MOB_SPR_V = "9.29", MOB_SPR = {};
+const MOB_SPR_KEYS = ["bomber", "bonewolf", "crow", "frostwolf", "golem", "guardian", "hunter", "icewisp", "imp", "jianling", "lava", "shield", "skyfox", "tgolem", "treant", "twisp", "witch", "wolf", "yeti"], MOB_SPR_V = "9.29.1", MOB_SPR = {};
 for (const k of MOB_SPR_KEYS) { const im = new Image(); im.onload = () => { MOB_SPR[k] = im; }; im.src = `img/mob/${k}.png?v=${MOB_SPR_V}`; }
 function mobDir8(m) { // 追你／出招看「怪→你」，其他看移動方向
   let a;
