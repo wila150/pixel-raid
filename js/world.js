@@ -1822,14 +1822,15 @@ function renderWorld() {
   drawWBossBar();
 }
 // 企劃 71：PixelLab 8 方向圖（img/mob/<key>.png＝8 格橫條：東、東南、南、西南、西、西北、北、東北），有圖的怪才換，沒載好照舊用舊圖；換色怪不拿新圖 recolor
-const MOB_SPR_KEYS = ["wolf", "imp", "frostwolf", "bonewolf", "skyfox", "hunter", "golem"], MOB_SPR_V = "9.28.1", MOB_SPR = {};
+const MOB_SPR_ROT = { jianling: 1 };
+const MOB_SPR_KEYS = ["bonewolf", "crow", "frostwolf", "golem", "guardian", "hunter", "icewisp", "imp", "lava", "shield", "skyfox", "tgolem", "treant", "twisp", "witch", "wolf", "yeti"], MOB_SPR_V = "9.29", MOB_SPR = {};
 for (const k of MOB_SPR_KEYS) { const im = new Image(); im.onload = () => { MOB_SPR[k] = im; }; im.src = `img/mob/${k}.png?v=${MOB_SPR_V}`; }
 function mobDir8(m) { // 追你／出招看「怪→你」，其他看移動方向
   let a;
   if (m.st === "chase" || m.wind > 0 || m.mv) a = Math.atan2(W0.y - m.y, W0.x - m.x);
   else if (m.spx !== undefined) { const dx = m.x - m.spx, dy = m.y - m.spy; if (dx * dx + dy * dy > 0.0004) a = Math.atan2(dy, dx); }
   m.spx = m.x; m.spy = m.y;
-  if (a !== undefined) m.d8 = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+  if (a !== undefined) { m.d8 = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8; m.sa = a; }
   return m.d8 === undefined ? 2 : m.d8;
 }
 function drawWMob(m) {
@@ -1846,7 +1847,8 @@ function drawWMob(m) {
   if (!spr && m.x > W0.x) ctx.scale(-1, 1);
   if ((m.fuse > 0 || wq > 0.5) && Math.floor(time * 16) % 2) ctx.globalCompositeOperation = "lighter";
   if (spr) { // 企劃 71：8 方向圖，世界寬度約 r×3.2，最近點縮放
-    const fw = spr.height, i = mobDir8(m), s2 = fw * ((d.r * 3.2) / 34) * sc; ctx.imageSmoothingEnabled = false;
+    const fw = spr.height, one = spr.width <= fw, i0 = mobDir8(m), i = one ? 0 : i0, s2 = fw * ((d.r * 3.2) / 34) * sc; ctx.imageSmoothingEnabled = false; // 只有一張 south 的（冰靈、雷靈、爆石靈、劍靈）：全部方向用同一張
+    if (one && MOB_SPR_ROT[m.type] && m.sa !== undefined) ctx.rotate(m.sa - Math.PI / 2); // 劍靈：照方向轉圖片
     ctx.drawImage(spr, i * fw, 0, fw, fw, -s2 / 2, -s2 / 2, s2, s2);
     if (m.flash > 0) { ctx.globalCompositeOperation = "lighter"; ctx.drawImage(spr, i * fw, 0, fw, fw, -s2 / 2, -s2 / 2, s2, s2); }
   } else {
