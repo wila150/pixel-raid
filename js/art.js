@@ -448,8 +448,11 @@ function heroImgFor(rq, cq, bq, walk, skin = "none") {
   return (heroCache[key] = sprite([...top, ...legs], pal));
 }
 // ───────── 企劃 71 C：主角換 PixelLab 8 方向圖（img/hero.png 8 格橫條），袍子／腰帶／頭髮換色、頭頂小冠、靴子品質色 ─────────
+// 企劃 71 §11：新圖專用的袍子顏色（亮、中、腰帶），避開膚色（色相 15–40°、低飽和高亮度）
+const HERO_ROBE = [["#eef2fa", "#a9bcd8", "#3c8fd1"], ["#9cc8ff", "#4a82d8", "#1e4a9a"], ["#c89cf8", "#8a56d0", "#4a2280"], ["#f0902a", "#c0601a", "#803a12"]], HERO_ROBE_NONE = ["#9a9488", "#6a6458", "#4a4038"];
+const HERO_SKIN_FIX = { gold: { W: "#f2c418", w: "#b88a0c", B: "#ff6a2a" }, sakura: { W: "#ff9cc4", w: "#d86090", B: "#9a2a60" } };
 const HERO_SPR_K = 6 * 3.2 / 34; // 跟狼妖同一個像素密度（新圖 1 格＝0.565 世界單位）
-let HERO_SPR = null; { const im = new Image(); im.onload = () => { HERO_SPR = im; }; im.src = "img/hero.png?v=9.28"; }
+let HERO_SPR = null; { const im = new Image(); im.onload = () => { HERO_SPR = im; }; im.src = "img/hero.png?v=9.28.1"; }
 const heroNameDY = () => (HERO_SPR ? -5 : 0); // 新圖比較高：名字往上
 const hx2rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const dir8 = (a) => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
@@ -459,8 +462,8 @@ function heroSprFor(rq, cq, bq, skin, d) {
   const fw = HERO_SPR.height, c = document.createElement("canvas"); c.width = fw; c.height = fw + 3; const g = c.getContext("2d");
   g.drawImage(HERO_SPR, d * fw, 0, fw, fw, 0, 3, fw, fw);
   const im = g.getImageData(0, 0, c.width, c.height), D = im.data, W2 = c.width;
-  const rc = (rq < 0 ? ["#c8bca8", "#8a8070", "#6a5a4a"] : ROBE_C[rq]).slice(); let H = null, h = null;
-  const sk = SKINS[skin]; if (sk && skin !== "none") { if (sk.W) rc[0] = sk.W; if (sk.w) rc[1] = sk.w; if (sk.B) rc[2] = sk.B; H = sk.H || null; h = sk.h || null; }
+  const rc = (rq < 0 ? HERO_ROBE_NONE : HERO_ROBE[rq]).slice(); let H = null, h = null;
+  const sk = SKINS[skin] && skin !== "none" ? Object.assign({}, SKINS[skin], HERO_SKIN_FIX[skin] || {}) : null; if (sk) { if (sk.W) rc[0] = sk.W; if (sk.w) rc[1] = sk.w; if (sk.B) rc[2] = sk.B; H = sk.H || null; h = sk.h || null; }
   const R0 = hx2rgb(rc[0]), R1 = hx2rgb(rc[1]), BL = hx2rgb(rc[2]), HH = H && hx2rgb(H), Hh = h && hx2rgb(h), BT = hx2rgb(bq < 0 ? "#3a2f4a" : BOOT_C[bq]);
   const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
   let top = 99, bot = -1;
