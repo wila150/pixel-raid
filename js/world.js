@@ -1213,7 +1213,7 @@ function updateWorld(dt) {
     }
     if (tr === "guard") { p.guardSh = Math.round(p.maxHp * 0.15); p.guardT2 = 2 + 0.22; W0.rings.push({ x: p.x, y: p.y, t: 0, max: 0.35, r: 20, c: "255,230,150" }); floatText(p.x, p.y - 20, "護體", "#ffe08a"); } // 企劃 66 C：閃出去＋護盾 15% 生命 2 秒
     if (tr === "ghost") { p.ghostT = 0; p.ghostN = Math.max(p.ghostN || 0, 5); p.ghostSl = "r"; // 企劃 66 C：起點留殘影 1.5 秒，120 內正在追你的小怪改去追殘影（精英、王不吃）
-      W0.decoy = { x: p.x, y: p.y, t: 1.5, flip: p.flip };
+      W0.decoy = { x: p.x, y: p.y, t: 1.5, flip: p.flip, face: p.face };
       for (const m of W0.mobs) if (!m.dead && !m.boss && !m.elite && !m.hunter && m.st === "chase" && dist(m, p) < 120) { m.dcy = 1; m.wind = 0; m.mv = null; m.dv = null; }
     }
     else if (tr === "surge") { W0.sureT = 1; } // 企劃 68：1 秒內下一次任何攻擊（普攻／Q／E）必定暴擊
@@ -1718,15 +1718,14 @@ function renderWorld() {
       ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
       ctx.fillStyle = "#1b1424"; ctx.fillText(n.n, n.x + 0.5, n.y - 11.5); ctx.fillStyle = "#ffe066"; ctx.fillText(n.n, n.x, n.y - 12);
     } else if (o.me && state !== "worldDead") {
-      if (W0.decoy) { const D = W0.decoy; ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(time * 14); ctx.translate(Math.round(D.x), Math.round(D.y)); if (D.flip) ctx.scale(-1, 1); ctx.drawImage(heroImg(0), -6, -9); ctx.restore(); }
+      if (W0.decoy) { const D = W0.decoy; ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(time * 14); ctx.restore(); const g = heroGear(); drawHeroBody(D.x, D.y, D.face !== undefined ? D.face : D.flip ? Math.PI : 0, D.flip, +g[0], +g[1], +g[2], g[3], 0, 0.35 + 0.15 * Math.sin(time * 14)); } // 企劃 71 C
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
         ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(p.x, p.y + 7, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
         const wt = curWeapon(), behind = Math.sin(p.face) < -0.3, rd = typeof mountRide === "function" ? mountRide() : null;
         drawHeroAura(p);
         if (rd) drawMount(rd, p.x, p.y, p.flip, p.walk);
         if (behind && !rd) drawHeldWeapon(p, wt);
-        ctx.save(); ctx.translate(Math.round(p.x), Math.round(p.y) - (rd ? 6 : 0) - (p.jumpT > 0 && p.roll > 0 ? Math.round(Math.sin((1 - p.roll / p.jumpT) * Math.PI) * (p.jumpT < 0.45 ? 22 : 14)) : 0)); if (p.flip) ctx.scale(-1, 1);
-        ctx.drawImage(heroImg(rd ? 0 : Math.floor(p.walk) % 2), -6, -9); ctx.restore();
+        { const g = heroGear(), jy = (rd ? 6 : 0) + (p.jumpT > 0 && p.roll > 0 ? Math.round(Math.sin((1 - p.roll / p.jumpT) * Math.PI) * (p.jumpT < 0.45 ? 22 : 14)) : 0); drawHeroBody(p.x, p.y - jy, p.face, p.flip, +g[0], +g[1], +g[2], g[3], rd ? 0 : p.walk); } // 企劃 71 C：8 方向新圖
         if (!behind && !rd) drawHeldWeapon(p, wt);
         if (!rd) drawSlash(p, wt);
         if (rd) { p.y -= 6; drawMyName(p); p.y += 6; } else drawMyName(p);
@@ -1823,7 +1822,7 @@ function renderWorld() {
   drawWBossBar();
 }
 // 企劃 71：PixelLab 8 方向圖（img/mob/<key>.png＝8 格橫條：東、東南、南、西南、西、西北、北、東北），有圖的怪才換，沒載好照舊用舊圖；換色怪不拿新圖 recolor
-const MOB_SPR_KEYS = ["wolf"], MOB_SPR_V = "9.27", MOB_SPR = {};
+const MOB_SPR_KEYS = ["wolf", "imp", "frostwolf"], MOB_SPR_V = "9.28", MOB_SPR = {};
 for (const k of MOB_SPR_KEYS) { const im = new Image(); im.onload = () => { MOB_SPR[k] = im; }; im.src = `img/mob/${k}.png?v=${MOB_SPR_V}`; }
 function mobDir8(m) { // 追你／出招看「怪→你」，其他看移動方向
   let a;

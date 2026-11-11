@@ -447,6 +447,49 @@ function heroImgFor(rq, cq, bq, walk, skin = "none") {
   const legs = walk ? ["..kbk..kbk..", "..kk.....k.."] : ["...kbk.kbk..", "...kk...kk.."];
   return (heroCache[key] = sprite([...top, ...legs], pal));
 }
+// ───────── 企劃 71 C：主角換 PixelLab 8 方向圖（img/hero.png 8 格橫條），袍子／腰帶／頭髮換色、頭頂小冠、靴子品質色 ─────────
+const HERO_SPR_K = 6 * 3.2 / 34; // 跟狼妖同一個像素密度（新圖 1 格＝0.565 世界單位）
+let HERO_SPR = null; { const im = new Image(); im.onload = () => { HERO_SPR = im; }; im.src = "img/hero.png?v=9.28"; }
+const heroNameDY = () => (HERO_SPR ? -5 : 0); // 新圖比較高：名字往上
+const hx2rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const dir8 = (a) => ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+function heroSprFor(rq, cq, bq, skin, d) {
+  if (!HERO_SPR) return null;
+  const key = `n${rq},${cq},${bq},${skin},${d}`; if (heroCache[key]) return heroCache[key];
+  const fw = HERO_SPR.height, c = document.createElement("canvas"); c.width = fw; c.height = fw + 3; const g = c.getContext("2d");
+  g.drawImage(HERO_SPR, d * fw, 0, fw, fw, 0, 3, fw, fw);
+  const im = g.getImageData(0, 0, c.width, c.height), D = im.data, W2 = c.width;
+  const rc = (rq < 0 ? ["#c8bca8", "#8a8070", "#6a5a4a"] : ROBE_C[rq]).slice(); let H = null, h = null;
+  const sk = SKINS[skin]; if (sk && skin !== "none") { if (sk.W) rc[0] = sk.W; if (sk.w) rc[1] = sk.w; if (sk.B) rc[2] = sk.B; H = sk.H || null; h = sk.h || null; }
+  const R0 = hx2rgb(rc[0]), R1 = hx2rgb(rc[1]), BL = hx2rgb(rc[2]), HH = H && hx2rgb(H), Hh = h && hx2rgb(h), BT = hx2rgb(bq < 0 ? "#3a2f4a" : BOOT_C[bq]);
+  const mix = (a, b, t) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
+  let top = 99, bot = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < W2; x++) { const i = (y * W2 + x) * 4; if (D[i + 3] < 10) continue; top = Math.min(top, y); bot = Math.max(bot, y); }
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < W2; x++) {
+    const i = (y * W2 + x) * 4; if (D[i + 3] < 10) continue;
+    const r = D[i], gg = D[i + 1], b = D[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), L = (mx + mn) / 510, sat = mx - mn;
+    if (mx < 20) continue; // 外框
+    let o = null;
+    if (y >= bot - 1) o = BT; // 靴子：最下面 2 列
+    else if (r > gg && gg > b && r > 180 && sat > 25) continue; // 皮膚
+    else if (b > r + 20 && b >= gg) o = mix(BL, [0, 0, 0], Math.max(0, 0.75 - L) * 0.6); // 腰帶（藍）
+    else if (sat < 40 && L > 0.7) o = mix(R1, R0, Math.min(1, Math.max(0, (L - 0.78) / 0.2))); // 袍子（白、淡紫）
+    else if (L < 0.45 && HH) o = mix(Hh || HH, HH, Math.min(1, L / 0.3)); // 頭髮（時裝才換）
+    if (o) { D[i] = o[0]; D[i + 1] = o[1]; D[i + 2] = o[2]; }
+  }
+  g.putImageData(im, 0, 0);
+  if (cq >= 0 && top < 99) { const C = CROWN_C[cq], cx = Math.round(W2 / 2) + (d === 0 || d === 1 || d === 7 ? 1 : d >= 3 && d <= 5 ? -1 : 0); g.fillStyle = "#080605"; g.fillRect(cx - 3, top - 3, 6, 4); g.fillStyle = C; g.fillRect(cx - 2, top - 2, 4, 2); if (cq >= 2) { g.fillRect(cx - 2, top - 3, 1, 1); g.fillRect(cx + 1, top - 3, 1, 1); } } // 頭頂小冠
+  return (heroCache[key] = c);
+}
+// 畫主角身體（自己、殘影、別人共用）；新圖沒載好退回舊圖
+function drawHeroBody(x, y, face, flip, rq, cq, bq, skin, walk, alpha) {
+  const c = heroSprFor(rq, cq, bq, skin, dir8(face));
+  ctx.save(); if (alpha !== undefined) ctx.globalAlpha = alpha;
+  if (c) { const s = c.width * HERO_SPR_K, bob = walk ? -Math.abs(Math.sin(walk * 1.6)) * 0.8 : 0; ctx.imageSmoothingEnabled = false; ctx.drawImage(c, Math.round(x - s / 2), Math.round(y - s / 2 - 3 + bob), s, c.height * HERO_SPR_K); }
+  else { ctx.translate(Math.round(x), Math.round(y)); if (flip) ctx.scale(-1, 1); ctx.drawImage(heroImgFor(rq, cq, bq, walk ? Math.floor(walk) % 2 : 0, skin), -6, -9); }
+  ctx.restore();
+}
+const heroGear = () => gearKey().split(",");
 function drawHeroAura(p) { // 穿傳說裝：腳下光環；武器強化 +7 以上：武器旁邊閃光
   const n = SLOT_KEYS.filter((k) => save.eq[k] && save.eq[k].q === 3).length, en = save.eq.sword ? save.eq.sword.en || 0 : 0;
   if (n) {
@@ -464,10 +507,10 @@ const myName = () => ((save.w && save.w.nick) || (typeof fbUser !== "undefined" 
 function drawMyName(p) {
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const t = `${myName()} Lv.${save.w.lv}${save.w.tj && typeof TJ_N !== "undefined" ? "・" + TJ_N[save.w.tj] : ""}`;
-  ctx.fillStyle = "#1b1424"; ctx.fillText(t, p.x + 0.5, p.y - 12.5); ctx.fillStyle = "#ffe066"; ctx.fillText(t, p.x, p.y - 13);
+  const ny = p.y + heroNameDY(); ctx.fillStyle = "#1b1424"; ctx.fillText(t, p.x + 0.5, ny - 12.5); ctx.fillStyle = "#ffe066"; ctx.fillText(t, p.x, ny - 13);
   const ti = typeof myTitle === "function" ? myTitle() : "", ay = ti ? -6 : 0;
-  if (ti) drawTitleTag(ti, p.x, p.y - 19);
-  ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.moveTo(p.x - 2, p.y - 20 + ay); ctx.lineTo(p.x + 2, p.y - 20 + ay); ctx.lineTo(p.x, p.y - 17.5 + ay); ctx.fill(); // 小箭頭：這是你
+  if (ti) drawTitleTag(ti, p.x, ny - 19);
+  ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.moveTo(p.x - 2, ny - 20 + ay); ctx.lineTo(p.x + 2, ny - 20 + ay); ctx.lineTo(p.x, ny - 17.5 + ay); ctx.fill(); // 小箭頭：這是你
 }
 // 角色畫面：改暱稱、換時裝
 function fashionHtml() {
@@ -484,6 +527,7 @@ const skinIconCache = {};
 function skinIcon(k) {
   const g = gearKey().split(","), ck = k + g.slice(0, 3).join("");
   if (skinIconCache[ck]) return skinIconCache[ck];
+  const nw = heroSprFor(+g[0], +g[1], +g[2], k, 2); if (nw) return (skinIconCache[ck] = nw.toDataURL()); // 企劃 71 C
   const img = heroImgFor(+g[0], +g[1], +g[2], 0, k), c = document.createElement("canvas");
   c.width = 14; c.height = 16; c.getContext("2d").drawImage(img, 1, 1);
   return (skinIconCache[ck] = c.toDataURL());

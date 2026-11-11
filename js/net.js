@@ -169,15 +169,14 @@ function drawOther(o) {
   const rd = typeof MOUNTS !== "undefined" && MOUNTS[g[4]] ? g[4] : null; // 別人騎的坐騎
   if (rd) drawMount(rd, o.x, o.y, fake.flip, o.walk);
   if (behind && !rd) drawHeldWeapon(fake, d.wt);
-  ctx.save(); ctx.translate(Math.round(o.x), Math.round(o.y) - (rd ? 6 : 0)); if (fake.flip) ctx.scale(-1, 1);
-  ctx.drawImage(heroImgFor(r, c, b, rd ? 0 : Math.floor(o.walk) % 2, sk), -6, -9); ctx.restore();
+  drawHeroBody(o.x, o.y - (rd ? 6 : 0), fake.face, fake.flip, r, c, b, sk, rd ? 0 : o.walk); // 企劃 71 C
   if (!behind && !rd) drawHeldWeapon(fake, d.wt);
   if (!rd) drawSlash(fake, d.wt);
   ctx.globalAlpha = 1;
   ctx.font = "bold 6px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
   const label = `${d.n} Lv.${d.lv}${d.tj && typeof TJ_N !== "undefined" && TJ_N[d.tj] ? "・" + TJ_N[d.tj] : ""}`;
-  ctx.fillStyle = "#1b1424"; ctx.fillText(label, o.x + 0.5, o.y - 12.5); ctx.fillStyle = "#9fffb0"; ctx.fillText(label, o.x, o.y - 13);
-  if (d.ti && typeof drawTitleTag === "function") drawTitleTag(d.ti, o.x, o.y - 19);
+  ctx.fillStyle = "#1b1424"; ctx.fillText(label, o.x + 0.5, o.y - 12.5 + heroNameDY()); ctx.fillStyle = "#9fffb0"; ctx.fillText(label, o.x, o.y - 13 + heroNameDY());
+  if (d.ti && typeof drawTitleTag === "function") drawTitleTag(d.ti, o.x, o.y - 19 + heroNameDY());
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && netRef) netSend(true); });
 
