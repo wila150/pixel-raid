@@ -1822,6 +1822,17 @@ function renderWorld() {
   drawWorldHud();
   drawWBossBar();
 }
+// 企劃 71：PixelLab 8 方向圖（img/mob/<key>.png＝8 格橫條：東、東南、南、西南、西、西北、北、東北），有圖的怪才換，沒載好照舊用舊圖；換色怪不拿新圖 recolor
+const MOB_SPR_KEYS = ["wolf"], MOB_SPR_V = "9.27", MOB_SPR = {};
+for (const k of MOB_SPR_KEYS) { const im = new Image(); im.onload = () => { MOB_SPR[k] = im; }; im.src = `img/mob/${k}.png?v=${MOB_SPR_V}`; }
+function mobDir8(m) { // 追你／出招看「怪→你」，其他看移動方向
+  let a;
+  if (m.st === "chase" || m.wind > 0 || m.mv) a = Math.atan2(W0.y - m.y, W0.x - m.x);
+  else if (m.spx !== undefined) { const dx = m.x - m.spx, dy = m.y - m.spy; if (dx * dx + dy * dy > 0.0004) a = Math.atan2(dy, dx); }
+  m.spx = m.x; m.spy = m.y;
+  if (a !== undefined) m.d8 = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+  return m.d8 === undefined ? 2 : m.d8;
+}
 function drawWMob(m) {
   if (m.boss) { drawWBoss(m); return; }
   if (WMOBS[m.type].draw) { WMOBS[m.type].draw(m); return; }
@@ -1832,10 +1843,17 @@ function drawWMob(m) {
   const wq = m.wind > 0 ? 1 - m.wind / m.windMax : 0, step = Math.sin(time * 12 + m.x) ; // 走路一跳一跳、蓄力時抖動
   ctx.translate(Math.round(m.x + (wq ? rand(-1, 1) * wq : 0)), Math.round(m.y - Math.abs(step) * (m.st === "chase" ? 1.2 : 0.5)));
   if (wq) ctx.scale(1 + wq * 0.15, 1 - wq * 0.12); else if (m.lunge > 0) ctx.scale(1.15, 0.9);
-  if (m.x > W0.x) ctx.scale(-1, 1);
+  const spr = MOB_SPR[m.type];
+  if (!spr && m.x > W0.x) ctx.scale(-1, 1);
   if ((m.fuse > 0 || wq > 0.5) && Math.floor(time * 16) % 2) ctx.globalCompositeOperation = "lighter";
+  if (spr) { // 企劃 71：8 方向圖，世界寬度約 r×3.2，最近點縮放
+    const fw = spr.height, i = mobDir8(m), s2 = fw * ((d.r * 3.2) / 34) * sc; ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spr, i * fw, 0, fw, fw, -s2 / 2, -s2 / 2, s2, s2);
+    if (m.flash > 0) { ctx.globalCompositeOperation = "lighter"; ctx.drawImage(spr, i * fw, 0, fw, fw, -s2 / 2, -s2 / 2, s2, s2); }
+  } else {
   ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc);
   if (m.flash > 0) { ctx.globalCompositeOperation = "lighter"; ctx.drawImage(img, -img.width * sc / 2, -img.height * sc / 2, img.width * sc, img.height * sc); }
+  }
   ctx.restore();
   drawMobExtra(m, d);
   if (m.hunter) { ctx.strokeStyle = `rgba(255,70,50,${0.6 + 0.4 * Math.sin(time * 10)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(m.x, m.y + d.r * 0.8, d.r * 2, d.r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); }
