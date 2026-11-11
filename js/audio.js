@@ -9,16 +9,27 @@ function initAudio() {
   if (!AC) return;
   actx = new AC();
   master = actx.createGain();
-  master.gain.value = muted ? 0 : 0.5;
-  master.connect(actx.destination);
+  master.connect(actx.destination); applyVol();
 }
 window.addEventListener("pointerdown", initAudio);
 window.addEventListener("keydown", initAudio);
 function setMuted(m) {
   muted = m;
   localStorage.setItem("pixelraid_mute", m ? "1" : "0");
-  if (master) master.gain.value = m ? 0 : 0.5;
+  applyVol();
 }
+// 企劃 74 B：主音量／音效／音樂三條（0–100，這台裝置的設定 pr_vol）；背景音樂播的音走 AUDIO_BUS="music"
+const VOL = (() => { try { return Object.assign({ m: 80, s: 80, b: 50 }, JSON.parse(localStorage.getItem("pr_vol") || "{}")); } catch (e) { return { m: 80, s: 80, b: 50 }; } })();
+let busS = null, busM = null, AUDIO_BUS = "sfx";
+function applyVol() {
+  if (master) master.gain.value = muted ? 0 : 0.6 * VOL.m / 100;
+  if (busS) busS.gain.value = VOL.s / 80; if (busM) busM.gain.value = VOL.b / 50;
+}
+function audioBus() {
+  if (!busS && actx) { busS = actx.createGain(); busM = actx.createGain(); busS.connect(master); busM.connect(master); applyVol(); }
+  return AUDIO_BUS === "music" ? busM : busS;
+}
+function setVol(k, v) { VOL[k] = Math.max(0, Math.min(100, Math.round(v))); try { localStorage.setItem("pr_vol", JSON.stringify(VOL)); } catch (e) {} applyVol(); }
 
 // 一個音：波形、起始頻率、結束頻率、長度、音量、延遲
 function tone(type, f0, f1, dur, vol = 0.2, delay = 0) {
@@ -30,7 +41,7 @@ function tone(type, f0, f1, dur, vol = 0.2, delay = 0) {
   if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(master);
+  o.connect(g); g.connect(audioBus());
   o.start(t); o.stop(t + dur + 0.02);
 }
 // 噪音（爆炸、撞擊用）
@@ -47,7 +58,7 @@ function noise(dur, vol = 0.2, freq = 1200, delay = 0) {
   src.buffer = noiseBuf;
   f.type = "lowpass"; f.frequency.value = freq;
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  src.connect(f); f.connect(g); g.connect(master);
+  src.connect(f); f.connect(g); g.connect(audioBus());
   src.start(t); src.stop(t + dur);
 }
 

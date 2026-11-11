@@ -25,7 +25,7 @@ const STAT_HELP = {
   resP: ["混沌抗性", "毒池、毒沼蟾、屍骨狼、腐沼樹妖、腐骨蟾王的傷害少扣這麼多（最多 75%）。幽冥沼澤會扣 20%。", "比較難拿：混沌抗性詞綴（很少見）、腐骨蟾王卡 +20%、避毒丹 +30%。全元素抗性不含混沌。"],
   es: ["能量護盾", "一層先扣的護盾，幾秒沒被打會自己回滿。", "靠智慧、護盾詞綴、天兵石像卡提高。"],
   leech: ["吸血", "打出傷害的這麼多 % 變成自己的生命。", "靠嗜血寶石、吸血詞綴、血玉佩、技能「嗜血」提高。"],
-  eCd: ["E 冷卻", "E 招冷卻縮短：裝備和傳說的「E 招冷卻縮短」加起來最多 −30%；大節點天道再 ×0.7；全部加起來最多 −50%。", "靠飾品、靴子等後綴詞綴「E 招冷卻縮短」，或大節點天道。"],
+  eCd: ["冷卻恢復速度", "最終冷卻＝招式冷卻 ÷（100%＋冷卻恢復速度），堆越多越不划算；冷卻會往上取到 1/30 秒，所以短冷卻的招要剛好跨過檔位才會變快。全部加起來最多 +100%（冷卻變一半）。普攻類吃攻速，不吃這個。", "後綴詞綴「冷卻恢復速度」、大節點天道（+40%）、技能寶石每 5 級 +3%、輔助寶石疾風。"],
   mpRegen: ["真氣回復", "每秒回多少真氣。最多每秒回真氣上限的 10%（天賦吐納 +2%、昇華法力 +3%、星隕天樞杖 +3%，最多 15%）；打中回的真氣另外算，每秒最多 20%。", "靠等級、智慧、天賦「吐納」、裝備「真氣回復」提高；到上限就改堆真氣上限。"],
 };
 const TAB_HELP = {
@@ -38,7 +38,7 @@ function chStats() {
   return {
     main: [["atk", "攻擊", "×" + B.atk.toFixed(2) + (B.inc != null ? `（增加 +${Math.round(B.inc * 100)}%・更多 ×${(B.more || 1).toFixed(2)}）` : "")], ["crit", "爆擊率", pc(B.crit || 0)], ["critDmg", "爆擊傷害", pc(B.critDmg || 2)], ["aspd", "攻擊速度", pc(B.aspd || 1) + (B.aspdCap ? "（上限）" : ""), B.aspdCap ? "cap" : ""], ["spd", "移動速度", pc(B.spdMul || 1) + (B.spdCap ? "（上限）" : ""), B.spdCap ? "cap" : ""], ["hp", "生命", B.maxHp], ["mp", "真氣", B.maxMp]],
     res: [["phys", "物理減免", pc(physRed())]].concat(ELES.map((e) => ["res" + e, RES_N[e], pc(effRes(e)), effRes(e) < 0 ? "neg" : effRes(e) >= RES_CAP ? "cap" : ""])),
-    def: [["armor", "護甲", Math.round(B.armor || 0)], ["dodge", "閃避", pc(B.dodge || 0)], ["supp", "法術壓制", pc(B.supp || 0)], ["es", "能量護盾", B.maxEs || 0], ["leech", "吸血", pc(B.leech || 0)], ["eCd", "E 冷卻", (() => { const raw = (B.gUlt || 0) / 100, v = 1 - eCdMul(); return `−${Math.round(v * 100)}%（裝備上限 30%）`; })(), (B.gUlt || 0) / 100 >= E_CD_CAP ? "cap" : ""], ["mpRegen", "真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒" + (B.mpRegenCap ? "（上限）" : ""), B.mpRegenCap ? "cap" : ""]],
+    def: [["armor", "護甲", Math.round(B.armor || 0)], ["dodge", "閃避", pc(B.dodge || 0)], ["supp", "法術壓制", pc(B.supp || 0)], ["es", "能量護盾", B.maxEs || 0], ["leech", "吸血", pc(B.leech || 0)], ["eCd", "冷卻恢復速度", `+${Math.round(cdrAll() * 100)}%（上限 100%）`, cdrAll() >= CDR_CAP ? "cap" : ""], ["mpRegen", "真氣回復", (B.mpRegen || 0).toFixed(1) + "/秒" + (B.mpRegenCap ? "（上限）" : ""), B.mpRegenCap ? "cap" : ""]],
   };
 }
 const chRow = ([k, n, v, c]) => `<button class="chrow${chHelp === k ? " sel" : ""}${c ? " " + c : ""}" data-help="${k}"><span>${n}</span><b>${v}</b></button>`;

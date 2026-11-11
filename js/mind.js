@@ -17,7 +17,7 @@ const KEYSTONE = {
     { k: "huixin", n: "會心", c: "#ffe066", d: "爆擊率 +12%、爆擊傷害 +40%；攻擊 −15%", f: (b) => { b.crit = (b.crit || 0) + 0.12; b.critDmg = (b.critDmg || 2) + 0.4; b.more *= 0.85; } },
   ],
   4: [
-    { k: "tiandao", n: "天道", c: "#c8a0ff", d: "E 招冷卻 −30%；攻擊 −10%", f: (b) => { b.eCd = (b.eCd || 1) * 0.7; b.more *= 0.9; } },
+    { k: "tiandao", n: "天道", c: "#c8a0ff", d: "所有招式冷卻恢復速度 +40%；攻擊 −10%", f: (b) => { b.cdrAdd = (b.cdrAdd || 0) + 0.4; b.more *= 0.9; } },
     { k: "shayi", n: "殺意", c: "#ff6b6b", d: "E 招真氣 ×1.5；每殺一隻攻擊 +3%（5 秒，最多 10 層）", f: (b) => { b.eMp = (b.eMp || 1) * 1.5; } },
   ],
 };

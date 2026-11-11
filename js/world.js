@@ -294,30 +294,55 @@ let E_OFF_MP = 3; // 企劃 69 §9：E 類招放在左鍵或 Q 時真氣 ×3（�
 const E_CD_CAP = 0.3; // 企劃 69 §8：裝備＋傳說的 E 冷卻縮短最多 30%
 const eCdGear = () => Math.min(E_CD_CAP, ((typeof B !== "undefined" && B && B.gUlt) || 0) / 100);
 const eCdMul = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0.5, (b.eCd || 1) * (1 - eCdGear())); }; // 詞綴「E 招冷卻縮短」×天道 0.7，最低 ×0.5
+// 企劃 72 B：冷卻恢復速度（PoE 分母公式）：最終冷卻＝基礎 ÷（1＋冷卻恢復速度），往上取到 1/30 秒（1 tick）
+// 來源：詞綴「冷卻恢復速度」（b.gUlt %）、天道 b.cdrAdd、技能寶石／天賦等原本「冷卻 ×m」的（換成 1/m − 1）、疾風寶石；全部加起來最多 +100%
+const CDR_CAP = 1, TICK = 1 / 30;
+const tickUp = (s) => Math.ceil(s / TICK - 1e-6) * TICK;
+function cdrOf(k) {
+  const b = typeof B !== "undefined" && B ? B : {}, S = WSKILL[k] || {};
+  const r = (b.gUlt || 0) / 100 + (b.cdrAdd || 0) + (b.skCd && b.skCd[k] ? 1 / b.skCd[k] - 1 : 0) + (S.cdr || 0);
+  return Math.max(0, Math.min(CDR_CAP, r));
+}
+const cdrAll = () => { const b = typeof B !== "undefined" && B ? B : {}; return Math.max(0, Math.min(CDR_CAP, (b.gUlt || 0) / 100 + (b.cdrAdd || 0))); };
+function cdFull(k) { // 這一招放完要等幾秒
+  const S = WSKILL[k], b = typeof B !== "undefined" && B ? B : {};
+  if (k === "roll") return S.cd * (b.rollCd || 1) * ((b.skCd && b.skCd.roll) || 1);
+  if (k === "potion") return S.cd;
+  if (S.cls === "a") return Math.max(0.07, S.cd / ((b.aspd || 1) * eAspd()) * ((b.skCd && b.skCd[k]) || 1)); // 普攻類：出手間隔吃攻速
+  return Math.max(0.2, tickUp(S.cd / (1 + cdrOf(k))));
+}
 function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，冷卻、真氣、名字看那招（cls＝招式原本的類）
   const wt = curWeapon(), ws = WSKILLS[wt], u = curUq(), CK = { a: "attack", q: "spin", e: "ult" };
-  WSKILL = { roll: { cd: 2, mp: 0 }, potion: { cd: 1, mp: 0 } };
+  WSKILL = { roll: { cd: 2, mp: 0 }, potion: { cd: 1.5, mp: 0 } };
   for (const sl of ["a", "q", "e"]) {
     const pk = typeof slotPick === "function" && save.w ? slotPick(wt, sl) : { c: sl, k: sl === "e" ? "base" : "" }, b = ws[CK[pk.c]];
     WSKILL[CK[sl]] = { n: b[0], cd: b[1], mp: pk.c === "e" ? 0 : b[2], cls: pk.c, k: pk.k };
   }
   const SLK = { attack: "a", spin: "q", ult: "e", roll: "r" }; // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
+  const T = typeof SK_CD !== "undefined" && SK_CD[wt], qcd = T ? T.q.base : ws.spin[1]; // 企劃 72 A：每招冷卻照強度（SK_CD 表）
   for (const k of ["attack", "spin", "ult", "roll"]) {
-    const S = WSKILL[k], sl = SLK[k], cdm = Math.max(0.4, 1 - 0.07 * gemLv("haste", sl)), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
-    if (S.cls === "e") { const [ecd, emx] = eCost(S.k); S.cd = ecd * cdm; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * (sl !== "e" ? E_OFF_MP : 1) * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 企劃 69 A：E 類花真氣（Q 的倍數）＋冷卻
+    const S = WSKILL[k], sl = SLK[k], hl = gemLv("haste", sl), cdm = Math.max(0.4, 1 - 0.07 * hl), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
+    const tk = S.k || "base", tcd = k !== "roll" && T && T[S.cls] ? T[S.cls][tk] : undefined;
+    if (S.cls === "e" && (S.k === "origin" || S.k === "uq")) { const [ecd, emx] = eCost(S.k); S.cd = ecd; S.cdr = hl ? 1 / cdm - 1 : 0; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 起源覺醒、傳說 E：照舊
+    if (tcd !== undefined) S.cd = tcd;
+    if (k !== "roll" && S.cls !== "a") { // Q、E 類：疾風寶石換成冷卻恢復速度；真氣＝Q 原本真氣 ×（冷卻 ÷ Q 原本冷卻）^0.5
+      S.cdr = hl ? 1 / cdm - 1 : 0;
+      S.mp = Math.max(1, Math.round(ws.spin[2] * Math.sqrt(S.cd / qcd) * mm * mpLvMul() * meleeMpMul(sl) * (S.cls === "e" ? ((typeof B !== "undefined" && B && B.eMp) || 1) : 1)));
+      continue;
+    }
     S.cd *= cdm; S.mp = Math.round(S.mp ? S.mp * mm : Math.max(0, mm - 1) * 4); // 普攻、閃身原本不耗真氣：串了寶石才開始耗
-    if (k === "attack" && S.cls === "a") { S.mpS = mm > 1 ? ATK_MP_K * (mm - 1) * mpLvMul() * meleeMpMul(sl) : 0; S.mp = 0; } // 企劃 61：普攻串寶石改「每秒」耗氣（攻速快不會多扣），出手時照這一下的冷卻算
-    else if (S.mp) S.mp = Math.max(1, Math.round(S.mp * mpLvMul() * (k === "roll" ? 1 : meleeMpMul(sl)))); // 企劃 61 A-2／C：Q、E、身法耗氣跟等級長；近戰招 ×0.7
+    if (S.cls === "a") { S.mpS = mm > 1 ? ATK_MP_K * (mm - 1) * mpLvMul() * meleeMpMul(sl) : 0; S.mp = 0; } // 企劃 61：普攻串寶石改「每秒」耗氣
+    else if (S.mp) S.mp = Math.max(1, Math.round(S.mp * mpLvMul()));
   }
-  CHAIN_DMS = typeof chainDmMul === "function" && save.w ? { a: chainDmMul("a"), q: chainDmMul("q"), e: chainDmMul("e"), r: chainDmMul("r") } : {}; // 企劃 61 §A-2
+  CHAIN_DMS = typeof chainDmMul === "function" && save.w ? { a: chainDmMul("a"), q: chainDmMul("q"), e: chainDmMul("e"), r: chainDmMul("r"), o: chainDmMul("o") } : {}; // 企劃 61 §A-2
   if (typeof triOf === "function" && save.w) { // 名字、各招自己的冷卻修正
     for (const sl of ["a", "q", "e"]) {
       const S = WSKILL[CK[sl]], c = S.cls, k = S.k;
       S.n = pickName(wt, c, k);
-      if (c === "a") { if (k === "snipe") S.cd *= 2; if (k === "frost") S.cd *= 1.54; if (k === "quake") S.cd *= 1.67; if (k === "break") S.cd *= BREAK_CD; } // 企劃 08-B／68
-      if (c === "q") { if (k === "rush") S.cd += 0.3; if (k === "doom") S.cd += 0.6; if (wt === "staff" && save.eq.sword && save.eq.sword.u === "xingyun") S.cd *= 1.3; } // 企劃 57 星隕天樞杖
+      if (!T && c === "a") { if (k === "snipe") S.cd *= 2; if (k === "frost") S.cd *= 1.54; if (k === "quake") S.cd *= 1.67; if (k === "break") S.cd *= BREAK_CD; } // 企劃 08-B／68（沒有 SK_CD 表時才用；企劃 72 起冷卻都在表裡）
+      if (!T && c === "q") { if (k === "rush") S.cd += 0.3; if (k === "doom") S.cd += 0.6; }
+      if (c === "q" && wt === "staff" && save.eq.sword && save.eq.sword.u === "xingyun") S.cd *= 1.3; // 企劃 57 星隕天樞杖
       if (c === "e" && k === "uq" && u) S.uq = u;
-      if (c !== sl) S.cd *= OFF_CD;
     }
     const tr = triOf(wt, "r"), RM = { blink: ["縮地", 0.715], pull: ["聚妖", 0.99], guard: ["護體", 1.375] }; /* 企劃 68：閃身冷卻 2 秒，縮地／聚妖／護體維持原本的秒數 */ // 企劃 66 C：聚妖、護體也會閃身，冷卻縮短 // 身法通用招
     if (RM[tr]) { WSKILL.roll.n = RM[tr][0]; WSKILL.roll.cd *= RM[tr][1]; }
@@ -476,7 +501,7 @@ function hitMob(m, dmg, kb = 0, from = null, quiet = false) {
   const d = WMOBS[m.type], vs = B.vs || {}, sz = d.sz || (m.boss ? "L" : "M");
   const crit = !DOT_HIT && (W0.sureCast || W0.sureNow || Math.random() < Math.min(CRIT_CAP, B.crit + (sz === "L" ? vs.critL || 0 : 0) + (W0.critAdd || 0)));
   HIT_CRIT = crit; // 企劃 41 §2-4：持續傷害不吃暴擊；燃燒、中毒的基準扣掉暴擊（elem.js）
-  if (crit) { dmg *= B.critDmg; W0.lastCrit = time; if (CUR_SL && CUR_SL !== "e") W0.critEv = 1; } // 觸發：暴擊
+  if (crit) { dmg *= B.critDmg; W0.lastCrit = time; if (CUR_SL && CUR_SL !== "o") W0.critEv = 1; } // 觸發：暴擊（自動欄自己的暴擊不算）
   dmg *= (m.boss ? 1 : (SIZE_MOD[curWeapon()] || SIZE_MOD.staff)[sz]) * (1 + (vs[sz] || 0) / 100) * (1 + ((d.race && vs[d.race]) || 0) / 100) * (1 + ((d.ele && vs["e" + d.ele]) || 0) / 100); // 體型、種族、屬性（卡片）
   if (crit && !chainLock && save.eq.sword && save.eq.sword.card === "rbthunder" && Math.random() < 0.2) chainZap(m, dmg * 0.5, 2); // 九雷鵬王卡
   if (crit && B.uq.thunder && Math.random() < 0.3) { dmg += wDmg(20); bolts.push({ x: m.x, y: m.y, life: 0.25 }); }
@@ -564,8 +589,25 @@ function killMob(m) {
   if (!m.hunter && !m.noRespawn) m.camp.respawn.push(15 + Math.random() * 7);
 }
 // 掉落過濾器：低於設定品質的裝備直接變成靈石（不會占背包、也不用走過去撿）
-function wDropItem(it, at) { if (it.q < (save.w.filt || 0)) wDrop({ kind: "stone", v: sellPrice(it) }, at); else wDrop({ kind: "item", it }, at); }
+function wDropItem(it, at) { wDrop({ kind: "item", it }, at); } // 企劃 74 D：掉落過濾不再換成靈石（低於設定的只是名字變暗）
 function wDrop(o, at) { o.x = at.x + rand(-12, 12); o.y = at.y + rand(-8, 8); o.t = 0; W0.drops.push(o); }
+const pickReach = () => 22 * (1 + 0.5 * ((B && B.magnet) || 0)); // 企劃 74：F 能撿到的距離（撿取範圍詞綴也加）
+function pickUp(o, p) { // 撿起一件掉落物；行囊滿了撿不起來回傳 false
+  const w = save.w;
+  if (o.got) return false;
+  if (o.kind === "item" && typeof bagHold === "function" && bagHold(o)) return false; // 企劃 53：行囊滿了撿不起來
+  o.got = true;
+  if (o.kind === "item") { if (W0.zone !== "town" && !o.safe) o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
+  else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
+  else if (o.kind === "potion") { if (typeof potAdd === "function") potAdd("hp", 1); else w.potions = Math.min(B.potMax, w.potions + 1); floatText(p.x, p.y - 16, "回春丹 +1", "#7dff8a"); sfx("heal"); }
+  else if (o.kind === "gem") { addGem(o.g); floatText(p.x, p.y - 16, `◆ ${gemName(o.g)}`, GEMS[o.g.split(":")[0]].c, true); sfx("arrive"); }
+  else if (o.kind === "card") { addCard(o.c); floatText(p.x, p.y - 16, `🂠 ${CARDS[o.c].n}！`, "#ff9ad8", true); sfx("win"); }
+  else if (o.kind === "ess") { addEss(o.k); floatText(p.x, p.y - 16, essName(o.k), "#7dffd8", true); sfx("arrive"); }
+  else if (o.kind === "key") { addKey(o.k); floatText(p.x, p.y - 16, `秘境鑰 第 ${o.k.tier} 層`, "#9fe8ff", true); sfx("arrive"); }
+  else if (typeof dropPick === "function") dropPick(o, p); // 通貨、素材（econ.js）
+  writeSave();
+  return true;
+}
 function gainExp(n) {
   const w = save.w;
   w.exp += n;
@@ -757,7 +799,7 @@ function updateWorld(dt) {
   if (tileAt(p.x, p.y) === 3) { p.lavaT -= dt; if (p.lavaT <= 0) { p.lavaT = 0.5; p.iframe = 0; HURT_DOT = true; try { hurtW(4 + w.lv * 0.6, null, "F"); } finally { HURT_DOT = false; } } } // 企劃 70 §9：地形持續傷害不打斷前搖
 
   const near = (max) => { if (mouseAim() && !W0.noAim) return mouseTarget(max); let best = null, bd = max; for (const m of W0.mobs) { if (m.dead) continue; const d = dist(m, p); if (d < bd) { bd = d; best = m; } } return best; };
-  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; if (p.mistT > 0 && k !== "roll" && k !== "potion") { if (!(p.mistAtkT > time)) { p.mistAtkT = time + 1; popWord(p, "霧化中不能攻擊", "#cfe8e0"); } return false; } /* 企劃 68 化身霧氣 */ p.cds[k] = WSKILL[k].cd * (k === "roll" ? B.rollCd : WSKILL[k].cls === "a" ? 1 / ((B.aspd || 1) * eAspd()) : WSKILL[k].cls === "e" ? eCdMul() : 1) * ((B.skCd && B.skCd[k]) || 1); mpPay(p, mc); if (WSKILL[k].cls === "a") p.cds[k] = Math.max(0.07, p.cds[k]); if (k === "attack") W0.justAtk = true; /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin" || k === "ult") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
+  const useSkill = (k) => { const mc = (k === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[k].mp) * ((B.skMp && B.skMp[k]) || 1) * (1 - (B.mpCut || 0)); /* 企劃 67：減少真氣消耗 */ if (p.cds[k] <= 0 && p.roll <= 0 && !mpCan(p, mc) && !inMenu && !(p.mpLackT > time)) { p.mpLackT = time + 1; popWord(p, "真氣不足", "#7aa8ff"); } /* 企劃 61：沒氣要講 */ if (p.cds[k] > 0 || !mpCan(p, mc) || p.roll > 0) return false; if (p.mistT > 0 && k !== "roll" && k !== "potion") { if (!(p.mistAtkT > time)) { p.mistAtkT = time + 1; popWord(p, "霧化中不能攻擊", "#cfe8e0"); } return false; } /* 企劃 68 化身霧氣 */ p.cds[k] = cdFull(k); mpPay(p, mc); /* 企劃 72：冷卻＝表 ÷（1＋冷卻恢復速度），取 tick */ if (k === "attack") W0.justAtk = true; /* 企劃 24：普攻最快 0.07 秒 */ if ((k === "attack" || k === "spin" || k === "ult") && W0.sureT > 0) { W0.sureT = 0; W0.sureCast = true; } skillUsed(k); tutEvent(k); return true; };
   const wt = curWeapon();
   const arcHit = (range, half, base, kb) => {
     for (const m of W0.mobs) {
@@ -1119,12 +1161,12 @@ function updateWorld(dt) {
     else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) eNameShow("起源覺醒"); }
   }
   if (p.cds.ult > ultCd0 && !W0.originCast) { eNameShow(WSKILL.ult.n); netCast("e", p.face, p.x, p.y); } // 企劃 35 §5：拿掉附帶的天罰（全畫面落雷），改成上方小字顯示招式名
-  // 觸發寶石（只能串 E）：暴擊／受傷時自動放 E，不吃 E 的冷卻
+  // 觸發寶石（企劃 72 D：只能串在自動欄）：暴擊／受傷時自動放自動欄那招，不吃那招的冷卻
   if (p.trigCd > 0) p.trigCd -= dt;
-  if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && wLv() >= E_LV) {
-    const gc = p.critEv ? gemLv("trigc", "e") : 0, gh = p.hurtEv ? gemLv("trigh", "e") : 0, l = Math.max(gc, gh);
-    const cost = Math.round(TRIG_MP * chainMpMul("e") * mpLvMul() * (1 - (B.mpCut || 0)));
-    if (l && mpCan(p, cost)) { p.trigCd = 1; mpPay(p, cost); cast("e", () => runSlot("e"), 0.8); }
+  if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && typeof autoSlotOn === "function" && autoSlotOn()) {
+    const gc = p.critEv ? gemLv("trigc", "o") : 0, gh = p.hurtEv ? gemLv("trigh", "o") : 0, l = Math.max(gc, gh);
+    const cost = Math.round(TRIG_MP * chainMpMul("o") * mpLvMul() * (1 - (B.mpCut || 0)));
+    if (l && mpCan(p, cost)) { p.trigCd = Math.max(4 * TICK, tickUp(1 / (1 + cdrAll()))); mpPay(p, cost); cast("o", () => runSlot("o"), 0.8); }
   }
   p.critEv = 0; p.hurtEv = 0;
   for (const sl of ["a", "q", "e"]) if (W0["rc" + sl] > 0 && (W0["rc" + sl] -= dt) <= 0) { W0["rc" + sl] = 0; cast(sl, SLFX[sl]); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
@@ -1487,35 +1529,29 @@ function updateWorld(dt) {
   W0.eshots = W0.eshots.filter((s) => s.life > 0);
   W0.combatT = aggro ? W0.combatT + dt : 0;
 
-  // 撿東西
+  // 撿東西（企劃 74 A：裝備、寶石、卡片、鑰匙預設手動撿——按 F／點名字／手機「撿」鈕；自動撿照設定「保留與拾取」）
   for (const o of W0.drops) {
     o.t += dt;
-    const d = dist(o, p), mag = 26 * (1 + B.magnet);
-    if (o.kind !== "item" && o.kind !== "key" && o.kind !== "gem" && o.kind !== "card" && d < mag) { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
-    if (d < 10) {
-      if (o.kind === "item" && typeof bagHold === "function" && bagHold(o)) continue; // 企劃 53：行囊滿了撿不起來
-      o.got = true;
-      if (o.kind === "item") { if (W0.zone !== "town" && !o.safe) o.it.risk = 1; grantLoot(o.it, p.x, p.y - 6); }
-      else if (o.kind === "stone") { save.stone += o.v; floatText(p.x, p.y - 16, `靈石 +${o.v}`, "#9fe8ff"); sfx("good"); }
-      else if (o.kind === "potion") { w.potions = Math.min(B.potMax, w.potions + 1); floatText(p.x, p.y - 16, "丹藥 +1", "#7dff8a"); sfx("heal"); }
-      else if (o.kind === "gem") { addGem(o.g); floatText(p.x, p.y - 16, `◆ ${gemName(o.g)}`, GEMS[o.g.split(":")[0]].c, true); sfx("arrive"); }
-      else if (o.kind === "card") { addCard(o.c); floatText(p.x, p.y - 16, `🂠 ${CARDS[o.c].n}！`, "#ff9ad8", true); sfx("win"); }
-      else if (o.kind === "ess") { addEss(o.k); floatText(p.x, p.y - 16, essName(o.k), "#7dffd8", true); sfx("arrive"); }
-      else if (o.kind === "key") { addKey(o.k); floatText(p.x, p.y - 16, `秘境鑰 第 ${o.k.tier} 層`, "#9fe8ff", true); sfx("arrive"); }
-      else if (typeof dropPick === "function") dropPick(o, p); // 通貨、素材（econ.js）
-      writeSave();
-    }
+    const d = dist(o, p), mag = 26 * (1 + B.magnet), auto = typeof pickAuto === "function" ? pickAuto(o) : true;
+    if (auto && d < mag && o.kind !== "item" && o.kind !== "key" && o.kind !== "gem" && o.kind !== "card") { const a = angTo(o, p); o.x += Math.cos(a) * 180 * dt; o.y += Math.sin(a) * 180 * dt; }
+    if (d < 10 && auto) pickUp(o, p);
   }
-  W0.drops = W0.drops.filter((o) => !o.got && o.t < (o.corpse ? 600 : 120));
+  if (!inMenu && (pressed.has("f") || W0.pickReq)) { // F：撿最近的一件（手機「撿」鈕）
+    W0.pickReq = false; let best = null, bd = pickReach();
+    for (const o of W0.drops) { if (o.got) continue; const d = dist(o, p); if (d < bd) { bd = d; best = o; } }
+    if (best) pickUp(best, p); else if (pressed.has("f")) popWord(p, "附近沒有東西可以撿", "#cfc4dc");
+  }
+  { const lim = RIFT ? 1e9 : 180; W0.drops = W0.drops.filter((o) => !o.got && o.t < (o.corpse ? 600 : lim)); } // 企劃 74：野外 3 分鐘消失、秘境裡不消失
+  if (W0.drops.length > 80) { const old = W0.drops.filter((o) => o.kind === "item" && !o.corpse && o.it.q === 0).sort((a, b) => b.t - a.t); while (W0.drops.length > 80 && old.length) { const o = old.shift(); o.got = true; W0.drops.splice(W0.drops.indexOf(o), 1); } }
   if (W0.grave && ((W0.grave.t -= dt) <= 0 || !W0.drops.some((o) => o.corpse))) W0.grave = null;
 
   // 地區切換提示、傳送陣解鎖
   const z = zoneAt(p.x, p.y);
-  if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); bankLoot("回到青雲城"); } }
+  if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); if (typeof potFill === "function") potFill(); bankLoot("回到青雲城"); } }
   W0.bannerT = Math.max(0, W0.bannerT - dt);
   for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮傳送陣：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
   const cp = campAt(p.x, p.y), cid = cp ? cp.id : null;
-  if (cid !== (W0.camp || null)) { W0.camp = cid; if (cid) { floatText(p.x, p.y - 44, `進入安全營地・${cp.n}`, "#ffe9a0", true); bankLoot("安全營地"); } else if (W0.zone !== "town") floatText(p.x, p.y - 44, "踏出結界，小心妖獸", "#ff9a7a"); }
+  if (cid !== (W0.camp || null)) { W0.camp = cid; if (cid) { floatText(p.x, p.y - 44, `進入安全營地・${cp.n}`, "#ffe9a0", true); if (typeof potFill === "function") potFill(); bankLoot("安全營地"); } else if (W0.zone !== "town") floatText(p.x, p.y - 44, "踏出結界，小心妖獸", "#ff9a7a"); }
 
   // NPC、傳送陣、祭壇：走過去自動打開
   const spots = worldSpots();
@@ -1524,7 +1560,6 @@ function updateWorld(dt) {
   if (!hitSpot) W0.npcCool = null;
   else if (W0.npcCool !== hitSpot.id && !inMenu) { W0.npcCool = hitSpot.id; openSpot(hitSpot); return; }
 
-  if (pressed.has("f")) quickSwap();
   spawnHunter(dt);
   if (W0.recall > 0) { // 回城符：原地不動 3 秒
     if (ml > 0.1 || p.hurt > 0) { W0.recall = 0; floatText(p.x, p.y - 26, "回城被打斷", "#ff8a7a"); }
@@ -1560,7 +1595,7 @@ function openSpot(s) {
   let body = "", btns = "";
   if (s.id === "rift") { renderRift(); return; } // 企劃 16：秘境改成用仙界角色進
   if (s.id === "alch") {
-    W0.hp = W0.maxHp; W0.mp = B.maxMp; w.potions = Math.max(w.potions, B.potMax); writeSave();
+    W0.hp = W0.maxHp; W0.mp = B.maxMp; w.potions = Math.max(w.potions, B.potMax); if (typeof potFill === "function") potFill(); writeSave();
     body = `生命、真氣都回滿了，丹藥補到 ${w.potions} 顆。`;
   } else if (s.kind === "wp") { openTeleport(); return; } else if (false) {
     body = "";
@@ -1668,11 +1703,18 @@ function renderWorld() {
         ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.ellipse(o.x, o.y, 9 + Math.sin(time * 6) * 2, 4, 0, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ctx.restore();
       } else { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4 + o.x); ctx.fillStyle = c; ctx.fillRect(o.x - 1.5, o.y - hgt, 3, hgt); ctx.globalAlpha = 1; }
       ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6); ctx.fillStyle = c; ctx.fillRect(o.x - 2, o.y - 2, 4, 4);
+      if (typeof dropNameOn !== "function" || dropNameOn(o)) { // 企劃 74：名字（設定可關，按住 Alt 一定顯示）；低於掉落過濾的變暗；靠近可以撿的加亮框
+      const dim = typeof dropDim === "function" && dropDim(o), near = dist(o, W0) < pickReach();
+      if (dim) ctx.globalAlpha = 0.45;
       ctx.font = `${q >= 2 ? 900 : "bold"} ${q >= 2 ? 7 : 6}px 'Noto Sans TC', sans-serif`; ctx.textAlign = "center";
       const tw = ctx.measureText(o.it.name).width, lh = q >= 2 ? 10 : 8, ly = o.y - hgt - lh;
+      o.lb = [o.x - tw / 2 - 3, ly, tw + 6, lh]; // 點名字撿（pickup.js）
       ctx.fillStyle = q >= 2 ? c : "rgba(0,0,0,0.75)"; ctx.fillRect(o.x - tw / 2 - 3, ly, tw + 6, lh);
       if (q >= 2) { ctx.fillStyle = "rgba(20,10,0,0.55)"; ctx.fillRect(o.x - tw / 2 - 2, ly + 1, tw + 4, lh - 2); }
+      if (near && !dim) { ctx.strokeStyle = "#ffe9a0"; ctx.lineWidth = 0.8; ctx.strokeRect(o.x - tw / 2 - 3.5, ly - 0.5, tw + 7, lh + 1); }
       ctx.fillStyle = q >= 2 ? "#fff" : q === 0 ? "#c8c0d0" : c; ctx.fillText(o.it.name, o.x, ly + lh - 2.5);
+      ctx.globalAlpha = 1;
+      } else o.lb = null;
     } else if (o.kind === "stone") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); }
     else if (o.kind === "potion") { ctx.fillStyle = "#ff6b8a"; ctx.fillRect(o.x - 2, o.y - 3, 4, 5); ctx.fillStyle = "#fff"; ctx.fillRect(o.x - 1, o.y - 4, 2, 1); }
     else if (o.kind === "card" || o.kind === "ess") { // 卡片：粉紫卡＋光柱；精髓：青色晶體
@@ -1823,7 +1865,7 @@ function renderWorld() {
 }
 // 企劃 71：PixelLab 8 方向圖（img/mob/<key>.png＝8 格橫條：東、東南、南、西南、西、西北、北、東北），有圖的怪才換，沒載好照舊用舊圖；換色怪不拿新圖 recolor
 const MOB_SPR_ROT = { jianling: 1 };
-const MOB_SPR_KEYS = ["bomber", "bonewolf", "crow", "frostwolf", "golem", "guardian", "hunter", "icewisp", "imp", "jianling", "lava", "shield", "skyfox", "tgolem", "treant", "twisp", "witch", "wolf", "yeti"], MOB_SPR_V = "9.29.1", MOB_SPR = {};
+const MOB_SPR_KEYS = ["bogtree", "bomber", "bonewolf", "crane", "crow", "frostwolf", "golem", "guardian", "hunter", "icewisp", "imp", "jianling", "lava", "shield", "skyfox", "tgolem", "thawk", "toad", "treant", "twisp", "witch", "wolf", "yeti"], MOB_SPR_V = "9.30", MOB_SPR = {};
 for (const k of MOB_SPR_KEYS) { const im = new Image(); im.onload = () => { MOB_SPR[k] = im; }; im.src = `img/mob/${k}.png?v=${MOB_SPR_V}`; }
 function mobDir8(m) { // 追你／出招看「怪→你」，其他看移動方向
   let a;
@@ -2027,7 +2069,7 @@ function drawWorldHud() {
   // 按鈕冷卻
   for (const k of ["spin", "ult", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
-    if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : WSKILL[k].cd * (k === "roll" ? B.rollCd : k === "ult" ? eCdMul() : 1) * ((B.skCd && B.skCd[k]) || 1)), 0, 1)); } // 扇形轉圈冷卻
+    if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : cdFull(k)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
     if (btn && k === "roll") { const ch = p.wCh !== undefined ? String(p.wCh) : ""; if (btn.dataset.ch !== ch) btn.dataset.ch = ch; } // 凌波：剩幾次
     if (btn) { const lack = !mpCan(p, WSKILL[k].mp * ((B.skMp && B.skMp[k]) || 1)); btn.style.opacity = lack ? 0.45 : 1; btn.classList.toggle("nomp", lack); } // 企劃 61：真氣不足變暗

@@ -166,7 +166,7 @@ function curBtns(it, camp) {
 }
 function bindCur(it, again) {
   const on = (id, f) => { const e = document.getElementById(id); if (e) e.onclick = () => { if (!atCamp()) { again("回營地才能用鐵匠鋪"); return; } f(); }; };
-  const done = (k, msg, s = "good") => { useCur(k); nameItem(it); writeSave(); sfx(s); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(msg); };
+  const done = (k, msg, s = "good") => { useCur(k); it.cu = 1; nameItem(it); writeSave(); sfx(s); if (W0) { B = worldStats(); W0.maxHp = B.maxHp; } again(msg); };
   on("cGold", () => { if (!curN("gold")) return; it.q++; if (it.bt) setBase(it); else it.base = SLOTS[it.slot].base === "crit" ? Math.round(it.base * 1.12 * 10) / 10 : Math.round(it.base * 1.12); rollAffixes(it, Math.max(RARITY[it.q].aff[0], Object.keys(it.aff).length + 1)); done("gold", `點金成功：${RARITY[it.q].n}裝`, "arrive"); });
   on("cChaos", () => { if (!curN("chaos")) return; const [a0, a1] = RARITY[it.q].aff; rollAffixes(it, a0 + Math.floor(Math.random() * (a1 - a0 + 1))); done("chaos", "混元重骰：詞綴全部換了"); });
   on("cExalt", () => {

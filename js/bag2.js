@@ -101,7 +101,7 @@ function b2List() {
 // 一鍵分解：白 0、藍 1、紫 3 碎屑，傳說不拆；不拆鎖住、武器組、比身上強的（跟一鍵出售同一套排除）
 const SALV_SH = [0, 1, 3];
 const salvPref = () => { const w = save.w; if (!w.salv) w.salv = { q: [0, 1] }; return w.salv; };
-const salvPick = () => save.bag.filter((it) => it && it.q < 3 && !it.lock && !inWset(it) && salvPref().q.includes(it.q) && !isBetterIt(it));
+const salvPick = () => save.bag.filter((it) => it && it.q < 3 && !it.lock && !(typeof keepHit === "function" && keepHit(it)) && !inWset(it) && salvPref().q.includes(it.q) && !isBetterIt(it));
 function salvPopHtml() {
   const L = salvPick(), sh = L.reduce((s, it) => s + SALV_SH[it.q], 0);
   return `<div class="sellpop salvpop"><div class="sellbox"><h3>一鍵分解</h3>

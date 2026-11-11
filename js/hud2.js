@@ -93,8 +93,8 @@ function autoStep(p, dt) {
   const A = AUTO;
   if (typeof RIFT !== "undefined" && RIFT) { autoStop(); return null; }
   if (p.recall > 0) return null; // 等御劍
-  if (p.hurt > 0.15) { autoStop("被攻擊了，自動尋路停止"); return null; }
-  if (Math.hypot(p.x - A.x, p.y - A.y) < 40) { autoStop("到了！"); sfx("arrive"); return null; }
+  if (p.hurt > 0.15) { autoStop(A.mv ? "" : "被攻擊了，自動尋路停止"); return null; }
+  if (Math.hypot(p.x - A.x, p.y - A.y) < (A.near || 40)) { const q = A.pick || A.mv; autoStop(q ? "" : "到了！"); if (!q) sfx("arrive"); return null; } // 企劃 74：點地上走過去（A.mv）、點掉落物撿（A.pick）不講話
   if (!A.path || !A.last || Math.hypot(p.x - A.last.x, p.y - A.last.y) > 60) { // 第一次、或剛御劍過去：重算
     A.path = autoPathFind(p.x, p.y, A.x, A.y, false) || autoPathFind(p.x, p.y, A.x, A.y, true); A.i = 0; A.stuckT = 0; A.ref = { x: p.x, y: p.y };
     if (!A.path) { autoStop("找不到路"); return null; }
@@ -138,5 +138,5 @@ drawWorldHud = function () {
   _drawWorldHudH.apply(this, arguments);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   drawStatus(); drawTarget(); drawDps(); drawNotice();
-  if (AUTO) { ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = `rgba(160,230,255,${0.7 + 0.3 * Math.sin(time * 5)})`; ctx.fillText(W0.recall > 0 ? "御劍中…之後自動走過去" : "自動尋路中…（動搖桿取消）", W / 2, H - 84 - SAFE.b); }
+  if (AUTO && !AUTO.pick && !AUTO.mv) { ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = `rgba(160,230,255,${0.7 + 0.3 * Math.sin(time * 5)})`; ctx.fillText(W0.recall > 0 ? "御劍中…之後自動走過去" : "自動尋路中…（動搖桿取消）", W / 2, H - 84 - SAFE.b); }
 };

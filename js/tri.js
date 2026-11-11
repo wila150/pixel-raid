@@ -158,6 +158,7 @@ const triName = (wt, l) => { const v = triOf(wt, l), L = triList(wt, l); return 
 function triSetPick(wt, sl, c, k) {
   const w = save.w; if (!w.tri) w.tri = {}; if (!w.tri[wt]) w.tri[wt] = {};
   const T = w.tri[wt], norm = (cc, kk) => cc + ":" + (cc === "e" ? kk || "base" : kk || ""), cur = slotPick(wt, sl), want = norm(c, k);
+  if (sl === "o") { T.o = want; writeSave(); applyWeapon(); setPadLabels(true); return; } // 企劃 72 D：自動欄可以跟別格放同一招
   for (const s of ["a", "q", "e"]) if (s !== sl) { const pk = slotPick(wt, s); if (norm(pk.c, pk.k) === want) T[s] = norm(cur.c, cur.k); }
   T[sl] = c === sl && c !== "e" && !k ? "" : want; if (!T[sl]) delete T[sl];
   writeSave(); applyWeapon(); setPadLabels(true);
@@ -203,7 +204,8 @@ const GEM_TAGS = { haste: "*", thrift: "*", multi: "pma", chain: "pma", burst: "
   enlarge: "amd", after: "a", focus: "a", trail: "v", rshield: "v", icepath: "v", rapid: "m", bell: "m", totem: "pa" }; // 沒寫的＝全部攻擊招 pmad
 const eRaw = (wt) => { const w = save.w; return (w && w.tri && w.tri[wt] && w.tri[wt].e) || ""; };
 const E_SPEC = ["base", "origin", "uq"];
-const slotsN = () => Math.min(5, 1 + jobLv()); // 0 轉 1 格 → 四轉 5 格
+const SOCK_LV = [1, 8, 20, 40, 70]; // 企劃 72 D：輔助寶石孔看等級（原本看轉職）
+const slotsN = () => SOCK_LV.filter((l) => wLv() >= l).length;
 function slotSkill(sl, wt = curWeapon()) { // 這一格放的招的代碼（"base"＝那類原本的招；類看 slotCls）
   if (sl === "r") return triOf(wt, "r") || "base";
   if (TRI_OVR && TRI_OVR.c === sl && wt === curWeapon()) return TRI_OVR.k || "base"; // 放招中：招式程式問「E 類現在是哪招」
@@ -232,7 +234,7 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
   if (sl === "e" && slotSkill(sl, wt) === "origin") return "起源覺醒不能串輔助";
   if (k === "multi" && sl !== "r" && !isSpellWt(wt)) return "連發只能串法術（法杖、扇）";
   if (k === "rapid" && isSpellWt(wt)) return "連打只能串攻擊（不能串法杖、扇）";
-  if ((k === "trigc" || k === "trigh") && sl !== "e") return "只能串在 E";
+  if ((k === "trigc" || k === "trigh") && sl !== "o") return "只能串在自動欄"; // 企劃 72 D
   if (k === "totem" && sl !== "a" && sl !== "q") return "只能串在普攻或 Q";
   if (k === "multi" && sl === "r") return "身法不能串";
   if ((k === "rapid" || k === "totem") && tags.includes("v")) return "位移招不能串";
@@ -250,7 +252,7 @@ const gemFits = (g, sl) => { const k = g.split(":")[0]; if (k === "spread") retu
 const SL_ORD = ["a", "q", "e", "r"];
 function slLabel(sl, wt) {
   if (sl === "r") { const k = triOf(wt, "r"), o = k && TRI.r.find((x) => x.k === k); return `身法${o ? `（${o.n}）` : ""}`; }
-  const pk = slotPick(wt, sl); return `${{ a: "左鍵", q: "Q", e: "E" }[sl]}（${pickName(wt, pk.c, pk.k)}）`; // 企劃 69 B
+  const pk = slotPick(wt, sl); return `${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]}（${pickName(wt, pk.c, pk.k)}）`; // 企劃 69 B
 }
 function gemElse(k, sl, wt = curWeapon()) {
   const w = save.w; if (!w || !w.chain) return null;
@@ -331,7 +333,7 @@ function chainCells(l) {
   const row = chainRaw(l), n = slotsN(); let cells = "";
   for (let i = 0; i < 5; i++) {
     const g = row[i];
-    if (i >= n) cells += `<span class="rcell lock">🔒<small>${JOB_N[i]}</small></span>`;
+    if (i >= n) cells += `<span class="rcell lock">🔒<small>Lv.${SOCK_LV[i]}</small></span>`;
     else if (g) { const [k, lv] = g.split(":"), why = !gemReqOk(g) ? gemNeedTxt(g) : gemWhy(g, l, i) ? "這招用不到" : ""; cells += `<button class="rcell has${why ? " bad" : ""}" data-cs="${l}:${i}" style="--c:${gemCol(g)[1]}">${gemIco(g, "rico")}<b style="color:${GEMS[k].c}">${GEMS[k].n}</b><small>${lv} 級${why ? "・" + why : ""}</small></button>`; }
     else cells += `<button class="rcell empty${triPick && triPick.l === l && triPick.i === i ? " pick" : ""}" data-cs="${l}:${i}">＋<small>輔助</small></button>`;
     if (i < 4) cells += `<i class="rlink"></i>`;
@@ -438,7 +440,7 @@ function triPoolList(wt) {
   return out;
 }
 const pickEq = (a, b) => a.c === b.c && (a.k || (a.c === "e" ? "base" : "")) === (b.k || (b.c === "e" ? "base" : ""));
-const costTxt = (wt, c, k, sl) => { const SN = { a: "左鍵", q: "Q", e: "E" }, off = sl && sl !== c ? `<b class="toff">・放在${SN[sl]}：冷卻 ×${OFF_CD}${c === "e" ? `、真氣 ×${E_OFF_MP}` : ""}</b>` : ""; if (c === "e") { const [cd, m] = eCost(k || "base"); return `冷卻 ${cd} 秒・真氣 Q×${m}${off}`; } const b = WSKILLS[wt][c === "a" ? "attack" : "spin"]; return (c === "a" ? "吃攻速" : `冷卻 ${b[1]} 秒`) + off; };
+const costTxt = (wt, c, k) => skCostTxt(wt, c, k); // 企劃 72：冷卻照強度（skcd.js）
 function renderTri(msg = "") {
   const wt = curWeapon(), lv = wLv(), why = triSwapWhy();
   if (save.w) save.w.triSeen = Math.max(save.w.triSeen || 1, lv);
@@ -476,7 +478,7 @@ function triPoolHtml() {
     const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}技能商人・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
     return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${x.spec ? "" : skIco(wt, x.c, k, "tico")}${x.n}</b><small>${open ? `${w ? `<i class="tin">在${{ a: "左鍵", q: "Q", e: "E" }[w]}・點了對調</i> ` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k, sl)}</i> ${x.d}` : lockTxt}</small></button>`; };
   const tabs = [["all", "全部"], ["a", "普攻類"], ["q", "Q 類"], ["e", "E 類"]].map(([k, n]) => `<button data-ptab="${k}" class="${poolTab === k ? "on" : ""}">${n}</button>`).join("");
-  return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${{ a: "左鍵", q: "Q", e: "E" }[sl]} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
+  return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
 }
 function triPoolClose() { if (!triPool) return false; triPool = null; renderSkills(); return true; }
 function bindTri() {
@@ -491,7 +493,7 @@ function bindTri() {
     if (b.dataset.tc && b.dataset.tc !== "r") { // 企劃 69 B：三格自由放
       const wt = curWeapon(), sl = b.dataset.tl, c = b.dataset.tc, k = b.dataset.tk, why = triSwapWhy();
       if (why) { sfx("bad"); triPool = null; renderSkills(why); return; }
-      triSetPick(wt, sl, c, k); triPool = null; sfx("good"); renderSkills(`${{ a: "左鍵", q: "Q", e: "E" }[sl]} 換成「${pickName(wt, c, c === "e" ? k || "base" : k)}」`); return;
+      triSetPick(wt, sl, c, k); triPool = null; sfx("good"); renderSkills(`${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]} 換成「${pickName(wt, c, c === "e" ? k || "base" : k)}」`); return;
     }
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
     if (why) { sfx("bad"); renderSkills(why); return; }
