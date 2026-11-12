@@ -488,6 +488,36 @@ function trCenter() { // 鏡頭對準已點格子的中心（還沒點就看起�
   trView.x = ns.reduce((a, id) => a + TREE[id].x, 0) / ns.length; trView.y = ns.reduce((a, id) => a + TREE[id].y, 0) / ns.length;
   if (!T.s) { trView.x = 0; trView.y = 0; }
 }
+// 11/13 天賦樹畫面：每格看它在哪一區上色；星雲背景
+const TR_SEC_LBL = ["智力", "敏捷・智力", "敏捷", "力量・敏捷", "力量", "智力・力量"];
+function trSecCol(N) {
+  if (N._sc) return N._sc;
+  if (N.t === "hub") return (N._sc = "#e8c46a");
+  let i = N.sec;
+  if (!(i >= 0)) { const h = TREE.h, a = Math.atan2(N.y - h.y, N.x - h.x) * 180 / Math.PI; let best = 0, bd = 999; TR_SEC.forEach((S, k) => { const d = Math.abs(((a - S.a + 540) % 360) - 180); if (d < bd) { bd = d; best = k; } }); i = best; }
+  return (N._sc = TR_SEC[i].c);
+}
+let trStars = null;
+function trNebula(g, W, H, hx, hy, z) {
+  g.fillStyle = "#0c0a14"; g.fillRect(0, 0, W, H);
+  const core = g.createRadialGradient(hx, hy, 0, hx, hy, 1500 * z); core.addColorStop(0, "#2a1f3a"); core.addColorStop(0.5, "#1a1428"); core.addColorStop(1, "#0c0a14"); g.fillStyle = core; g.fillRect(0, 0, W, H);
+  for (const S of TR_SEC) { // 6 區的星雲
+    const a = S.a * Math.PI / 180;
+    for (const [r, rad, al] of [[520, 560, "30"], [950, 520, "22"]]) {
+      const cx = hx + Math.cos(a) * r * z, cy = hy + Math.sin(a) * r * z, gr = g.createRadialGradient(cx, cy, 0, cx, cy, rad * z);
+      gr.addColorStop(0, S.c + al); gr.addColorStop(1, S.c + "00"); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    }
+  }
+  if (!trStars) { let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647); trStars = Array.from({ length: 260 }, () => [rnd() * 3400 - 1700, rnd() * 3400 - 1700, rnd()]); }
+  for (const [sx, sy, b] of trStars) { const x = hx + sx * z, y = hy + sy * z; if (x < 0 || x > W || y < 0 || y > H) continue; g.fillStyle = `rgba(255,245,220,${0.15 + b * 0.5})`; g.fillRect(x, y, b > 0.85 ? 2 : 1, b > 0.85 ? 2 : 1); }
+  g.save(); g.strokeStyle = "rgba(200,170,120,0.10)"; g.lineWidth = Math.max(1, 1.5 * z); for (const r of [260, 700, 1100]) { g.beginPath(); g.arc(hx, hy, r * z, 0, Math.PI * 2); g.stroke(); } g.restore(); // 淡淡的環
+  if (z > 0.25) { // 區名大字
+    g.save(); g.textAlign = "center"; g.textBaseline = "middle";
+    TR_SEC.forEach((S, i) => { const a = S.a * Math.PI / 180, x = hx + Math.cos(a) * 400 * z, y = hy + Math.sin(a) * 400 * z, fs = Math.round(Math.max(14, 34 * z));
+      g.font = `700 ${fs}px "Noto Serif TC", serif`; g.fillStyle = S.c + "55"; g.fillText(TR_SEC_LBL[i], x, y); });
+    g.restore();
+  }
+}
 function trXY(N) { if (N.cl && trCollapsed()) N = TREE[N.cl]; const c = trCv, z = trView.z; return [c.width / 2 / trDpr() + (N.x - trView.x) * z, c.height / 2 / trDpr() + (N.y - trView.y) * z]; }
 const trDpr = () => Math.min(2, window.devicePixelRatio || 1);
 function trDraw() {
@@ -496,14 +526,8 @@ function trDraw() {
   if (c.width !== Math.round(r.width * d) || c.height !== Math.round(r.height * d)) { c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); }
   const g = c.getContext("2d"), T = treeSt(), have = new Set(trHave()), wsSet = new Set(TRM ? wsTree(TRM - 1).n : []), wsC = TRM ? TRWS_C[TRM - 1] : "", z = trView.z, W = r.width, H = r.height;
   g.setTransform(d, 0, 0, d, 0, 0);
-  const bg = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7); bg.addColorStop(0, "#1a1712"); bg.addColorStop(1, "#08080a");
-  g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  // 6 區淡淡的顏色
   const [hx, hy] = trXY(TREE.h);
-  for (const S of TR_SEC) {
-    const a = S.a * Math.PI / 180, gr = g.createRadialGradient(hx + Math.cos(a) * 560 * z, hy + Math.sin(a) * 560 * z, 0, hx + Math.cos(a) * 560 * z, hy + Math.sin(a) * 560 * z, 520 * z);
-    gr.addColorStop(0, S.c + "18"); gr.addColorStop(1, S.c + "00"); g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  }
+  trNebula(g, W, H, hx, hy, z); // 11/13：星雲背景＋6 區顏色＋區名大字（參考 Slay Monsters）
   const _ps = (typeof trHov !== "undefined" && trHov) || trSel, path = _ps && !have.has(_ps) ? trPath(_ps) : null, pset = new Set(path || []); // 11/13：滑鼠指著也預覽路徑
   const avail = new Set(); if (T.s) for (const id of have) for (const v of TREE[id].adj) if (!have.has(v) && !(TRM && wsNoNode(TREE[v]))) avail.add(v);
   // 連線
@@ -516,8 +540,11 @@ function trDraw() {
       if (x1 === x2 && y1 === y2) continue;
       if (Math.max(x1, x2) < -40 || Math.min(x1, x2) > W + 40 || Math.max(y1, y2) < -40 || Math.min(y1, y2) > H + 40) continue;
       const both = have.has(id) && have.has(v), pth = (pset.has(id) || have.has(id)) && (pset.has(v) || have.has(v)) && (pset.has(id) || pset.has(v));
-      g.strokeStyle = both ? (wsSet.has(id) || wsSet.has(v) ? wsC : "#e8b84a") : pth ? "#fff3c0" : "rgba(160,130,70,0.32)"; g.lineWidth = Math.max(1.5, (both || pth ? 5 : 3.5) * z);
-      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      const lw = Math.max(1.5, (both || pth ? 5 : 3.5) * z);
+      g.strokeStyle = "rgba(10,8,14,0.85)"; g.lineWidth = lw + Math.max(2, 3 * z); g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); // 深色描邊
+      g.strokeStyle = both ? (wsSet.has(id) || wsSet.has(v) ? wsC : "#e8b84a") : pth ? "#fff3c0" : "rgba(196,170,120,0.55)"; g.lineWidth = lw;
+      if (!both && !pth && (TREE[id].t === "ks" || TREE[v].t === "ks" || TREE[id].t === "jw" || TREE[v].t === "jw")) g.setLineDash([6 * z + 2, 5 * z + 2]); // 通往核心／玉槽：虛線
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.setLineDash([]);
     }
   }
   // 格子
@@ -531,11 +558,17 @@ function trDraw() {
     const on = have.has(id), av = avail.has(id) || (!T.s && N.t === "start"), inP = pset.has(id), sel = trSel === id;
     const ac = N.at ? TR_ATTR[N.at].c : N.t === "start" ? TR_SEC[N.sec].c : null;
     g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2);
-    g.fillStyle = on ? (wsSet.has(id) ? wsC : N.t === "ks" ? "#ff9ae0" : "#ffd25a") : inP ? "#6a5a30" : N.t === "ks" ? "#3a1c34" : N.t === "note" ? "#3a3220" : "#26241f";
+    const scol = trSecCol(N);
+    if (N.t === "note" || N.t === "ks") { g.save(); g.setLineDash([2, 3]); g.lineWidth = Math.max(1, 1.6 * z); g.strokeStyle = on ? "#ffe9a0" : scol + "aa"; g.beginPath(); g.arc(x, y, rr * 1.32, 0, Math.PI * 2); g.stroke(); g.restore(); } // 重要天賦外圈虛線光圈
+    { const gr = g.createRadialGradient(x - rr * 0.35, y - rr * 0.35, rr * 0.1, x, y, rr); // 球狀格子
+      if (on) { gr.addColorStop(0, "#fff6d0"); gr.addColorStop(1, wsSet.has(id) ? wsC : N.t === "ks" ? "#ff9ae0" : "#e8a830"); }
+      else if (inP) { gr.addColorStop(0, "#a08850"); gr.addColorStop(1, "#5a4a28"); }
+      else { gr.addColorStop(0, scol + (av ? "cc" : "88")); gr.addColorStop(0.55, scol + (av ? "55" : "33")); gr.addColorStop(1, "#14111a"); }
+      g.fillStyle = gr; }
     g.fill();
     if (ac && (N.t !== "start" || !on)) { g.beginPath(); g.arc(x, y, rr * (on ? 0.45 : 0.6), 0, Math.PI * 2); g.fillStyle = ac; g.globalAlpha = on ? 1 : 0.55; g.fill(); g.globalAlpha = 1; }
     g.lineWidth = Math.max(1.2, (sel ? 3.5 : 2) * Math.min(1.3, z));
-    g.strokeStyle = sel ? "#ffffff" : on ? "#fff1b0" : inP ? "#fff3c0" : av ? "#f4f0e6" : N.t === "ks" ? "#8a4a7a" : N.t === "note" ? "#8a7440" : "#5a5446";
+    g.strokeStyle = sel ? "#ffffff" : on ? "#fff1b0" : inP ? "#fff3c0" : av ? "#f4f0e6" : N.t === "ks" ? "#c87ab0" : N.t === "note" ? "#c8a860" : "#6a5e4a";
     g.stroke();
     if (rr >= 7 && (N.t === "note" || N.t === "ks" || N.t === "start")) { // 使用者畫的圖示（企劃 31）
       const ik = N.t === "note" ? N.th : N.t === "ks" ? N.ks : "s" + N.sec, s2 = rr * (N.t === "ks" ? 2.3 : 2.1);

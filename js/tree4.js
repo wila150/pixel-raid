@@ -92,6 +92,7 @@ trPanel = function () { // eslint-disable-line no-func-assign
   const rb = ov && ov.querySelector("#trReset"); if (rb) rb.onclick = (e) => { e.stopPropagation(); sfx("click"); trConfirmReset(); };
   const pts = ov && ov.querySelector(".trtop .trpts"); if (pts && !TRM) { const T = treeSt(); pts.innerHTML = `可用天賦點 <b class="${treeFree() > 0 ? "hot" : ""}">${treeFree()}</b><small>已學 ${T.n.filter((x) => x !== T.s).length} / ${treeTotal()}</small>`; }
   trSearchCount();
+  { const inf = ov && ov.querySelector(".trinfo"); if (inf) inf.hidden = !trSel && !TRM && !!treeSt().s && matchMedia("(pointer: fine)").matches && !inf.querySelector(".trmsg"); } // 電腦有提示框了：沒選格子就不擋畫面
   const wrap = ov && ov.querySelector(".trwrap");
   if (wrap && !wrap.querySelector(".trtip")) wrap.insertAdjacentHTML("beforeend", `<div class="trtip" hidden></div>`);
   if (trCv && !trCv.dataset.t5) {

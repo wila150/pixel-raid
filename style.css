@@ -1475,3 +1475,4 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 #updCard #updOk { width: auto; flex: none; }
 #updCard .ux { right: 0; }
 @media (pointer: fine) { #wbar { max-width: calc(50vw - 340px); } }
+.ov .trinfo[hidden] { display: none; }
