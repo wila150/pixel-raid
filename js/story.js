@@ -1,9 +1,10 @@
 // 萬劍仙途 — 劍靈＋主線劇情＋更新公告（企劃 12 第 2-1、2-4 節、15 第 9 節）
 // 一句話世界觀：天道崩壞，萬劍歸墟；你是青雲城最後一批御劍修士，一路往東，追查是誰在「斬仙」。
 "use strict";
-const GAME_VER = "9.30"; // 改版時跟 index.html 的 ?v= 一起改；更新公告看這個
+const GAME_VER = "9.31"; // 改版時跟 index.html 的 ?v= 一起改；更新公告看這個
 const UPDATES = [
-  { v: "9.30", t: ["打寶改成手動撿：裝備、寶石、卡片、鑰匙不會自動吸，靠近按 F（手機按「撿」）或點地上的名字撿；設定 →「保留與拾取」可以勾哪些自動撿、加保留規則（一鍵出售／分解不會碰）", "冷卻照招式強度重算：大招冷卻長、小招短，放哪一格都一樣（拿掉放錯格子 ×2、×3 的規則）；新增「冷卻恢復速度」（加在分母、取 1/30 秒），原本的 E 冷卻詞綴、天道都改成它", "輔助寶石孔改看等級（Lv.8／20／40／70 開）；Lv.40 開「自動」欄：放一招＋觸發寶石就會自動放；技能頁每一格顯示每秒傷害、真氣、冷卻", "行囊改成 裝備（格子）／消耗品／魔石／寶石 四頁；丹藥變 4 種：回春、聚氣、護體、淨化（4／5／6／7），回城、營地免費補滿", "天賦樹多了加成總覽、縮放按鈕、右鍵退點；設定改成 一般／按鍵配置（可以改鍵、可選滑鼠點擊移動）／保留與拾取；毒沼蟾、腐沼樹妖、雷鷹、仙鶴妖換上新圖"] },
+  { v: "9.31", d: "2026-11-13", t: ["技能欄改成 左鍵＋1～5 共 6 格，每一格都能放任何技能（3、4、5 格在 Lv.10／25／45 開）；丹藥改成 Q／E／R／G，X 換武器組", "技能寶石面板重做：左邊是技能欄（每格的技能、輔助寶石孔、每秒傷害、真氣、冷卻），右邊是寶石袋；先點寶石再點欄位，右鍵拿下或自動放", "天賦樹：滑鼠指著顯示說明和要走的路、左鍵直接學、右鍵退點、搜尋顯示找到幾個、重置前會先確認", "電腦版下方改成 生命球｜技能欄｜真氣球，點技能欄可以打開技能寶石", "等級上限 Lv.120；閉關（掛機）經驗大幅調低：一天最多一次、最多給 1/4 級"] },
+  { v: "9.30", d: "2026-11-12", t: ["打寶改成手動撿：裝備、寶石、卡片、鑰匙不會自動吸，靠近按 F（手機按「撿」）或點地上的名字撿；設定 →「保留與拾取」可以勾哪些自動撿、加保留規則（一鍵出售／分解不會碰）", "冷卻照招式強度重算：大招冷卻長、小招短，放哪一格都一樣（拿掉放錯格子 ×2、×3 的規則）；新增「冷卻恢復速度」（加在分母、取 1/30 秒），原本的 E 冷卻詞綴、天道都改成它", "輔助寶石孔改看等級（Lv.8／20／40／70 開）；Lv.40 開「自動」欄：放一招＋觸發寶石就會自動放；技能頁每一格顯示每秒傷害、真氣、冷卻", "行囊改成 裝備（格子）／消耗品／魔石／寶石 四頁；丹藥變 4 種：回春、聚氣、護體、淨化（4／5／6／7），回城、營地免費補滿", "天賦樹多了加成總覽、縮放按鈕、右鍵退點；設定改成 一般／按鍵配置（可以改鍵、可選滑鼠點擊移動）／保留與拾取；毒沼蟾、腐沼樹妖、雷鷹、仙鶴妖換上新圖"] },
   { v: "9.29", t: ["更多怪物換上新圖：火鴉、熔岩獸、雪巨猿、雷甲巨像、天兵石像、鐵盾妖、妖巫、樹妖、冰靈、雷靈（冰靈、雷靈這種飄的只有一張圖）", "爆石靈、劍靈也換上新圖"] },
   { v: "9.28", t: ["主角換上新的細緻圖，會朝 8 個方向轉身；袍子、腰帶照道袍品質變色，頭冠、靴子照品質上色，時裝照樣換袍子和頭髮顏色", "小妖、霜狼、屍骨狼、天狐、獵寶妖、石甲妖也換上新圖", "道袍顏色調過：紫品紫色、傳說橘色，不會跟皮膚混在一起"] },
   { v: "9.27", t: ["狼妖換上新的細緻圖，會朝 8 個方向轉身（往上走看到背、往下走看到臉）；其他怪物會陸續換上"] },
@@ -207,14 +208,16 @@ drawNotice = function () {
 };
 
 // ───────── 更新公告卡 ─────────
-function showUpdates(all) {
+function showUpdates(all) { // 11/13：照 Slay Monsters 的樣子：標題「更新內容」、右上 ✕、版本＋日期、知道了
   const old = document.getElementById("updCard"); if (old) old.remove();
   const list = all ? UPDATES : UPDATES.filter((u) => !save.lastVer || verGt(u.v, save.lastVer)).slice(0, 3);
   if (!list.length) return;
   const el = document.createElement("div"); el.id = "updCard";
-  el.innerHTML = `<div class="ubox"><div class="uhead"><span class="uspirit">🗡</span><b>劍靈：這次更新了這些</b></div>${list.map((u) => `<div class="uver">v${u.v}</div><ul>${u.t.map((x) => `<li>${x}</li>`).join("")}</ul>`).join("")}<button id="updOk" class="gold">知道了</button></div>`;
+  el.innerHTML = `<div class="ubox" role="dialog" aria-label="更新內容"><div class="uhead"><b>更新內容</b><button class="ux" aria-label="關閉">✕</button></div><div class="ulist">${list.map((u) => `<div class="uver">v${u.v}${u.d ? `<small>${u.d}</small>` : ""}</div><ul>${u.t.map((x) => `<li>${x}</li>`).join("")}</ul>`).join("")}</div><button id="updOk" class="gold">知道了</button></div>`;
   document.body.appendChild(el);
-  el.querySelector("#updOk").onclick = () => { sfx("click"); el.remove(); save.lastVer = GAME_VER; writeSave(); };
+  const close = () => { sfx("click"); el.remove(); save.lastVer = GAME_VER; writeSave(); };
+  el.querySelector("#updOk").onclick = close; el.querySelector(".ux").onclick = close;
+  el.addEventListener("click", (e) => { if (e.target === el) close(); });
 }
 const verGt = (a, b) => { const x = a.split(".").map(Number), y = String(b).split(".").map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return false; };
 setInterval(() => {

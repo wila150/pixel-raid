@@ -4,7 +4,7 @@
 const TUT = [
   { t: () => (TOUCH || (navigator.maxTouchPoints > 0 && !matchMedia("(hover: hover)").matches) ? "用左下搖桿走走看（按住畫面左半邊拖曳）" : "用 WASD 走走看"), ev: "move", n: 80 },
   { t: () => `按「${WSKILL.attack.n}」攻擊（${TOUCH ? "右下大按鈕" : "滑鼠左鍵"}）`, ev: "attack", n: 3, hi: "attack" },
-  { t: () => `放技能「${WSKILL.spin.n}」（${TOUCH ? "按鈕" : "Q"}），會花真氣（能量球外圈的藍弧）`, ev: "spin", n: 1, hi: "spin" },
+  { t: () => `放技能「${WSKILL.spin.n}」（${TOUCH ? "按鈕" : "數字鍵 1"}），會花真氣（右下藍色的真氣球）`, ev: "spin", n: 1, hi: "spin" },
   { t: () => `按「閃身」（${TOUCH ? "按鈕" : "空白鍵"}）：閃身的瞬間不會受傷，看到紅圈就閃`, ev: "roll", n: 1, hi: "roll" },
   { t: () => `打開行囊（${TOUCH ? "右上角「行囊」" : "按 I"}）：撿到的裝備、寶石都在這裡`, ev: "bag", n: 1, hiHud: "bag" },
   { t: () => "照左上角的主線任務，出城打第一隻妖獸", ev: "kill", n: 1 },

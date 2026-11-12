@@ -2,7 +2,7 @@
 // 手冊：每種妖物 3 顆星（斬 100、斬 1000、拿過卡片），每顆星對那種妖物傷害 +1%；全書每 10 顆星生命 +1%。
 //       每收集過一件傳說，攻擊 +0.3%。
 // 稱號：條件達成就解鎖，戴上後顯示在名字上面，別的玩家看得到（presence 的 ti 欄位）。
-// 閉關：在青雲城或營地結界裡按「閉關」，或直接下線；回來依時間給經驗，最多算 8 小時 ≈ 你平常玩 30 分鐘的量。
+// 閉關：在青雲城或營地結界裡按「閉關」，或直接下線；回來依時間給經驗，最多算 8 小時，給目前等級 1/4 級的經驗，一天一次（11/13 調低）。
 "use strict";
 const BOOK_MOBS = ["imp", "wolf", "treant", "golem", "bomber", "crow", "lava", "frostwolf", "icewisp", "yeti", "toad", "bonewolf", "bogtree", "thawk", "tgolem", "twisp", "crane", "skyfox", "guardian", "jianling", "shield", "witch", "healer", "rusher", "hunter"];
 const BOOK_BOSS_CARD = { volcano: "wboss", swamp: "rbswamp", thunder: "rbthunder", sky: "rbsky" };
@@ -52,11 +52,13 @@ updateWorld = function (dt) {
   return _updateWorldBk.apply(this, arguments);
 };
 const medRate = () => Math.min(0.2, Math.max(0.004, save.w.xrN || 1 / 60)) * expNext(save.w.lv); // 每分鐘經驗
-const medExp = (min) => Math.round(medRate() * 30 * Math.min(MED_MAX_H, min / 60) / MED_MAX_H);
+const MED_LV_MAX = 0.25; // 11/13 使用者「掛機升太多等」：閉關最多給目前等級 1/4 級的經驗（8 小時），一天最多一次
+const medExp = (min) => Math.round(Math.min(medRate() * 30, MED_LV_MAX * expNext(save.w.lv)) * Math.min(MED_MAX_H, min / 60) / MED_MAX_H);
 const fmtHM = (min) => { const h = Math.floor(min / 60), m = Math.floor(min % 60); return h ? `${h} 小時 ${m} 分` : `${m} 分`; };
 function medGrant(ms) {
   const w = save.w, min = ms / 60000;
   if (!W0 || !(min >= MED_MIN)) return 0;
+  const today = new Date().toDateString(); if (w.medDay === today) { w.offT = Date.now(); return 0; } w.medDay = today; // 一天只算一次
   const n = medExp(min), b = book();
   b.oh = Math.round((b.oh || 0) * 100 + Math.min(MED_MAX_H, min / 60) * 100) / 100;
   medGiving = true; gainExp(n); medGiving = false;
@@ -212,7 +214,7 @@ function bookMedHtml() {
   }
   const can = medCan();
   return `<div class="bkmed"><h3>閉關修煉</h3>
-    <p>在青雲城或營地結界裡閉關，或是直接下線，回來時依時間給經驗。<br>最多算 <b>${MED_MAX_H} 小時</b>，大約等於你平常玩 <b>30 分鐘</b>的量；不到 ${MED_MIN} 分鐘不算。</p>
+    <p>在青雲城或營地結界裡閉關，或是直接下線，回來時依時間給經驗。<br>最多算 <b>${MED_MAX_H} 小時</b>，最多給 <b>1/4 級</b>的經驗，<b>一天一次</b>；不到 ${MED_MIN} 分鐘不算。等級上限 Lv.${LV_CAP}。</p>
     <div class="sr"><span>你最近的修煉速度</span><b>每分鐘約 ${Math.round(medRate()).toLocaleString()} 經驗${w.xrN ? "" : "（還在估算，多玩幾分鐘會更準）"}</b></div>
     <div class="sr"><span>閉關 8 小時可得</span><b>經驗 +${medExp(MED_MAX_H * 60).toLocaleString()}</b></div>
     <div class="sr"><span>累計閉關</span><b>${Math.floor(b.oh || 0)} 小時（24 小時得稱號〔閉關老祖〕）</b></div>

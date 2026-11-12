@@ -23,7 +23,7 @@ function b4EqGrid() {
     <p class="dim b4help">${TOUCH ? "點一下看說明・長按穿上" : "點一下看說明・右鍵（或長按）穿上・滑過看詞綴"}</p>`;
 }
 function b4PotTab() {
-  const belt = POT_KEYS.map((k) => { const P = POTS[k], n = potN(k), m = potMaxOf(k); return `<div class="b4pot" data-pot="${k}" style="--c:${P.c}"><span class="b4pi" style="background:${P.c}">${P.n[0]}</span><span class="b2mid"><b style="color:${P.c}">${P.n}</b>${TOUCH ? "" : `<kbd>${k === "hp" ? "4／H" : P.key}</kbd>`}<small>${P.d}</small></span><span class="b4pn ${n >= m ? "full" : ""}"><b>${n}</b>／${m}</span></div>`; }).join("");
+  const belt = POT_KEYS.map((k) => { const P = POTS[k], n = potN(k), m = potMaxOf(k); return `<div class="b4pot" data-pot="${k}" style="--c:${P.c}"><span class="b4pi" style="background:${P.c}">${P.n[0]}</span><span class="b2mid"><b style="color:${P.c}">${P.n}</b>${TOUCH ? "" : `<kbd>${P.key}</kbd>`}<small>${P.d}</small></span><span class="b4pn ${n >= m ? "full" : ""}"><b>${n}</b>／${m}</span></div>`; }).join("");
   const bf = save.w.buffs || {}, now = Date.now();
   const other = [];
   for (const k in BUFFS) if (bf[k] > now) other.push(`<div class="b4pot buff" style="--c:${BUFFS[k].c}"><span class="b4pi" style="background:${BUFFS[k].c}">${BUFFS[k].g}</span><span class="b2mid"><b style="color:${BUFFS[k].c}">${BUFFS[k].n}</b><small>${BUFFS[k].d}</small></span><span class="b4pn">剩 ${Math.ceil((bf[k] - now) / 60000)} 分</span></div>`);

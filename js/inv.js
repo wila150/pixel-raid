@@ -96,11 +96,47 @@ function comboGlow() {
   return g;
 }
 let comboLast = "";
+// 11/13 電腦版技能欄：左鍵、1～5、空白（身法），點一下打開技能寶石
+const SKB = [["a", "左鍵", "attack"], ["q", "1", "spin"], ["e", "2", "ult"], ["s3", "3", "s3"], ["s4", "4", "s4"], ["s5", "5", "s5"], ["r", "空白", "roll"]];
+const SKB_W = 50, SKB_G = 4;
+let skbRects = [];
+const skBarRect = () => { const w = SKB.length * SKB_W + (SKB.length - 1) * SKB_G; return { x: Math.round(W / 2 - w / 2), y: H - SKB_W - 16, w, h: SKB_W }; };
+function drawSkillBar(p) {
+  const R0 = skBarRect(), cg = comboGlow(), wt = curWeapon(); skbRects = [];
+  ctx.fillStyle = "rgba(12,10,16,0.82)"; ctx.fillRect(R0.x - 6, R0.y - 6, R0.w + 12, R0.h + 12);
+  ctx.strokeStyle = "rgba(200,170,120,0.45)"; ctx.lineWidth = 1; ctx.strokeRect(R0.x - 5.5, R0.y - 5.5, R0.w + 11, R0.h + 11);
+  SKB.forEach(([sl, key, id], i) => {
+    const x = R0.x + i * (SKB_W + SKB_G), y = R0.y, S = WSKILL[id] || {}; skbRects.push({ x, y, w: SKB_W, h: SKB_W, sl });
+    const locked = sl !== "r" && typeof slotUnlocked === "function" && !slotUnlocked(sl), empty = sl !== "r" && (S.empty || !S.cls);
+    ctx.fillStyle = "#17131d"; ctx.fillRect(x, y, SKB_W, SKB_W);
+    const f = locked || empty ? 0 : (p.cds[id] || 0) / Math.max(0.01, cdFull(id));
+    const lack = !locked && !empty && !mpCan(p, ((id === "attack" && S.mpS ? atkMpNow() : S.mp) || 0) * ((B.skMp && B.skMp[id]) || 1) * (1 - (B.mpCut || 0)));
+    if (!locked && !empty) {
+      const sk = typeof slotSkill === "function" ? slotSkill(sl) : null;
+      let drew = false;
+      if (sk && sk !== "over" && sk !== "origin" && sk !== "uq" && typeof icoHas === "function") { const k2 = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${wt}:${slotCls(sl)}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = lack ? 0.4 : 1; drew = icoDrawS(ctx, "skill", k2, x + 5, y + 4, SKB_W - 10, SKB_W - 10); ctx.globalAlpha = 1; }
+      if (!drew) { ctx.fillStyle = lack ? "#6a6070" : "#e8dcc0"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillText((S.n || "閃身").slice(0, 3), x + SKB_W / 2, y + SKB_W / 2 + 4); }
+      if (f > 0) { ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.62)"; ctx.beginPath(); ctx.moveTo(x + SKB_W / 2, y + SKB_W / 2); ctx.arc(x + SKB_W / 2, y + SKB_W / 2, SKB_W, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(f, 0, 1)); ctx.closePath(); ctx.rect(x, y, SKB_W, SKB_W); ctx.clip(); ctx.restore(); ctx.save(); ctx.beginPath(); ctx.rect(x, y, SKB_W, SKB_W); ctx.clip(); ctx.fillStyle = "rgba(0,0,0,0.62)"; ctx.beginPath(); ctx.moveTo(x + SKB_W / 2, y + SKB_W / 2); ctx.arc(x + SKB_W / 2, y + SKB_W / 2, SKB_W, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(f, 0, 1)); ctx.closePath(); ctx.fill(); ctx.restore();
+        const sec = (p.cds[id] || 0); if (sec > 0.95) { ctx.fillStyle = "#fff"; ctx.font = "bold 13px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillText(Math.ceil(sec), x + SKB_W / 2, y + SKB_W / 2 + 5); } }
+    } else { ctx.fillStyle = "#5a5262"; ctx.font = locked ? "9px 'Noto Sans TC', sans-serif" : "bold 18px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.fillText(locked ? `Lv.${SLOT_LV[sl]}` : "＋", x + SKB_W / 2, y + SKB_W / 2 + (locked ? 4 : 6)); }
+    const glow = cg[id];
+    ctx.strokeStyle = glow ? `rgba(255,224,102,${0.55 + 0.45 * Math.sin(performance.now() / 80)})` : sl === "a" ? "rgba(232,196,106,0.6)" : "rgba(200,170,120,0.35)"; ctx.lineWidth = glow ? 2.5 : 1; ctx.strokeRect(x + 0.5, y + 0.5, SKB_W - 1, SKB_W - 1);
+    ctx.textAlign = "left"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(x + 1, y + 1, ctx.measureText(key).width + 6, 12); ctx.fillStyle = "#ffe9a0"; ctx.fillText(key, x + 4, y + 10);
+    if (id === "roll" && p.wCh !== undefined) { ctx.fillStyle = p.wCh ? "#9fe8ff" : "#6a6070"; ctx.textAlign = "right"; ctx.fillText("×" + p.wCh, x + SKB_W - 3, y + 10); }
+  });
+  ctx.textAlign = "center";
+}
+cvs.addEventListener("pointerdown", (e) => { // 點技能欄＝打開技能寶石
+  if (e.pointerType !== "mouse" || e.button !== 0 || state !== "world" || !skbRects.length) return;
+  const h = skbRects.find((r) => e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h);
+  if (!h) return; mouse.down = false; e.stopImmediatePropagation(); if (typeof sgFocus !== "undefined") sgFocus = h.sl; openHud("skill");
+}, true);
 function drawOrbs() {
   const p = W0, padOn = !pad.classList.contains("hidden") && getComputedStyle(pad).display !== "none";
   let R = clamp(Math.min(W, H) * 0.11, 34, 56);
   // 左下：生命血球
-  const hx = SAFE.l + R + 14, hy = H - R - 18;
+  const SB = !padOn ? skBarRect() : null;
+  const hx = SB ? SB.x - R - 12 : SAFE.l + R + 14, hy = SB ? H - R - 14 : H - R - 18;
   drawOrb(hx, hy, R, p.hp / p.maxHp, "#c8282c", "#5a0a10", p.hp / p.maxHp < 0.3 ? `rgba(255,90,80,${0.6 + Math.sin(time * 8) * 0.4})` : "rgba(200,150,120,0.55)");
   if (B.maxEs > 0) { // 能量護盾：血球外圍半透明淡藍外殼
     const ef2 = clamp((p.es || 0) / B.maxEs, 0, 1);
@@ -115,7 +151,7 @@ function drawOrbs() {
   ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#f2dede";
   ctx.fillText(`${Math.ceil(p.hp)}`, hx, hy + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#c8a8a8"; ctx.fillText(`/ ${p.maxHp}`, hx, hy + 12);
   // 右下：真氣球（企劃 69 A：天罰能量拿掉）
-  let ex = W - SAFE.r - R - 14, ey = H - R - 18;
+  let ex = SB ? SB.x + SB.w + R + 12 : W - SAFE.r - R - 14, ey = SB ? H - R - 14 : H - R - 18;
   if (padOn) {
     if (!atkRect || time - atkRectT > 1) { const b = pad.querySelector(".btn-atk"); atkRect = b && b.getBoundingClientRect(); atkRectT = time; }
     if (atkRect && atkRect.width) { ex = atkRect.left + atkRect.width / 2; ey = atkRect.top + atkRect.height / 2; R = atkRect.width / 2; }
@@ -137,25 +173,10 @@ function drawOrbs() {
     ctx.restore();
   }
   { const dry = p.dryT > 0, fl = dry && Math.sin(time * 14) > 0; drawOrb(ex, ey, R, ef, dry ? (fl ? "#6a7488" : "#4a5468") : "#3a78e8", dry ? "#1a1e28" : "#0a1848", dry ? "rgba(160,170,190,0.6)" : "rgba(140,180,255,0.6)"); } // 企劃 70：乾涸變灰閃
-  if (!padOn) { // 電腦：球上寫字＋左邊招式冷卻
+  if (!padOn) { // 電腦：球上寫字＋中間技能欄（11/13：左鍵＋1～5＋空白，照 Slay Monsters 的排法）
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#d8e4ff";
     ctx.fillText(`${Math.floor(p.mp || 0)}`, ex, ey + 2); ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#a8b8d8"; ctx.fillText(`/ ${B.maxMp}`, ex, ey + 12);
-    const sk = [["左鍵", WSKILL.attack.n, "attack"], ["Q", WSKILL.spin.n, "spin"], ["E", WSKILL.ult.n, "ult"], ["空白", WSKILL.roll.n || "閃身", "roll"]]; // 丹藥改在下方快捷道具欄（v5.8）
-    let x = ex - R - 16 - sk.length * 50;
-    const cg = comboGlow();
-    for (const [k, n, id] of sk) {
-      if (cg[id]) { const a = 0.55 + 0.45 * Math.sin(performance.now() / 80); ctx.save(); ctx.shadowColor = "#ffd84a"; ctx.shadowBlur = 12; ctx.strokeStyle = `rgba(255,224,102,${a})`; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1.5, H - 51.5, 49, 33); ctx.restore(); }
-      const f = p.cds[id] / Math.max(0.01, cdFull(id)), lack = !mpCan(p, ((id === "attack" && WSKILL.attack.mpS ? atkMpNow() : WSKILL[id].mp) || 0) * ((B.skMp && B.skMp[id]) || 1) * (1 - (B.mpCut || 0)));
-      { const sl = { attack: "a", spin: "q", ult: "e", roll: "r" }[id], sk = typeof slotSkill === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
-        if (sk && sk !== "over" && sk !== "origin" && sk !== "uq" && typeof icoHas === "function") { const key = sl === "r" ? "r:" + (sk === "base" ? "" : sk) : `${curWeapon()}:${slotCls(sl)}:${sk === "base" ? "" : sk}`; ctx.globalAlpha = f > 0 || lack ? 0.45 : 1; icoDrawS(ctx, "skill", key, x + 7, H - 84, 32, 32); ctx.globalAlpha = 1; } }
-      ctx.fillStyle = "rgba(14,12,18,0.72)"; ctx.fillRect(x, H - 50, 46, 30);
-      if (f > 0) { ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(x, H - 50, 46, 30 * clamp(f, 0, 1)); }
-      ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, H - 49.5, 45, 29);
-      ctx.fillStyle = lack ? "#6a6070" : "#e8dcc0"; ctx.font = "bold 10px 'Noto Sans TC', sans-serif"; ctx.fillText(n, x + 23, H - 36);
-      if (id === "roll" && p.wCh !== undefined) { ctx.fillStyle = p.wCh ? "#9fe8ff" : "#6a6070"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillText("×" + p.wCh, x + 39, H - 43); } // 凌波剩幾次
-      ctx.fillStyle = "#9a8e78"; ctx.font = "8px 'Noto Sans TC', sans-serif"; ctx.fillText(k, x + 23, H - 25);
-      x += 50;
-    }
+    drawSkillBar(p);
   }
   if (padOn) { const cg = comboGlow(), key = (cg.attack ? "a" : "") + (cg.spin ? "s" : ""); if (key !== comboLast) { comboLast = key; pad.querySelector('[data-act="attack"]').classList.toggle("combo", cg.attack); pad.querySelector('[data-act="spin"]').classList.toggle("combo", cg.spin); } }
   const ub = pad.querySelector('[data-act="ult"]');

@@ -5,37 +5,40 @@ const SET74 = (() => { try { return Object.assign({ dmg: true, names: true, clic
 const set74Save = () => { try { localStorage.setItem("pr_set74", JSON.stringify(SET74)); } catch (e) {} };
 
 // ───────── 改鍵：實體鍵 → 遊戲原本的鍵（攔在最前面，再發一個「原本那顆鍵」的事件，所以所有快捷鍵都跟著換）─────────
+// [id, 名稱, 遊戲內部的鍵, 預設實體鍵, 預設次要鍵]（11/13：1～5 放技能、Q／E／R／G 喝丹藥，照 Slay Monsters 的排法）
 const KEY_ACTS = [
-  ["技能", [["skQ", "Q 招", "q"], ["skE", "E 招", "e"], ["roll", "身法（閃身）", " "], ["atk", "普攻（鍵盤）", "j"], ["save", "護身法術", "v"]]],
-  ["移動", [["up", "向上", "w"], ["down", "向下", "s"], ["left", "向左", "a"], ["right", "向右", "d"]]],
-  ["丹藥", [["pot_hp", "回春丹", "4"], ["pot_mp", "聚氣丹", "5"], ["pot_guard", "護體丹", "6"], ["pot_pure", "淨化丹", "7"]]],
-  ["互動", [["pick", "撿東西", "f"], ["ws1", "武器組 1", "1"], ["ws2", "武器組 2", "2"], ["ws3", "武器組 3", "3"], ["names", "顯示掉落物名字（按住）", "alt"]]],
-  ["介面", [["bag", "行囊", "i"], ["char", "角色", "c"], ["skill", "技能", "n"], ["tree", "天賦樹", "p"], ["smith", "鐵匠鋪", "b"], ["map", "星盤", "m"], ["quest", "任務", "y"], ["book", "冒險手冊", "k"], ["cards", "卡片", "l"], ["rank", "排行", "r"], ["chat", "聊天", "g"]]],
+  ["技能", [["sk1", "技能 1", "sk1", "1"], ["sk2", "技能 2", "sk2", "2"], ["sk3", "技能 3", "sk3", "3"], ["sk4", "技能 4", "sk4", "4"], ["sk5", "技能 5", "sk5", "5"], ["roll", "身法（閃身）", " ", " ", "shift"], ["atk", "左鍵技能（鍵盤）", "j", "j"], ["save", "護身法術", "v", "v"]]],
+  ["移動", [["up", "向上", "w", "w"], ["down", "向下", "s", "s"], ["left", "向左", "a", "a"], ["right", "向右", "d", "d"]]],
+  ["丹藥", [["pot_hp", "回春丹（生命）", "h", "q"], ["pot_mp", "聚氣丹（真氣）", "pmp", "e"], ["pot_guard", "護體丹", "pgd", "r"], ["pot_pure", "淨化丹", "ppu", "g"]]],
+  ["互動", [["pick", "撿東西", "f", "f"], ["wsc", "換武器組（輪流）", "wsc", "x"], ["ws1", "武器組 1", "ws1", ""], ["ws2", "武器組 2", "ws2", ""], ["ws3", "武器組 3", "ws3", ""], ["names", "顯示掉落物名字（按住）", "alt", "alt"]]],
+  ["介面", [["bag", "行囊", "i", "i"], ["char", "角色", "c", "c"], ["skill", "技能寶石", "n", "n"], ["tree", "天賦樹", "p", "p"], ["smith", "鐵匠鋪", "b", "b"], ["map", "星盤", "m", "m"], ["quest", "任務", "y", "y"], ["book", "冒險手冊", "k", "k"], ["cards", "卡片", "l", "l"], ["rank", "排行", "r", ""], ["chat", "聊天", "g", "t"]]],
 ];
-const KEY_DEF = {}; for (const [, L] of KEY_ACTS) for (const [id, , k] of L) KEY_DEF[id] = k;
-const keyBinds = (() => { try { return JSON.parse(localStorage.getItem("pr_keys") || "{}"); } catch (e) { return {}; } })();
-const keyOf = (id) => (keyBinds[id] || [KEY_DEF[id], ""]);
+const KEY_INT = {}, KEY_DEF = {}, KEY_DEF2 = {}; for (const [, L] of KEY_ACTS) for (const [id, , k, d, d2] of L) { KEY_INT[id] = k; KEY_DEF[id] = d; KEY_DEF2[id] = d2 || ""; }
+const keyBinds = (() => { try { const o = JSON.parse(localStorage.getItem("pr_keys") || "{}"); if (!o._v) { for (const k in o) delete o[k]; o._v = 2; } return o; } catch (e) { return { _v: 2 }; } })(); // 舊版（Q／E 放招）的改鍵不沿用
+const keyOf = (id) => (keyBinds[id] || [KEY_DEF[id], KEY_DEF2[id]]);
 let KEYMAP = {};
+const KEY_PASS = new Set(["escape", "tab", "enter", "arrowup", "arrowdown", "arrowleft", "arrowright"]);
 function keyMapBuild() {
   KEYMAP = {};
   const bound = new Set();
-  for (const id in KEY_DEF) { const d = KEY_DEF[id]; for (const u of keyOf(id)) { if (!u) continue; bound.add(u); if (u !== d) KEYMAP[u] = d; } }
-  for (const id in KEY_DEF) { const d = KEY_DEF[id]; if (!bound.has(d)) KEYMAP[d] = "__none"; } // 原本的鍵沒人用了：按了不做事
+  for (const id in KEY_INT) { const d = KEY_INT[id]; for (const u of keyOf(id)) { if (!u) continue; bound.add(u); KEYMAP[u] = d; } }
+  for (const id in KEY_INT) { const d = KEY_INT[id]; if (!bound.has(d) && !(d in KEYMAP)) KEYMAP[d] = "__none"; } // 遊戲內部的鍵沒被綁：按了不做事
+  for (const [k, v] of Object.entries(KEYMAP)) if (k === v) delete KEYMAP[k];
 }
 keyMapBuild();
-const keyHit = (id) => pressed.has(KEY_DEF[id]); // 遊戲裡判斷都用「原本的鍵」（實體鍵已經換過了）
-const keyLabel = (k) => (!k ? "—" : k === " " ? "空白" : k === "alt" ? "Alt" : k === "shift" ? "Shift" : k === "control" ? "Ctrl" : k.length === 1 ? k.toUpperCase() : k.replace(/^arrow/, "方向").replace(/^(.)/, (m) => m.toUpperCase()));
+const keyHit = (id) => pressed.has(KEY_INT[id]); // 遊戲裡判斷都用「內部的鍵」（實體鍵已經換過了）
+const keyLabel = (k) => (!k ? "—" : k === "enter" ? "Enter" : k === " " ? "空白" : k === "alt" ? "Alt" : k === "shift" ? "Shift" : k === "control" ? "Ctrl" : k.length === 1 ? k.toUpperCase() : k.replace(/^arrow/, "方向").replace(/^(.)/, (m) => m.toUpperCase()));
 let keyRemapping = false;
 const remapKey = (type) => (e) => {
   if (keyRemapping || !e.isTrusted) return;
   if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
   if (keyCatch && type === "keydown") return; // 正在設定按鍵
   const k = e.key.toLowerCase(), to = KEYMAP[k];
-  if (!to || to === k || e.key === "Escape") return;
+  if (!to || to === k || KEY_PASS.has(k)) return;
   e.stopImmediatePropagation(); e.preventDefault();
   if (to === "__none") return;
   keyRemapping = true;
-  try { window.dispatchEvent(new KeyboardEvent(type, { key: to === " " ? " " : to.length === 1 ? to : to === "alt" ? "Alt" : to, code: e.code, repeat: e.repeat, bubbles: true, cancelable: true })); } finally { keyRemapping = false; }
+  try { window.dispatchEvent(new KeyboardEvent(type, { key: to === "alt" ? "Alt" : to === "shift" ? "Shift" : to, code: e.code, repeat: e.repeat, bubbles: true, cancelable: true })); } finally { keyRemapping = false; }
 };
 window.addEventListener("keydown", remapKey("keydown"), true);
 window.addEventListener("keyup", remapKey("keyup"), true);
@@ -72,7 +75,7 @@ updateBgm = function () { AUDIO_BUS = "music"; try { return _updateBgm74.apply(t
 
 // ───────── 設定視窗 ─────────
 let setTab = "gen", keyCatch = null;
-const OPS = [["左鍵（按住）", "普攻；點地上的物品名字＝走過去撿"], ["Q／E", "招式（技能頁換招）"], ["空白", "身法（閃身）"], ["1／2／3", "換武器組"], ["4／5／6／7", "回春／聚氣／護體／淨化丹"], ["F", "撿附近的東西"], ["按住 Alt", "顯示所有掉落物名字"], ["V", "護身法術"], ["I", "行囊"], ["C", "角色"], ["N", "技能"], ["P", "天賦樹"], ["B", "鐵匠鋪"], ["M／Tab", "星盤（大地圖）"], ["Y", "任務"], ["K", "冒險手冊"], ["L", "卡片"], ["R", "排行"], ["G", "聊天"], ["Esc", "關掉視窗／設定"]];
+const OPS = [["左鍵（按住）", "左鍵技能；點地上的物品名字＝走過去撿"], ["1／2／3／4／5", "技能欄上的技能（按住會一直放）"], ["空白／Shift", "身法（閃身）"], ["Q／E／R／G", "回春／聚氣／護體／淨化丹"], ["X", "換武器組（下方武器列也能點）"], ["F", "撿附近的東西"], ["按住 Alt", "顯示所有掉落物名字"], ["V", "護身法術"], ["I", "行囊"], ["C", "角色"], ["N", "技能寶石"], ["P", "天賦樹"], ["B", "鐵匠鋪"], ["M／Tab", "星盤（大地圖）"], ["Y", "任務"], ["K", "冒險手冊"], ["L", "卡片"], ["T", "聊天"], ["Esc", "關掉視窗／設定"]];
 const OPS_TOUCH = [["左下搖桿", "移動"], ["右下大按鈕", "普攻（按住連打）"], ["Q／E 按鈕", "招式"], ["閃身按鈕", "身法"], ["「撿」按鈕", "撿附近的東西（靠近時出現）"], ["下方快捷欄", "換武器組、丹藥、回城符"], ["右上一排", "行囊、角色、技能、天賦…"]];
 function setGenHtml() {
   const sl = (k, n) => `<div class="s74sl"><span>${n}</span><input type="range" min="0" max="100" step="5" value="${VOL[k]}" data-vol="${k}" aria-label="${n}"><b>${VOL[k]}</b></div>`;
@@ -90,7 +93,7 @@ function setGenHtml() {
 }
 function setKeyHtml() {
   if (TOUCH) return `<p class="dim">手機、平板沒有鍵盤，這一頁只有接上鍵盤時有用。</p>`;
-  const row = ([id, n]) => { const [a, b] = keyOf(id), chg = keyBinds[id]; return `<div class="s74k"><span>${n}</span><button data-kc="${id}:0" class="${keyCatch === id + ":0" ? "catch" : ""}">${keyCatch === id + ":0" ? "按一個鍵…" : keyLabel(a)}</button><button data-kc="${id}:1" class="${keyCatch === id + ":1" ? "catch" : ""}">${keyCatch === id + ":1" ? "按一個鍵…" : keyLabel(b)}</button><button data-kr="${id}" class="s74rst" ${chg ? "" : "disabled"} aria-label="恢復">↺</button></div>`; };
+  const row = ([id, n]) => { const [a, b] = keyOf(id), chg = !!keyBinds[id]; return `<div class="s74k"><span>${n}</span><button data-kc="${id}:0" class="${keyCatch === id + ":0" ? "catch" : ""}">${keyCatch === id + ":0" ? "按一個鍵…" : keyLabel(a)}</button><button data-kc="${id}:1" class="${keyCatch === id + ":1" ? "catch" : ""}">${keyCatch === id + ":1" ? "按一個鍵…" : keyLabel(b)}</button><button data-kr="${id}" class="s74rst" ${chg ? "" : "disabled"} aria-label="恢復">↺</button></div>`; };
   return `<p class="s74note">點一格再按新的鍵；新的鍵已經被別的動作用了，兩個動作的鍵會對調。Esc、滑鼠不能改。只會存下你改過的鍵。</p>
     <div class="s74row"><span>移動方式</span><button data-cm="0" class="${SET74.clickMove ? "" : "on"}">WASD 鍵盤移動</button><button data-cm="1" class="${SET74.clickMove ? "on" : ""}">滑鼠點擊移動</button><small class="dim">點擊移動：左鍵點地面走過去、點怪出左鍵那招</small></div>
     <div class="s74two keys">${KEY_ACTS.map(([g, L]) => `<div class="s74col"><h3>${g}<small>主要　次要</small></h3>${L.map(row).join("")}</div>`).join("")}</div>
@@ -123,15 +126,15 @@ function openSettings() {
     all("[data-cm]", (b) => b.onclick = () => { SET74.clickMove = b.dataset.cm === "1"; set74Save(); sfx("click"); re(); });
     all("[data-kc]", (b) => b.onclick = () => { sfx("click"); keyCatch = keyCatch === b.dataset.kc ? null : b.dataset.kc; re(); });
     all("[data-kr]", (b) => b.onclick = () => { delete keyBinds[b.dataset.kr]; keySaveAll(); sfx("click"); re(); });
-    const ka = $("#s74KeyAll"); if (ka) ka.onclick = () => { for (const k in keyBinds) delete keyBinds[k]; keySaveAll(); sfx("click"); re(); };
+    const ka = $("#s74KeyAll"); if (ka) ka.onclick = () => { for (const k in keyBinds) if (k !== "_v") delete keyBinds[k]; keySaveAll(); sfx("click"); re(); };
   } else pickKeepBind(ov, re);
 }
 function keySaveAll() { try { localStorage.setItem("pr_keys", JSON.stringify(keyBinds)); } catch (e) {} keyMapBuild(); }
 function keySet(id, slot, k) { // 新的鍵已經被別的動作用了 → 對調
   const cur = keyOf(id).slice(), old = cur[slot];
-  for (const j in KEY_DEF) { if (j === id) continue; const o = keyOf(j).slice(); let ch = false; for (let s = 0; s < 2; s++) if (o[s] === k) { o[s] = old; ch = true; } if (ch) keyBinds[j] = o; }
+  for (const j in KEY_INT) { if (j === id) continue; const o = keyOf(j).slice(); let ch = false; for (let s = 0; s < 2; s++) if (o[s] === k) { o[s] = old; ch = true; } if (ch) keyBinds[j] = o; }
   cur[slot] = k; keyBinds[id] = cur;
-  for (const j in keyBinds) { const [a, b] = keyBinds[j]; if (a === KEY_DEF[j] && !b) delete keyBinds[j]; }
+  for (const j in keyBinds) { if (j === "_v") continue; const [a, b] = keyBinds[j]; if (a === KEY_DEF[j] && b === KEY_DEF2[j]) delete keyBinds[j]; }
   keySaveAll();
 }
 window.addEventListener("keydown", (e) => { // 正在等新的鍵

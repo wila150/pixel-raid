@@ -102,7 +102,7 @@ const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], e: [20, 35, 55, 70, 85, 100],
 const TRI_LV_X = { fist: { a: [25], q: [45] } }; // 企劃 55：拳套第 4 個選項（散手、摔投）；其他武器不動
 const triLvAt = (wt, l, i) => { const L = TRI_LV[l]; if (i < L.length) return L[i]; const x = TRI_LV_X[wt] && TRI_LV_X[wt][l]; return (x && x[i - L.length]) || 999; };
 const E_LV = 5;
-const TRI_LAYER_N = { a: "普攻", q: "Q 招", e: "E 招", r: "身法" };
+const TRI_LAYER_N = { a: "左鍵", q: "技能 1", e: "技能 2", s3: "技能 3", s4: "技能 4", s5: "技能 5", o: "自動欄", r: "身法" };
 const triList = (wt, l) => (l === "r" ? TRI.r : TRI[wt] && TRI[wt][l]) || null;
 const wLv = () => (save.w && save.w.lv) || 1;
 function triMig() { // 舊存檔：三選一選過的直接當已開
@@ -133,7 +133,8 @@ function pickOk(wt, c, k) {
 function slotPick(wt, sl) {
   wt = wt || curWeapon(); const v = triRaw(wt, sl);
   if (v.includes(":")) { const [c, k0] = v.split(":"), k = c === "e" ? k0 || "base" : k0 === "base" ? "" : k0; if ((c === "a" || c === "q" || c === "e") && pickOk(wt, c, k)) return { c, k }; }
-  else if (v && pickOk(wt, sl, v)) return { c: sl, k: sl !== "e" && v === "base" ? "" : v };
+  else if (v && v !== "none" && sl.length === 1 && pickOk(wt, sl, v)) return { c: sl, k: sl !== "e" && v === "base" ? "" : v };
+  if (sl.length > 1 || v === "none") return { c: null, k: "" }; // 11/13：3～5 格（s3～s5）沒放招＝空；"none"＝玩家拿掉了
   return { c: sl, k: sl === "e" ? eDefault() : "" };
 }
 const slotCls = (sl, wt = curWeapon()) => (sl === "r" ? "r" : slotPick(wt, sl).c);
@@ -143,7 +144,7 @@ function triOf(wt, l) {
   const alt = (pk) => (pk.k && !E_SPEC.includes(pk.k) ? pk.k : null);
   if (TRI_OVR && TRI_OVR.c === l) return alt(TRI_OVR);
   const own = slotPick(wt, l); if (own.c === l) return alt(own);
-  for (const s of ["a", "q", "e"]) { const pk = slotPick(wt, s); if (pk.c === l) return alt(pk); }
+  for (const s of SLOTS6) { const pk = slotPick(wt, s); if (pk.c === l) return alt(pk); }
   return null;
 }
 // 一招的名字（類＋代碼）
@@ -158,8 +159,9 @@ const triName = (wt, l) => { const v = triOf(wt, l), L = triList(wt, l); return 
 function triSetPick(wt, sl, c, k) {
   const w = save.w; if (!w.tri) w.tri = {}; if (!w.tri[wt]) w.tri[wt] = {};
   const T = w.tri[wt], norm = (cc, kk) => cc + ":" + (cc === "e" ? kk || "base" : kk || ""), cur = slotPick(wt, sl), want = norm(c, k);
-  if (sl === "o") { T.o = want; writeSave(); applyWeapon(); setPadLabels(true); return; } // 企劃 72 D：自動欄可以跟別格放同一招
-  for (const s of ["a", "q", "e"]) if (s !== sl) { const pk = slotPick(wt, s); if (norm(pk.c, pk.k) === want) T[s] = norm(cur.c, cur.k); }
+  if (sl === "o") { T.o = want; writeSave(); applyWeapon(); setPadLabels(true); return; }
+  if (cur.c && norm(cur.c, cur.k) === want) return; // 企劃 72 D：自動欄可以跟別格放同一招
+  for (const s of SLOTS6) if (s !== sl) { const pk = slotPick(wt, s); if (pk.c && norm(pk.c, pk.k) === want) T[s] = cur.c ? norm(cur.c, cur.k) : "none"; }
   T[sl] = c === sl && c !== "e" && !k ? "" : want; if (!T[sl]) delete T[sl];
   writeSave(); applyWeapon(); setPadLabels(true);
 }
@@ -249,15 +251,15 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
 }
 const gemFits = (g, sl) => { const k = g.split(":")[0]; if (k === "spread") return chainRow(sl).some((x) => x && x.startsWith("fire:")); return !gemWhy(g, sl, chainRaw(sl).indexOf(g)); };
 // 同一種輔助寶石還串在哪裡（這把武器的普攻／Q／E＋全武器共用的身法；在身法列找的時候看每把武器）
-const SL_ORD = ["a", "q", "e", "r"];
+const SL_ORD = ["a", "q", "e", "s3", "s4", "s5", "o", "r"];
 function slLabel(sl, wt) {
   if (sl === "r") { const k = triOf(wt, "r"), o = k && TRI.r.find((x) => x.k === k); return `身法${o ? `（${o.n}）` : ""}`; }
-  const pk = slotPick(wt, sl); return `${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]}（${pickName(wt, pk.c, pk.k)}）`; // 企劃 69 B
+  const pk = slotPick(wt, sl); return `${SLOT_N[sl] === "左鍵" || SLOT_N[sl] === "自動" ? SLOT_N[sl] : "技能 " + SLOT_N[sl]}（${pk.c ? pickName(wt, pk.c, pk.k) : "空"}）`; // 11/13
 }
 function gemElse(k, sl, wt = curWeapon()) {
   const w = save.w; if (!w || !w.chain) return null;
   const has = (row) => row && row.slice(0, slotsN()).findIndex((x) => x && x.split(":")[0] === k);
-  const spots = sl === "r" ? Object.keys(w.chain).filter((x) => x !== "r").flatMap((x) => ["a", "q", "e"].map((l) => [l, x])) : SL_ORD.filter((l) => l !== sl).map((l) => [l, wt]);
+  const spots = sl === "r" ? Object.keys(w.chain).filter((x) => x !== "r").flatMap((x) => SLOTS6.concat(["o"]).map((l) => [l, x])) : SL_ORD.filter((l) => l !== sl).map((l) => [l, wt]);
   for (const [l, x] of spots) { const row = l === "r" ? w.chain.r : w.chain[x] && w.chain[x][l]; const i = has(row); if (i >= 0) return { l, wt: x, i, label: (sl === "r" && x !== wt ? WEAPONS[x].n + "的" : "") + slLabel(l, x) }; }
   return null;
 }
@@ -268,10 +270,10 @@ function gemDupMig() {
   const seenR = new Set((w.chain.r || []).filter(Boolean).map((g) => g.split(":")[0]));
   for (const wt of Object.keys(w.chain)) {
     if (wt === "r") continue; const seen = new Set();
-    for (const l of ["a", "q", "e"]) { const row = w.chain[wt][l] || []; row.forEach((g, i) => { if (!g) return; const k = g.split(":")[0]; if (seen.has(k)) { addGem(g); row[i] = null; n++; } else seen.add(k); }); }
+    for (const l of SLOTS6.concat(["o"])) { const row = w.chain[wt][l] || []; row.forEach((g, i) => { if (!g) return; const k = g.split(":")[0]; if (seen.has(k)) { addGem(g); row[i] = null; n++; } else seen.add(k); }); }
   }
   // 身法列：跟任何一把武器重複的退回（a→q→e 在前面，留武器那顆）
-  const used = new Set(); for (const wt of Object.keys(w.chain)) if (wt !== "r") for (const l of ["a", "q", "e"]) for (const g of w.chain[wt][l] || []) if (g) used.add(g.split(":")[0]);
+  const used = new Set(); for (const wt of Object.keys(w.chain)) if (wt !== "r") for (const l of SLOTS6.concat(["o"])) for (const g of w.chain[wt][l] || []) if (g) used.add(g.split(":")[0]);
   (w.chain.r || []).forEach((g, i) => { if (g && used.has(g.split(":")[0])) { addGem(g); w.chain.r[i] = null; n++; } });
   w.gemOne = 1; return n;
 }
@@ -280,7 +282,7 @@ function gemGrpMig() {
   const w = save.w; if (!w || !w.chain || w.gemGrp) return 0;
   let n = 0;
   for (const wt of Object.keys(w.chain)) {
-    const ls = wt === "r" ? [["r", null]] : ["a", "q", "e"].map((l) => [l, wt]);
+    const ls = wt === "r" ? [["r", null]] : SLOTS6.concat(["o"]).map((l) => [l, wt]);
     for (const [l, x] of ls) {
       const row = wt === "r" ? w.chain.r : w.chain[wt][l]; if (!row) continue;
       const W = x || curWeapon();
@@ -322,7 +324,7 @@ function chainMig() {
   let n = 0;
   for (const g of list) {
     let ok = false;
-    for (const sl of ["a", "q", "e"]) { const row = chainRaw(sl); const used = row.slice(0, slotsN()).filter(Boolean).length; if (used < slotsN() && !gemWhy(g, sl)) { let i = 0; while (row[i]) i++; row[i] = g; ok = true; n++; break; } }
+    for (const sl of SLOTS6) { if (!slotPick(curWeapon(), sl).c) continue; const row = chainRaw(sl); const used = row.slice(0, slotsN()).filter(Boolean).length; if (used < slotsN() && !gemWhy(g, sl)) { let i = 0; while (row[i]) i++; row[i] = g; ok = true; n++; break; } }
     if (!ok) addGem(g);
   }
   w.chV = 2; return list.length ? [n, list.length] : 0;
@@ -472,13 +474,13 @@ function renderTri(msg = "") {
 function triPoolHtml() {
   if (!triPool) return "";
   const wt = curWeapon(), sl = triPool, all = triPoolList(wt), cur = slotPick(wt, sl);
-  const where = (x) => ["a", "q", "e"].find((s) => s !== sl && pickEq(slotPick(wt, s), x)) || null;
+  const where = (x) => SLOTS6.find((s) => s !== sl && pickEq(slotPick(wt, s), x)) || null;
   const list = all.filter((x) => poolTab === "all" || x.c === poolTab);
   const cardOf = (x) => { const lv = wLv(), k = x.spec ? x.k : x.k === "base" ? "" : x.k, open = x.c === "e" && (k === "" || x.spec) ? lv >= E_LV : !k || triOpen(wt, x.c, k), key = skgKey(wt, x.c, k), buy = k && !x.spec && !open && !skgHas(key), on = pickEq(x, cur), w = where(x);
     const lockTxt = buy ? `${lv >= x.need ? "" : `Lv.${x.need} `}技能商人・${(x.need * SKG_PRICE).toLocaleString()} 靈石（點這裡）` : `🔒 Lv.${x.need} 開放`;
     return `<button class="tricard${on ? " on" : ""}${open ? "" : " lock"}${buy ? " buy" : ""}" data-tl="${sl}" data-tc="${x.c}" data-tk="${x.k || ""}" ${buy ? `data-shop="${wt}"` : ""} ${(open && !on) || buy ? "" : "disabled"}><b>${x.spec ? "" : skIco(wt, x.c, k, "tico")}${x.n}</b><small>${open ? `${w ? `<i class="tin">在${{ a: "左鍵", q: "Q", e: "E" }[w]}・點了對調</i> ` : ""}<i class="tcls">${CLS_N[x.c]}・${costTxt(wt, x.c, k, sl)}</i> ${x.d}` : lockTxt}</small></button>`; };
   const tabs = [["all", "全部"], ["a", "普攻類"], ["q", "Q 類"], ["e", "E 類"]].map(([k, n]) => `<button data-ptab="${k}" class="${poolTab === k ? "on" : ""}">${n}</button>`).join("");
-  return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
+  return `<div class="gpop tpop" data-tpop="1"><div class="gpbox"><div class="gphead"><b>${(SLOT_N[sl] === "左鍵" || SLOT_N[sl] === "自動" ? SLOT_N[sl] : "技能 " + SLOT_N[sl])} 要放哪一招</b><button class="gpx" data-tpx="1">✕</button></div><div class="gptabs">${tabs}</div><div class="gplist tplist">${list.map(cardOf).join("")}</div></div></div>`;
 }
 function triPoolClose() { if (!triPool) return false; triPool = null; renderSkills(); return true; }
 function bindTri() {
@@ -493,7 +495,7 @@ function bindTri() {
     if (b.dataset.tc && b.dataset.tc !== "r") { // 企劃 69 B：三格自由放
       const wt = curWeapon(), sl = b.dataset.tl, c = b.dataset.tc, k = b.dataset.tk, why = triSwapWhy();
       if (why) { sfx("bad"); triPool = null; renderSkills(why); return; }
-      triSetPick(wt, sl, c, k); triPool = null; sfx("good"); renderSkills(`${{ a: "左鍵", q: "Q", e: "E", o: "自動" }[sl]} 換成「${pickName(wt, c, c === "e" ? k || "base" : k)}」`); return;
+      triSetPick(wt, sl, c, k); triPool = null; sfx("good"); renderSkills(`${(SLOT_N[sl] === "左鍵" || SLOT_N[sl] === "自動" ? SLOT_N[sl] : "技能 " + SLOT_N[sl])} 換成「${pickName(wt, c, c === "e" ? k || "base" : k)}」`); return;
     }
     const wt = curWeapon(), l = b.dataset.tl, k = b.dataset.tk, why = triSwapWhy();
     if (why) { sfx("bad"); renderSkills(why); return; }

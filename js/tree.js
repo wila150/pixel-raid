@@ -504,7 +504,7 @@ function trDraw() {
     const a = S.a * Math.PI / 180, gr = g.createRadialGradient(hx + Math.cos(a) * 560 * z, hy + Math.sin(a) * 560 * z, 0, hx + Math.cos(a) * 560 * z, hy + Math.sin(a) * 560 * z, 520 * z);
     gr.addColorStop(0, S.c + "18"); gr.addColorStop(1, S.c + "00"); g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
-  const path = trSel && !have.has(trSel) ? trPath(trSel) : null, pset = new Set(path || []);
+  const _ps = (typeof trHov !== "undefined" && trHov) || trSel, path = _ps && !have.has(_ps) ? trPath(_ps) : null, pset = new Set(path || []); // 11/13：滑鼠指著也預覽路徑
   const avail = new Set(); if (T.s) for (const id of have) for (const v of TREE[id].adj) if (!have.has(v) && !(TRM && wsNoNode(TREE[v]))) avail.add(v);
   // 連線
   g.lineCap = "round";
@@ -577,7 +577,11 @@ function trBindCanvas() {
   const up = (e) => {
     if (!trPtr.has(e.pointerId)) return;
     const p = trPtr.get(e.pointerId); trPtr.delete(e.pointerId); if (trPtr.size < 2) trPinch = null;
-    if (trPtr.size === 0 && trMoved < 8 && e.type === "pointerup") { const id = trHit(p[0], p[1]); sfx("click"); trSel = id === trSel ? null : id; trPanel(); trDraw(); }
+    if (trPtr.size === 0 && trMoved < 8 && e.type === "pointerup") {
+      const id = trHit(p[0], p[1]);
+      if (e.pointerType === "mouse" && e.button === 0 && id && typeof trQuickLearn === "function" && trQuickLearn(id)) return; // 11/13：電腦左鍵直接學
+      sfx("click"); trSel = id === trSel ? null : id; trPanel(); trDraw();
+    }
   };
   c.addEventListener("pointerup", up); c.addEventListener("pointercancel", up);
   c.addEventListener("wheel", (e) => { e.preventDefault(); const [x, y] = pos(e); zoomAt(x, y, trView.z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); trDraw(); }, { passive: false });

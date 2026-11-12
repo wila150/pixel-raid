@@ -15,7 +15,7 @@ function skCostTxt(wt, c, k) { // 招式卡上的冷卻、真氣
   if (c === "a") return `出手間隔 ${cd} 秒（吃攻速）`;
   return `冷卻 ${cd} 秒・真氣 ${skBaseMp(wt, cd)}`;
 }
-const SLK72 = { a: "attack", q: "spin", e: "ult", o: "ult" };
+const SLK72 = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5", o: "ult" };
 function slotStat(sl) { // 這一格：約每秒傷害、真氣、冷卻（含冷卻恢復速度、tick 檔位）
   const wt = curWeapon(), pk = slotPick(wt, sl), k = pk.k || "base", S = WSKILL[SLK72[sl]];
   if (!S || !SK_CD[wt]) return "";

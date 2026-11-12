@@ -2,10 +2,10 @@
 // 回春丹＝原本的丹藥（save.w.potions，舊的程式照用）；其他三種存 save.w.pots = { mp, guard, pure }
 "use strict";
 const POTS = {
-  hp: { n: "回春丹", c: "#ff6a5a", key: "4", ik: "pot", d: "立刻回 40% 生命" },
-  mp: { n: "聚氣丹", c: "#6aa8ff", key: "5", ik: "pot", d: "立刻回 40% 真氣" },
-  guard: { n: "護體丹", c: "#7ddc8a", key: "6", ik: "pot", d: "5 秒內受到的傷害 −25%" },
-  pure: { n: "淨化丹", c: "#ffd76a", key: "7", ik: "pot", d: "解除凍傷、毒池減速、電圈、破體，4 秒內不會再中" },
+  hp: { n: "回春丹", c: "#ff6a5a", key: "Q", ik: "pot", d: "立刻回 40% 生命" },
+  mp: { n: "聚氣丹", c: "#6aa8ff", key: "E", ik: "pot", d: "立刻回 40% 真氣" },
+  guard: { n: "護體丹", c: "#7ddc8a", key: "R", ik: "pot", d: "5 秒內受到的傷害 −25%" },
+  pure: { n: "淨化丹", c: "#ffd76a", key: "G", ik: "pot", d: "解除凍傷、毒池減速、電圈、破體，4 秒內不會再中" },
 };
 const POT_KEYS = ["hp", "mp", "guard", "pure"];
 const potMaxOf = (k) => { const m = (B && B.potMax) || 3; return k === "hp" || k === "mp" ? m : Math.ceil(m / 2); };

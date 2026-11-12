@@ -1396,3 +1396,82 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 .ov .s74foot { display: flex; justify-content: center; gap: 10px; padding-top: 8px; border-top: 1px solid #3a3442; }
 .ov .s74foot button { min-width: 7em; padding: 8px 14px; }
 @media (prefers-reduced-motion: reduce) { .ov .s74k button.catch { animation: none; } }
+/* 11/13 技能欄 1～5：手機多 3 顆（沒放招的藏起來）；電腦武器組／丹藥列移到左下 */
+.btn-sk3 { right: 246px; bottom: 6px; width: 54px; height: 54px; font-size: 12px; }
+.btn-sk4 { right: 246px; bottom: 68px; width: 54px; height: 54px; font-size: 12px; }
+.btn-sk5 { right: 180px; bottom: 128px; width: 54px; height: 54px; font-size: 12px; }
+#pad .btn.empty { display: none; }
+@media (pointer: fine) { #wbar { left: max(14px, env(safe-area-inset-left)) !important; transform: none !important; bottom: 18px !important; flex-wrap: wrap; max-width: calc(50vw - 260px); } }
+/* 11/13 技能寶石面板 */
+.ov .skwin.sgwin { max-width: 1100px; width: 100%; }
+.ov .sgw2 { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; text-align: left; color: #ece4d4; }
+.ov .sgl, .ov .sgr { background: #15111b; border: 1px solid #4a3d30; border-radius: 8px; padding: 10px; min-width: 0; }
+.ov .sghint { margin: 0 0 8px; font-size: 12px; color: #b0a48e; text-align: center; } .ov .sghint .warn, .ov .sginfo .warn { color: #ff9a7a; }
+.ov .sgrow { display: grid; grid-template-columns: 44px 56px auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px; background: #1d1724; border: 1px solid #33293e; border-radius: 8px; }
+.ov .sgrow.focus { border-color: #e8c46a; }
+.ov .sgrow.lock { opacity: 0.55; grid-template-columns: 44px 56px minmax(0, 1fr); }
+.ov .sgkey { justify-self: center; font: 700 12px "Noto Sans TC", sans-serif; color: #ffe9a0; background: #2a2131; border: 1px solid #5a4a38; border-radius: 4px; padding: 3px 6px; white-space: nowrap; }
+.ov .sgcir { position: relative; width: 52px; height: 52px; border-radius: 50%; border: 2px solid #e8c46a; background: radial-gradient(circle at 40% 35%, #3a2a28, #17111a); display: flex; align-items: center; justify-content: center; padding: 0; color: #e8c46a; font-size: 22px; cursor: pointer; }
+.ov .sgcir.empty { border-style: dashed; border-color: #6a5a48; color: #8a7a68; }
+.ov .sgcir.lock { border-color: #3a3442; color: #6a6070; font-size: 16px; cursor: default; }
+.ov .sgcir.target { box-shadow: 0 0 0 3px rgba(255, 216, 74, 0.5); animation: s74blink 0.8s infinite; }
+.ov .sgcir .sgci, .ov .sgcir .tico { width: 40px; height: 40px; border-radius: 50%; }
+.ov .sgtxt { font-size: 13px; color: #ffe9a0; }
+.ov .sglv { position: absolute; right: -3px; bottom: -3px; font-style: normal; font-size: 10px; font-weight: 700; background: #8a2a2a; color: #fff; border: 1px solid #ffe9a0; border-radius: 4px; padding: 0 3px; }
+.ov .sgsock .rchain { margin: 0; flex-wrap: nowrap; }
+.ov .sgsock .rcell { width: 40px; height: 40px; border-radius: 50%; padding: 0; font-size: 12px; }
+.ov .sgsock .rcell small { font-size: 8px; } .ov .sgsock .rcell b { display: none; }
+.ov .sgsock .rlink { width: 4px; }
+.ov .sginfo { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12px; }
+.ov .sginfo > b { font-size: 14px; color: #ff8a6a; } .ov .sginfo > b small { color: #ece4d4; font-size: 11px; }
+.ov .sginfo small { color: #b0a48e; }
+.ov .sgsec { text-align: center; color: #b0a48e; font-size: 12px; margin: 10px 0 6px; letter-spacing: 0.3em; }
+.ov .sgh { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; } .ov .sgh b { font: 700 16px "Noto Serif TC", serif; letter-spacing: 0.3em; color: #ffe9a0; } .ov .sgh small { color: #b0a48e; }
+.ov .sgtabs, .ov .sgsort { display: flex; gap: 4px; margin-bottom: 6px; align-items: center; font-size: 12px; }
+.ov .sgtabs button { flex: 1; } .ov .sgsort span { color: #b0a48e; margin-right: 4px; }
+.ov .sgr button:not(.sgc) { background: #241d2e; border: 1px solid #5a4a38; color: #ece4d4; border-radius: 5px; padding: 4px 8px; font: inherit; cursor: pointer; }
+.ov .sgr button.on { border-color: #ffd84a; color: #ffd84a; background: #3a2f1a; }
+.ov .sggrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.ov .sgc { position: relative; aspect-ratio: 1; border-radius: 6px; border: 1px solid #33293e; background: #1b1622; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 0; }
+.ov .sgc.blank { cursor: default; }
+.ov .sgc.act { border-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.ov .sgc.act .sgpi, .ov .sgc.act .tico { width: 74%; height: 74%; border-radius: 50%; box-shadow: 0 0 0 2px var(--c); }
+.ov .sgc.sup .sgpi { width: 74%; height: 74%; }
+.ov .sgc.on { box-shadow: 0 0 0 2px #ffd84a, 0 0 10px rgba(255, 216, 74, 0.6); }
+.ov .sgc.used { opacity: 0.6; }
+.ov .sgc .sglv { right: 1px; bottom: 1px; }
+.ov .sgcnt { position: absolute; left: 2px; bottom: 1px; font-style: normal; font-size: 9px; color: #ece4d4; }
+.ov .sgat { position: absolute; left: 1px; top: 1px; font-style: normal; font-size: 9px; background: #6a4a1a; color: #ffe9a0; border-radius: 3px; padding: 0 3px; }
+.ov .sgdesc { margin-top: 8px; padding: 8px; border: 1px solid color-mix(in srgb, var(--c, #5a4a38) 50%, transparent); border-radius: 6px; background: #1b1622; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.ov .sgdesc b { color: var(--c, #ece4d4); font-size: 14px; } .ov .sgdesc p { margin: 2px 0; color: #d8cfbf; } .ov .sgdesc small { color: #b0a48e; }
+.ov .sglegend { display: flex; gap: 10px; justify-content: center; font-size: 11px; margin-top: 6px; }
+@media (max-width: 760px), (orientation: portrait) { .ov .sgw2 { grid-template-columns: 1fr; } .ov .sgrow { grid-template-columns: 34px 48px minmax(0, 1fr); } .ov .sgrow .sgsock { grid-column: 1 / -1; } .ov .sgcir { width: 46px; height: 46px; } }
+/* 11/13 更新內容視窗：右上 ✕、版本＋日期 */
+#updCard .ubox { width: min(92vw, 560px); padding: 0 0 16px; border-radius: 4px; border: 1px solid #8a6a3a; background: #17131b; box-shadow: 0 10px 40px rgba(0,0,0,0.6), inset 0 0 0 4px rgba(232,196,106,0.06); display: flex; flex-direction: column; }
+#updCard .uhead { position: relative; justify-content: center; margin: 0 18px 8px; padding: 14px 0 10px; border-bottom: 1px solid #4a3d30; }
+#updCard .uhead b { font: 700 17px "Noto Serif TC", serif; letter-spacing: 0.35em; color: #f0e2c4; }
+#updCard .ux { position: absolute; right: -6px; top: 8px; width: 34px; height: 34px; border: 1px solid #8a6a3a; background: #241d2e; color: #ece4d4; font-size: 16px; cursor: pointer; border-radius: 3px; }
+#updCard .ulist { padding: 0 20px; overflow-y: auto; max-height: 60vh; }
+#updCard .uver { font: 700 18px "Noto Serif TC", serif; color: #e8c46a; margin-top: 10px; } #updCard .uver small { margin-left: 10px; font: 12px "Noto Sans TC", sans-serif; color: #b0a48e; }
+#updCard ul { list-style: none; margin: 6px 0 0; } #updCard li { position: relative; padding-left: 16px; color: #ece4d4; } #updCard li::before { content: "●"; position: absolute; left: 0; color: #e8c46a; font-size: 9px; top: 6px; }
+#updCard #updOk { align-self: center; margin-top: 14px; min-width: 140px; padding: 10px 18px; font-size: 15px; letter-spacing: 0.3em; }
+/* 11/13 天賦樹提示框、確認框、搜尋數量 */
+.ov .trtip { position: absolute; z-index: 8; pointer-events: none; width: max-content; max-width: 300px; background: #120f17; border: 1px solid #8a6a3a; border-radius: 6px; padding: 8px 10px; color: #ece4d4; font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,0.6); }
+.ov .trtip[hidden] { display: none; }
+.ov .trtn { font-weight: 700; font-size: 15px; display: flex; gap: 8px; align-items: baseline; } .ov .trtn small { color: #b0a48e; font-weight: normal; font-size: 11px; }
+.ov .trtl { display: flex; flex-direction: column; gap: 2px; margin: 6px 0; border-top: 1px solid #3a3040; padding-top: 6px; }
+.ov .trts { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #3a3040; padding-top: 6px; } .ov .trts .ok { color: #7dff8a; } .ov .trts .go { color: #ffd84a; } .ov .trts .bad { color: #ff8a7a; } .ov .trts small { color: #b0a48e; }
+.ov .trqn { position: absolute; left: 236px; z-index: 4; font-size: 12px; color: #ffe9a0; padding: 6px 8px; pointer-events: none; }
+.ov .trconf { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(0,0,0,0.55); }
+.ov .trcbox { width: min(90%, 380px); background: #17131b; border: 1px solid #8a6a3a; border-radius: 6px; padding: 14px 18px; color: #ece4d4; text-align: center; }
+.ov .trcbox h3 { margin: 0 0 8px; font: 700 16px "Noto Serif TC", serif; color: #f0e2c4; } .ov .trcbox p { font-size: 13px; } .ov .trcbox b { color: #ffd84a; }
+.ov .trcact { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+/* 11/13 版面微調 */
+.ov .col.cw:has(.sgwin) { max-width: 1180px; width: 96vw; }
+.ov .sgrow { padding: 5px 8px; margin-bottom: 5px; }
+.ov .sginfo { font-size: 11px; line-height: 1.35; } .ov .sginfo .sgstat { font-size: 11px; } .ov .sgstat .tick { display: none; }
+.ov .sgsock .rcell { width: 36px; height: 36px; }
+.ov .trhelp { top: auto; bottom: 10px; left: 64px; max-width: 280px; }
+#updCard #updOk { width: auto; flex: none; }
+#updCard .ux { right: 0; }
+@media (pointer: fine) { #wbar { max-width: calc(50vw - 340px); } }

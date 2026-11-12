@@ -279,6 +279,11 @@ const mpLvMul = () => lerpTbl(MP_LV, ((save.w && save.w.lv) || 1));
 const ATK_MP_K = 14, MELEE_MP = 0.7, MELEE_HEAL = 0.003, MELEE_HEAL_CD = 0.1, GRP_MOB = 0.5; // 企劃 61 C：近戰招耗氣 ×0.7、打中回 0.3% 生命（王 0.1%）；投射多道打同一隻一般怪第 2 道起 ×0.5（企劃寫 0.7，B 的 bot 量完再降）
 const meleeMpMul = (sl) => (typeof slotTags === "function" && save.w && slotTags(sl).includes("m") ? MELEE_MP : 1);
 // 企劃 69 A：E 類招式的冷卻（秒）和真氣（原本 Q 真氣的倍數）
+// 11/13 技能欄：左鍵＋1～5 共 6 格都能放任何一招（q＝1、e＝2，存檔相容；s3～s5 是新格）
+const SLOTS6 = ["a", "q", "e", "s3", "s4", "s5"], SLOT_KEY = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5" };
+const SLOT_N = { a: "左鍵", q: "1", e: "2", s3: "3", s4: "4", s5: "5", r: "空白", o: "自動" }, SLOT_IK = { a: "j", q: "sk1", e: "sk2", s3: "sk3", s4: "sk4", s5: "sk5" };
+const SLOT_LV = { e: 5, s3: 10, s4: 25, s5: 45 };
+const slotUnlocked = (sl) => !save.w || (save.w.lv || 1) >= (SLOT_LV[sl] || 1);
 const E_BUFF = new Set(["titan", "domain", "curse", "tslow", "gbell", "roar", "wwall", "stealth"]);
 function eCost(sk) {
   const wt = curWeapon(); sk = sk || (typeof slotSkill === "function" && save.w ? slotSkill("e") : "base");
@@ -314,14 +319,16 @@ function cdFull(k) { // 這一招放完要等幾秒
 function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，冷卻、真氣、名字看那招（cls＝招式原本的類）
   const wt = curWeapon(), ws = WSKILLS[wt], u = curUq(), CK = { a: "attack", q: "spin", e: "ult" };
   WSKILL = { roll: { cd: 2, mp: 0 }, potion: { cd: 1.5, mp: 0 } };
-  for (const sl of ["a", "q", "e"]) {
-    const pk = typeof slotPick === "function" && save.w ? slotPick(wt, sl) : { c: sl, k: sl === "e" ? "base" : "" }, b = ws[CK[pk.c]];
-    WSKILL[CK[sl]] = { n: b[0], cd: b[1], mp: pk.c === "e" ? 0 : b[2], cls: pk.c, k: pk.k };
+  for (const sl of SLOTS6) {
+    const pk = typeof slotPick === "function" && save.w ? slotPick(wt, sl) : { c: sl.length === 1 ? sl : null, k: sl === "e" ? "base" : "" };
+    if (!pk.c || !slotUnlocked(sl)) { WSKILL[SLOT_KEY[sl]] = { n: "", cd: 0, mp: 0, cls: null, k: "", empty: true }; continue; }
+    const b = ws[CK[pk.c]];
+    WSKILL[SLOT_KEY[sl]] = { n: b[0], cd: b[1], mp: pk.c === "e" ? 0 : b[2], cls: pk.c, k: pk.k };
   }
-  const SLK = { attack: "a", spin: "q", ult: "e", roll: "r" }; // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
+  const SLK = { attack: "a", spin: "q", ult: "e", roll: "r", s3: "s3", s4: "s4", s5: "s5" }; // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
   const T = typeof SK_CD !== "undefined" && SK_CD[wt], qcd = T ? T.q.base : ws.spin[1]; // 企劃 72 A：每招冷卻照強度（SK_CD 表）
-  for (const k of ["attack", "spin", "ult", "roll"]) {
-    const S = WSKILL[k], sl = SLK[k], hl = gemLv("haste", sl), cdm = Math.max(0.4, 1 - 0.07 * hl), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
+  for (const k of ["attack", "spin", "ult", "roll", "s3", "s4", "s5"]) {
+    const S = WSKILL[k], sl = SLK[k]; if (S.empty) continue; const _x = 0, hl = gemLv("haste", sl), cdm = Math.max(0.4, 1 - 0.07 * hl), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
     const tk = S.k || "base", tcd = k !== "roll" && T && T[S.cls] ? T[S.cls][tk] : undefined;
     if (S.cls === "e" && (S.k === "origin" || S.k === "uq")) { const [ecd, emx] = eCost(S.k); S.cd = ecd; S.cdr = hl ? 1 / cdm - 1 : 0; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 起源覺醒、傳說 E：照舊
     if (tcd !== undefined) S.cd = tcd;
@@ -334,10 +341,10 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
     if (S.cls === "a") { S.mpS = mm > 1 ? ATK_MP_K * (mm - 1) * mpLvMul() * meleeMpMul(sl) : 0; S.mp = 0; } // 企劃 61：普攻串寶石改「每秒」耗氣
     else if (S.mp) S.mp = Math.max(1, Math.round(S.mp * mpLvMul()));
   }
-  CHAIN_DMS = typeof chainDmMul === "function" && save.w ? { a: chainDmMul("a"), q: chainDmMul("q"), e: chainDmMul("e"), r: chainDmMul("r"), o: chainDmMul("o") } : {}; // 企劃 61 §A-2
+  CHAIN_DMS = typeof chainDmMul === "function" && save.w ? Object.fromEntries(SLOTS6.concat(["r", "o"]).map((x) => [x, chainDmMul(x)])) : {}; // 企劃 61 §A-2
   if (typeof triOf === "function" && save.w) { // 名字、各招自己的冷卻修正
-    for (const sl of ["a", "q", "e"]) {
-      const S = WSKILL[CK[sl]], c = S.cls, k = S.k;
+    for (const sl of SLOTS6) {
+      const S = WSKILL[SLOT_KEY[sl]], c = S.cls, k = S.k; if (S.empty) continue;
       S.n = pickName(wt, c, k);
       if (!T && c === "a") { if (k === "snipe") S.cd *= 2; if (k === "frost") S.cd *= 1.54; if (k === "quake") S.cd *= 1.67; if (k === "break") S.cd *= BREAK_CD; } // 企劃 08-B／68（沒有 SK_CD 表時才用；企劃 72 起冷卻都在表裡）
       if (!T && c === "q") { if (k === "rush") S.cd += 0.3; if (k === "doom") S.cd += 0.6; }
@@ -349,16 +356,17 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
   }
 }
 applyWeapon();
-const PAD_KEYS = { attack: "左鍵", spin: "Q", roll: "空白", ult: "E", potion: "H" };
+const PAD_KEYS = { attack: "左鍵", spin: "1", roll: "空白", ult: "2", s3: "3", s4: "4", s5: "5", potion: "Q" };
 const padOrig = {};
 pad.querySelectorAll(".btn").forEach((b) => { padOrig[b.dataset.act] = b.innerHTML; });
 function setPadLabels(world) {
   pad.querySelectorAll(".btn").forEach((b) => {
     if (!world) { b.innerHTML = padOrig[b.dataset.act]; return; }
     applyWeapon();
-    const k = PAD_KEYS[b.dataset.act], n = WSKILL[b.dataset.act].n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
-    const sl = { spin: "q", ult: "e", roll: "r" }[b.dataset.act], sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
-    const pi = sk && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl === "r" ? "r" : slotCls(sl), sk === "base" ? "" : sk, "pico") : ""; // 企劃 69 B：圖示看招式的類
+    const S0 = WSKILL[b.dataset.act] || {}; b.classList.toggle("empty", !!S0.empty); // 11/13：沒放招的 3～5 格藏起來
+    const k = PAD_KEYS[b.dataset.act], n = S0.n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
+    const sl = { spin: "q", ult: "e", roll: "r", s3: "s3", s4: "s4", s5: "s5" }[b.dataset.act], sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
+    const pi = sk && (sl === "r" || slotCls(sl)) && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl === "r" ? "r" : slotCls(sl), sk === "base" ? "" : sk, "pico") : ""; // 企劃 69 B：圖示看招式的類
     b.classList.toggle("hasico", !!pi);
     b.innerHTML = `${pi}<span class="plab">${n}<small>${k}</small></span>${b.dataset.act === "potion" ? '<b class="count">3</b>' : ""}${b.dataset.act !== "attack" ? '<i class="cd"></i>' : ""}`;
   });
@@ -388,7 +396,7 @@ function enterWorld() {
     makeCamps();
   }
   Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0, shield: 3, en: W0.en || 0,
-    roll: 0, rollDir: 0, cds: { attack: 0, spin: 0, ult: 0, roll: 0, potion: 0 }, regenAcc: 0, lavaT: 0, es: B.maxEs, esT: 0 });
+    roll: 0, rollDir: 0, cds: { attack: 0, spin: 0, ult: 0, s3: 0, s4: 0, s5: 0, roll: 0, potion: 0 }, regenAcc: 0, lavaT: 0, es: B.maxEs, esT: 0 });
   W0.voids = W0.voids || []; W0.orbs = W0.orbs || []; W0.barrs = []; W0.swArr = null; W0.novaP = null; W0.swRains = []; W0.infW = null; W0.emBall = null; W0.bkFx = []; W0.zaps = [];
   if (W0.keepHp) { W0.hp = Math.min(B.maxHp, W0.keepHp); W0.keepHp = 0; }
   particles = []; floaters = []; shake = 0; flashT = 0; hitstop = 0;
@@ -608,11 +616,13 @@ function pickUp(o, p) { // 撿起一件掉落物；行囊滿了撿不起來回�
   writeSave();
   return true;
 }
+const LV_CAP = 120; // 11/13 使用者：等級上限（內容到仙域 Lv.120）
 function gainExp(n) {
   const w = save.w;
+  if (w.lv >= LV_CAP) { w.exp = 0; return; }
   w.exp += n;
   floatText(W0.x + 10, W0.y - 22, `+${n} 經驗`, "#9fe8ff");
-  while (w.exp >= expNext(w.lv)) {
+  while (w.lv < LV_CAP && w.exp >= expNext(w.lv)) {
     w.exp -= expNext(w.lv); w.lv++; w.free += 4;
     B = worldStats(); W0.maxHp = B.maxHp; W0.hp = B.maxHp; W0.mp = B.maxMp;
     floatText(W0.x, W0.y - 34, `升級！Lv.${w.lv}（能力點 +4）`, "#ffe066", true);
@@ -674,8 +684,7 @@ const DRY_T = 1.5;
 // 企劃 70 B：旋風斬類（大刀 Q 原本／颶風／大迴旋／斷空）按住才一直轉；超過原本秒數後每秒扣藍＝基礎每秒×(1＋已按住秒數)×CH_MUL
 let CH_MUL = 0.75; // bot：Lv.100 大刀沒寶石滿真氣按住約 6 秒乾涸（1＝5.0 秒、0.65＝6.5 秒）
 const CH_SPIN = new Set([null, undefined, "gale", "whirl", "leap"]);
-const SLOT_KEY = { a: "attack", q: "spin", e: "ult" };
-const slotHeld = (sl) => { if (typeof inMenu !== "undefined" && inMenu) return false; if (sl === "a") return keys.has("j") || mouse.down || padHeld.has("attack"); if (sl === "q") return keys.has("k") || keys.has("x") || keys.has("q") || padHeld.has("spin"); if (sl === "e") return keys.has("e") || keys.has("u") || padHeld.has("ult"); return false; };
+const slotHeld = (sl) => { if (typeof inMenu !== "undefined" && inMenu) return false; if (sl === "a") return keys.has("j") || mouse.down || padHeld.has("attack"); return !!SLOT_IK[sl] && (keys.has(SLOT_IK[sl]) || padHeld.has(SLOT_KEY[sl])); };
 // 企劃 70 C：前搖（按下到主傷害出來中間）被打中扣到血 → 打斷、冷卻只算 1 秒、再扣這招真氣 50%
 const WU_T = { doom: 1.0, judg: 0.6, nova: 0.6, tstorm: 0.35, cold: 0.3 };
 function mpDry(p) {
@@ -1124,7 +1133,7 @@ function updateWorld(dt) {
     try { return pk.c === "a" ? atkFx() : pk.c === "q" ? doSpin() : ultFx(!manual); }
     finally { TRI_OVR = o0; if (wu) { const tok = W0.wuTok; for (let i = f0; i < W0.fires.length; i++) W0.fires[i].wu = tok; W0.wu = { tok, t: wu, max: wu, key: SLOT_KEY[sl], mp: (WSKILL[SLOT_KEY[sl]] && WSKILL[SLOT_KEY[sl]].mp) || 0, k: pk.k }; W0.wuTok = 0; } }
   };
-  const SLFX = { a: () => runSlot("a"), q: () => runSlot("q"), e: () => runSlot("e") };
+  const SLFX = Object.fromEntries(SLOTS6.concat(["o"]).map((x) => [x, () => runSlot(x)]));
   const slotCast = (sl, manual) => { // 手動出招：法壇、連發、連打
     const tl = sl === "a" || sl === "q" ? gemLv("totem", sl) : 0;
     if (tl && manual) {
@@ -1147,20 +1156,22 @@ function updateWorld(dt) {
   };
   if ((act("attack", "j", "z") || autoAtk || ((keys.has("j") || mouse.down || (padHeld.has("attack") && !inMenu)) && p.cds.attack <= 0)) && useSkill("attack")) slotCast("a", true);
   if (p.dash2T > 0) p.dash2T -= dt;
-  const chSl = p.dash2T > 0 && wt === "fist" ? ["a", "q", "e"].find((s) => { const pk = slotPick(wt, s); return pk.c === "q" && pk.k === "chain"; }) : null; // 企劃 69 B：連環衝放哪格就按哪格
-  if (chSl && p.roll <= 0 && (chSl === "a" ? act("attack", "j", "z") : chSl === "q" ? act("spin", "k", "x", "q") : act("ult", "u", "e"))) { // 連環衝：第 2、3 衝不扣真氣、不吃冷卻（企劃 68）
+  const slotPress = (sl) => (sl === "a" ? act("attack", "j") : act(SLOT_KEY[sl], SLOT_IK[sl]));
+  const chSl = p.dash2T > 0 && wt === "fist" ? SLOTS6.find((s) => { const pk = slotPick(wt, s); return pk.c === "q" && pk.k === "chain"; }) : null; // 連環衝放哪格就按哪格
+  if (chSl && p.roll <= 0 && slotPress(chSl)) { // 連環衝：第 2、3 衝不扣真氣、不吃冷卻（企劃 68）
     p.dash2N = Math.max(0, (p.dash2N || 1) - 1); p.dash2T = p.dash2N > 0 ? 1 : 0; const t2 = near(160); if (t2) p.face = angTo(p, t2);
     p.roll = 0.18; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); p.dashDmg = CHAIN_D; p.dashSl = chSl; p.dashDm = 1; sfx("dash"); netCast("q", p.face, p.x, p.y, "chain");
-  } else if (act("spin", "k", "x", "q") && useSkill("spin")) {
-    slotCast("q", true); fxCast(WPN_FX[wt]);
   }
-  const ultCd0 = p.cds.ult;
-  if (act("ult", "u", "e") && p.cds.ult <= 0 && wLv() >= E_LV) { // 企劃 69 A：冷卻好、真氣夠就放
-    W0.originCast = 0;
-    if (wt === "sword" && (() => { const pe = slotPick(wt, "e"); return pe.c === "e" && pe.k === "base"; })() && !near(150)) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc");
-    else if (useSkill("ult")) { slotCast("e", true); if (W0.originCast) eNameShow("起源覺醒"); }
+  for (const sl of ["q", "e", "s3", "s4", "s5"]) { // 11/13：1～5 格，按一下放、按住冷卻好就再放
+    if (sl === chSl) continue;
+    const k = SLOT_KEY[sl], S = WSKILL[k];
+    if (!S || S.empty || !(slotPress(sl) || (slotHeld(sl) && !(p.cds[k] > 0)))) continue;
+    if (S.cls === "e") {
+      W0.originCast = 0;
+      if (wt === "sword" && S.k === "base" && !near(150)) { if (slotPress(sl)) floatText(p.x, p.y - 20, "附近沒有目標", "#cfc4dc"); continue; }
+      if (useSkill(k)) { slotCast(sl, true); if (W0.originCast) eNameShow("起源覺醒"); else { eNameShow(S.n); netCast("e", p.face, p.x, p.y); } }
+    } else if (useSkill(k)) { slotCast(sl, true); if (S.cls === "q") fxCast(WPN_FX[wt]); }
   }
-  if (p.cds.ult > ultCd0 && !W0.originCast) { eNameShow(WSKILL.ult.n); netCast("e", p.face, p.x, p.y); } // 企劃 35 §5：拿掉附帶的天罰（全畫面落雷），改成上方小字顯示招式名
   // 觸發寶石（企劃 72 D：只能串在自動欄）：暴擊／受傷時自動放自動欄那招，不吃那招的冷卻
   if (p.trigCd > 0) p.trigCd -= dt;
   if ((p.critEv || p.hurtEv) && !inMenu && !(p.trigCd > 0) && typeof autoSlotOn === "function" && autoSlotOn()) {
@@ -1169,7 +1180,7 @@ function updateWorld(dt) {
     if (l && mpCan(p, cost)) { p.trigCd = Math.max(4 * TICK, tickUp(1 / (1 + cdrAll()))); mpPay(p, cost); cast("o", () => runSlot("o"), 0.8); }
   }
   p.critEv = 0; p.hurtEv = 0;
-  for (const sl of ["a", "q", "e"]) if (W0["rc" + sl] > 0 && (W0["rc" + sl] -= dt) <= 0) { W0["rc" + sl] = 0; cast(sl, SLFX[sl]); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
+  for (const sl of SLOTS6) if (W0["rc" + sl] > 0 && (W0["rc" + sl] -= dt) <= 0) { W0["rc" + sl] = 0; cast(sl, SLFX[sl]); floatText(p.x, p.y - 20, "連發！", "#ffb347"); }
   if (W0.rapidQ && (W0.rapidQ.t -= dt) <= 0) { const R = W0.rapidQ; cast(R.sl, SLFX[R.sl], R.dm); if (--R.n <= 0) W0.rapidQ = null; else R.t = 0.1; }
   if (W0.totems && W0.totems.length) { // 法壇：朝附近的怪自動放
     for (const T of W0.totems) {
@@ -1212,7 +1223,7 @@ function updateWorld(dt) {
   if (W0.decoy && (W0.decoy.t -= dt) <= 0) W0.decoy = null; // 殘影
   if (W0.grayT > 0) W0.grayT -= dt;
   if (W0.justAtk) { W0.justAtk = false; netCast("a", p.face, p.x, p.y, typeof triOf === "function" ? triOf(wt, "a") : null); }
-  if (B.noRoll && act("roll", " ", "l", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
+  if (B.noRoll && act("roll", " ", "shift") && !(p.nrMsg > time)) { p.nrMsg = time + 1.5; floatText(p.x, p.y - 20, "不動明王：不能閃身", "#e8c87a"); }
   // 身法取消動作：按空白鍵時，收招（揮砍減速）直接中斷；正在放衝刺類招式（御劍突、衝拳、斷空…）時先記住，衝完那一刻馬上閃身
   { // 企劃 66 C：凌波＝閃身可以存 2 次（每次都要等冷卻充好）
     const trw = typeof triOf === "function" ? triOf(wt, "r") : null;
@@ -1223,7 +1234,7 @@ function updateWorld(dt) {
       p.cds.roll = p.wCh > 0 ? 0 : Math.max(0.001, p.wT);
     } else if (p.wCh !== undefined) { delete p.wCh; delete p.wT; }
   }
-  const rollPress = !B.noRoll && act("roll", " ", "l", "shift");
+  const rollPress = !B.noRoll && act("roll", " ", "shift");
   if (rollPress && p.roll > 0 && !p.dodge) p.rollBuf = 0.3;
   if (p.rollBuf > 0) p.rollBuf -= dt;
   if (!B.noRoll && (rollPress || (p.rollBuf > 0 && p.roll <= 0)) && useSkill("roll") && ((p.rollBuf = 0), (p.swing = 0), true)) cast("r", () => {
@@ -1267,7 +1278,7 @@ function updateWorld(dt) {
   if (W0.kcPop > 0) W0.kcPop -= dt;
   if (W0.potHintT > 0) W0.potHintT -= dt;
   const autoPot = w.autoPot !== false && p.hp < p.maxHp * 0.3 && !inMenu; // 設定：低血量自動喝藥（預設開）
-  const potKey = act("potion", "h", "4");
+  const potKey = act("potion", "h");
   if (potKey && p.cds.potion > 0 && W0.potCd && !(W0.potHintT > 0)) { floatText(p.x, p.y - 16, `丹藥冷卻 ${Math.ceil(p.cds.potion)} 秒`, "#ff9a7a"); W0.potHintT = 1; }
   if ((potKey || autoPot) && w.potions > 0 && p.hp < p.maxHp && useSkill("potion")) {
     w.potions--; W0.potCd = bossHitNow() ? 6 : 0; if (W0.potCd) p.cds.potion = W0.potCd; // 打區域王：丹藥冷卻 6 秒（企劃 13：不能站著吃招靠丹藥硬撐）
@@ -2067,7 +2078,7 @@ function drawWorldHud() {
     ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.beginPath(); ctx.arc(stick.ox + dx * kk, stick.oy + dy * kk, 22, 0, Math.PI * 2); ctx.fill();
   }
   // 按鈕冷卻
-  for (const k of ["spin", "ult", "roll", "potion"]) {
+  for (const k of ["spin", "ult", "s3", "s4", "s5", "roll", "potion"]) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
     if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : cdFull(k)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);
@@ -2260,7 +2271,7 @@ hudEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () =
 // 電腦快捷鍵：I 背包、O 角色、T 傳送、R 排行、Q 換武器、M／Tab 大地圖
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") return;
-  const k = e.key.toLowerCase(), map = { i: "bag", b: "smith", l: "cards", o: "ap", c: "ap", n: "skill", y: "quest", t: "tp", m: "tp", tab: "tp", r: "rank", f: "swap" };
+  const k = e.key.toLowerCase(), map = { i: "bag", b: "smith", l: "cards", o: "ap", c: "ap", n: "skill", y: "quest", m: "tp", tab: "tp", r: "rank" };
   if (k === "tab") e.preventDefault();
   if (state !== "world" || e.repeat) return;
   if (map[k]) openHud(map[k]);

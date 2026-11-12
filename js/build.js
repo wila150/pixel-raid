@@ -44,7 +44,7 @@ const JOBS = [
   { lv: 10, n: "一轉・築基", d: "武器輔助插槽 3→4、移動 +5%、解鎖護身法術「化身霧氣」" },
   { lv: 30, n: "二轉・金丹", d: "輔助插槽 5、攻速 +8%、解鎖武器的「超技能插槽」、解鎖護身法術「血霧無敵」" },
   { lv: 70, n: "三轉・元嬰", d: "輔助插槽 6、所有招式段數 +1" },
-  { lv: 120, n: "四轉・化神", d: "段數再 +1、傷害 +15%、起源覺醒：按 E（冷卻 40 秒、花很多真氣）放出全螢幕時停的起源大招" },
+  { lv: 120, n: "四轉・化神", d: "段數再 +1、傷害 +15%、起源覺醒：放進技能欄（冷卻 40 秒、花很多真氣）放出全螢幕時停的起源大招" },
 ];
 // 舊存檔是 6 轉制，換成 4 轉制（一次性）
 const migJob = (w) => { if (w && w.job && !w.jv) { w.job = [0, 1, 2, 2, 3, 4, 4][w.job] || 4; } if (w) w.jv = 2; return w; };
@@ -245,7 +245,8 @@ function heroTick(dt, inMenu) {
   if (p.histT <= 0) { p.histT = 0.1; p.hist = p.hist || []; p.hist.push({ x: p.x, y: p.y, hp: p.hp, mp: p.mp }); if (p.hist.length > 30) p.hist.shift(); }
   originTick(dt);
   if (inMenu) return;
-  for (const k of ["1", "2", "3"]) if (pressed.has(k)) switchW(+k - 1);
+  for (const k of [1, 2, 3]) if (pressed.has("ws" + k)) switchW(k - 1);
+  if (pressed.has("wsc")) { const n = [0, 1, 2].map((d) => (save.w.wi + 1 + d) % 3).find((i) => i !== save.w.wi && wsGet(i)); if (n !== undefined) switchW(n); } // 11/13：X 輪流換武器組
   if (pressed.has("v")) heroSave();
 }
 // 出招時：浪人「下一招段數翻倍」
@@ -274,7 +275,7 @@ function wbarDraw(force) {
   const pot = save.w.potions, ap = save.w.autoPot !== false, rc = W0 && W0.recall > 0;
   const key = [0, 1, 2].map((i) => { const it = wsGet(i); return it ? it.id + it.q : "-"; }).join() + save.w.wi + cd + svKey() + pot + ap + rc;
   if (!force && key === wbarKey) return; wbarKey = key;
-  wbar.innerHTML = [0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="ws${i === save.w.wi ? " on" : ""}${it ? "" : " empty"}" data-ws="${i}" style="--c:${it ? RARITY[it.q].c : "#555"}">${it ? itemIcon(it) : ""}<small>${i + 1}</small></button>`; }).join("")
+  wbar.innerHTML = [0, 1, 2].map((i) => { const it = wsGet(i); return `<button class="ws${i === save.w.wi ? " on" : ""}${it ? "" : " empty"}" data-ws="${i}" style="--c:${it ? RARITY[it.q].c : "#555"}">${it ? itemIcon(it) : ""}<small>組${i + 1}</small></button>`; }).join("")
     + `<button class="save${cd ? " cd" : ""}" data-save="1"><b>${h.n}</b><small>${cd ? cd + "s" : TOUCH ? "" : "V"}</small></button>`
     + `<button class="qit pot${ap ? " auto" : ""}" data-it="pot" title="丹藥（長按切換自動）">${ico("mat", "pot", "qico") || "<b>丹</b>"}<small>×${pot}</small>${ap ? "<i>自</i>" : ""}</button>`
     + `<button class="qit rc${rc ? " on" : ""}" data-it="rc" title="回城符：原地不動 3 秒回青雲城">${ico("mat", "recall", "qico") || "<b>回</b>"}<small>${rc ? "…" : "城"}</small></button>`;

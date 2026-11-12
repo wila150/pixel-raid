@@ -5,7 +5,7 @@
 // 每級傷害 +2%（企劃寫 3%，§3 驗算：Lv.100 平均寶石 10 級 → +27%，打王快 21% 超過 15%，照企劃改 2%），每 5 級冷卻 −3%。
 "use strict";
 const SKG_PRICE = 40, SKG_MAX = 20, SKG_DMG = 0.02, SKG_CD = 0.03, SKG_SHARE = 0.1;
-const SL_ID = { a: "attack", q: "spin", e: "ult", r: "roll" };
+const SL_ID = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5", r: "roll" };
 const skgKey = (wt, l, k) => (l === "r" ? "r:" + (k || "base") : `${wt}:${l}:${k || "base"}`);
 const skgStore = () => save.skg || (save.skg = {});
 const skgFree = (k) => k.endsWith(":base");
@@ -17,7 +17,7 @@ const skgNeedXp = (L) => Math.round(0.4 * expNext(Math.max(1, 5 * L - 15)));
 const skgPrice = (wt, l, k) => triNeed(wt, l, k) * SKG_PRICE;
 // 這一格現在用的是哪顆技能寶石（起源、傳說專屬、被改寫的 Q 不是寶石）
 function skgOfSlot(sl, wt = curWeapon()) {
-  if (!sl || !save.w || typeof slotSkill !== "function") return null;
+  if (!sl || !save.w || typeof slotSkill !== "function") return null; if (sl !== "r" && !slotCls(sl, wt)) return null; // 空格
   const k = sl === "q" && !B ? slotPick(wt, "q").k || "base" : slotSkill(sl, wt); if (k === "origin" || k === "uq" || k === "over") return null;
   return skgKey(wt, sl === "r" ? "r" : slotCls(sl, wt), k); // 企劃 69 B：技能寶石看招式的類
 }
@@ -59,7 +59,7 @@ enterWorld = function () {
 function skgGain(n) {
   const w = save.w; if (!w || !(n > 0)) return;
   const S = skgStore(), wt = curWeapon(), cap = skgCap(), up = [];
-  for (const sl of ["a", "q", "e", "r"]) {
+  for (const sl of SLOTS6.concat(["r"])) {
     const key = skgOfSlot(sl, wt); if (!key) continue;
     const o = S[key] || (S[key] = { lv: 1, xp: 0 });
     if (o.lv >= cap) continue;
