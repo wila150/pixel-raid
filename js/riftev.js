@@ -43,7 +43,7 @@ function evPickKind(not) {
   return ks[ks.length - 1];
 }
 function evPlace(R, k) {
-  let pos = null;
+  let pos = typeof riftSpot === "function" ? riftSpot(R, R.key && R.key.mods.includes("fate") ? "room" : Math.random() < 0.5 ? "branch" : "room") : null; // 企劃 77：支線盡頭或戰鬥房正中間（有天命前綴時支線留給祭壇）
   for (let i = 0; i < 900 && !pos; i++) {
     const p = riftT2W(6 + Math.floor(Math.random() * (RIFT_IW - 12)), 5 + Math.floor(Math.random() * (RIFT_IH - 10)));
     if (!R.reach[evIdx(p.x, p.y)] || blockedCircle(p.x, p.y, 10)) continue;

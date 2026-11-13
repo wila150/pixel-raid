@@ -4,7 +4,7 @@
 // 所以碰撞、畫地形、子彈都不用改；zoneAt 在秘境裡固定回傳主題地區（畫面、怪物種類跟著換）。
 "use strict";
 
-const RIFT_IX0 = 120, RIFT_IY0 = 46, RIFT_IW = 95, RIFT_IH = 64; // x 1920–3440、y 736–1760（v6.1 再加寬 1.25 倍，企劃 16 第 10-2 節；避開沼澤傳送陣 3560）
+const RIFT_IX0 = 40, RIFT_IY0 = 3, RIFT_IW = 180, RIFT_IH = 106; // 企劃 77：放大到 180×106（x 640–3520、y 48–1744）。範圍會蓋到青雲城、傳送陣、祭壇，世界那些照座標判斷的東西在秘境裡都跳過（world.js inRiftW）
 const RIFT_LIVES = 3;
 const riftLives = (tier) => (tier <= 10 ? 3 : tier <= 15 ? 2 : 1); // 企劃 52
 const riftMobLv = (tier) => Math.max(riftLv(tier), ((save.w && save.w.lv) || 1) - 5); // 企劃 52：怪等級跟著你（最低是這層的等級）
@@ -30,54 +30,250 @@ function riftTile(z, n, v) { // 跟 buildWorld 同一套地形規則（障礙少
   if (z === "sky") return n > 0.76 && v < 0.4 ? 1 : v > 0.99 ? 2 : 0;
   return 0;
 }
-function riftBuild(R) {
-  const r = mulberry32(R.seed), z = R.theme;
-  wmap = new Uint8Array(TW * TH).fill(2);
-  const sx = r() * 500, sy = r() * 500;
-  for (let ty = 1; ty < RIFT_IH - 1; ty++) for (let tx = 1; tx < RIFT_IW - 1; tx++)
-    wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0 + tx] = riftTile(z, vnoise(tx / 6 + sx, ty / 6 + sy), r());
-  // 入口（左邊）、王（右邊）、營地（中間隨機）
-  R.ent = riftT2W(4, Math.floor(RIFT_IH / 2));
-  R.boss = riftT2W(RIFT_IW - 14, Math.floor(RIFT_IH / 2));
-  const pts = [];
-  for (let i = 0; i < 1200 && pts.length < 21; i++) {
-    const p = riftT2W(8 + Math.floor(r() * (RIFT_IW - 26)), 4 + Math.floor(r() * (RIFT_IH - 8)));
-    if (Math.hypot(p.x - R.ent.x, p.y - R.ent.y) < 150 || Math.hypot(p.x - R.boss.x, p.y - R.boss.y) < 210) continue;
-    if (pts.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 110)) continue;
-    pts.push(p);
+// ==RGEN== 企劃 77 §A：秘境＝房間＋走廊拼接（長廊 lane／環道 ring／廣場 arena）。純函式，回傳本地格子（0..IW-1, 0..IH-1）
+const RLAY = { lane: "長廊", ring: "環道", arena: "廣場" }, RLAY_KEYS = ["lane", "ring", "arena"];
+function riftGen(seed, lay, theme) {
+  for (let att = 0; att < 30; att++) { const G = riftGenTry(seed + att * 7919, lay, theme); if (G) return G; }
+  return null;
+}
+function riftGenTry(seed, lay, theme) {
+  const r = mulberry32(seed), IW = RIFT_IW, IH = RIFT_IH, M = 2, N = IW * IH;
+  const ri = (a, b) => a + Math.floor(r() * (b - a + 1)), pick = (a) => a[Math.floor(r() * a.length)];
+  const g = new Uint8Array(N).fill(2), hall = new Uint8Array(N), rm = new Int16Array(N).fill(-1);
+  // 格子切法：cols／rows 的寬高（浮點→整數邊界）
+  const bounds = (tot, ws) => { const s = ws.reduce((a, b) => a + b, 0), out = [M]; let acc = M; for (const w of ws) { acc += w / s * tot; out.push(Math.round(acc)); } return out; };
+  let colW, rowH, cells = [], boss = null, path = [], branchCells = [], extra = [], startCell = null, campN;
+  const flipX = r() < 0.5, flipY = r() < 0.5;
+  const cellKey = (c, rr) => c + "," + rr;
+  if (lay === "ring") {
+    colW = [1, 1, 1, 1]; rowH = [1, 1, 1];
+    // 起點 (0,2) → (0,1) → (0,0) → (1,0) → (2,0) → (3,0) → (3,1) → (3,2) → (2,2) → 王 (1,1–2) → 回起點；中間 (2,1) 是石山＋一條支線
+    path = [[0, 2], [0, 1], [0, 0], [1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [2, 2]];
+    boss = { c0: 1, c1: 1, r0: 1, r1: 2 };
+    branchCells = [[[2, 1], pick([[2, 0], [3, 1], [2, 2]])]];
+    campN = () => ri(2, 3);
+  } else if (lay === "arena") {
+    colW = [26, 50, 50, 50]; rowH = [1, 1];
+    const br = ri(0, 1), sr = ri(0, 1);
+    boss = { c0: 3, c1: 3, r0: br, r1: br };
+    // 起點在第 0 欄（整欄一格），另一列放支線
+    const free = []; for (let c = 1; c <= 3; c++) for (let q = 0; q < 2; q++) if (!(c === 3 && q === br)) free.push([c, q]);
+    const hp = hamPath(free, [1, sr], 5, (e) => adjBoss(e, boss), r); if (!hp) return null;
+    path = [[0, sr]].concat(hp);
+    branchCells = [[[0, 1 - sr], [1, 1 - sr]]];
+    // 多接 1–2 條捷徑（沒有死路）
+    for (let i = 0; i < hp.length; i++) for (let j = i + 2; j < hp.length; j++) if (Math.abs(hp[i][0] - hp[j][0]) + Math.abs(hp[i][1] - hp[j][1]) === 1 && r() < 0.6) extra.push([hp[i], hp[j]]);
+    campN = () => 4;
+  } else { // lane
+    colW = [1, 1, 1, 1, 1]; rowH = [1, 1, 1];
+    const br = ri(0, 1); boss = { c0: 3, c1: 4, r0: br, r1: br + 1 };
+    const free = []; for (let c = 0; c <= 4; c++) for (let q = 0; q < 3; q++) if (!(c >= 3 && q >= br && q <= br + 1)) free.push([c, q]);
+    let hp = null; for (let t = 0; t < 6 && !hp; t++) hp = hamPath(free, [0, ri(0, 2)], 9, (e) => adjBoss(e, boss), r);
+    if (!hp) return null;
+    path = hp;
+    for (const f of free) if (!hp.some((h) => h[0] === f[0] && h[1] === f[1])) { const nb = hp.filter((h) => Math.abs(h[0] - f[0]) + Math.abs(h[1] - f[1]) === 1 && h !== hp[0]); if (nb.length) branchCells.push([f, pick(nb)]); }
+    campN = () => ri(2, 3);
   }
-  // 路：從入口一路接最近的營地，最後接到王；再多接幾條讓地圖有環路
-  const left = pts.slice(); let cur = R.ent; const order = [];
-  while (left.length) { left.sort((a, b) => Math.hypot(a.x - cur.x, a.y - cur.y) - Math.hypot(b.x - cur.x, b.y - cur.y)); const nx = left.shift(); carve(cur, nx, 2); order.push(nx); cur = nx; }
-  carve(cur, R.boss, 2);
-  for (let i = 0; i < 3 && order.length > 3; i++) carve(order[Math.floor(r() * order.length)], order[Math.floor(r() * order.length)], 1);
-  carve(R.ent, R.boss, 1);
-  clearAround(R.ent.x, R.ent.y, 3);
-  for (const p of pts) clearAround(p.x, p.y, 2);
-  for (let i = -11; i <= 11; i++) for (let j = -11; j <= 11; j++) if (i * i + j * j <= 121) setT(R.boss.x + i * TS, R.boss.y + j * TS, 0); // 打王空地
-  // 外框補回石頭
-  for (let tx = 0; tx < RIFT_IW; tx++) { wmap[RIFT_IY0 * TW + RIFT_IX0 + tx] = 2; wmap[(RIFT_IY0 + RIFT_IH - 1) * TW + RIFT_IX0 + tx] = 2; }
-  for (let ty = 0; ty < RIFT_IH; ty++) { wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0] = 2; wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0 + RIFT_IW - 1] = 2; }
-  // 從入口 flood fill：走不到的營地不放怪（企劃 16 第 10 節 ③）
+  const xs = bounds(IW - 2 * M, colW), ys = bounds(IH - 2 * M, rowH), nc = colW.length, nr = rowH.length;
+  const fx = (c) => (flipX ? nc - 1 - c : c), fy = (q) => (flipY ? nr - 1 - q : q);
+  const rect = (c0, c1, r0, r1) => { const a = fx(c0), b = fx(c1), u = fy(r0), v = fy(r1); return { x0: xs[Math.min(a, b)], x1: xs[Math.max(a, b) + 1], y0: ys[Math.min(u, v)], y1: ys[Math.max(u, v) + 1] }; };
+  const rooms = [];
+  const addRoom = (kind, R, w, h, shape) => { // 在格子 R 裡放一間房（離格子邊至少 5 格 → 房間間距 ≥ 10）
+    w = Math.min(w, R.x1 - R.x0 - 10); h = Math.min(h, R.y1 - R.y0 - 10);
+    const cl = (v, a, b) => Math.max(a, Math.min(b, v)); // 放在格子中間附近（±3），走廊才不會太長
+    const x0 = cl(Math.round((R.x0 + R.x1 - w) / 2) + ri(-3, 3), R.x0 + 5, R.x1 - 5 - w), y0 = cl(Math.round((R.y0 + R.y1 - h) / 2) + ri(-3, 3), R.y0 + 5, R.y1 - 5 - h);
+    const o = { id: rooms.length, kind, x0, y0, w, h, cx: x0 + Math.floor(w / 2), cy: y0 + Math.floor(h / 2), shape, q: ri(0, 3) };
+    rooms.push(o); return o;
+  };
+  const SZ = lay === "arena" ? [30, 36] : lay === "ring" ? [22, 30] : [22, 26];
+  const fightShape = () => (lay === "arena" ? pick(["sq", "rd", "rd"]) : pick(["sq", "rd", "rd", "cross", "L"]));
+  const cellRoom = {};
+  const sc = path[0];
+  if (lay === "arena") { const R = rect(0, 0, 0, 1), half = { x0: R.x0, x1: R.x1, y0: fy(sc[1]) === 0 ? R.y0 : Math.round((R.y0 + R.y1) / 2), y1: fy(sc[1]) === 0 ? Math.round((R.y0 + R.y1) / 2) : R.y1 }; cellRoom[cellKey(...sc)] = addRoom("start", half, 16, 16, "sq"); }
+  else cellRoom[cellKey(...sc)] = addRoom("start", rect(sc[0], sc[0], sc[1], sc[1]), 16, 16, "sq");
+  for (const c of path.slice(1)) cellRoom[cellKey(...c)] = addRoom("fight", rect(c[0], c[0], c[1], c[1]), ri(SZ[0], SZ[1]), ri(SZ[0], SZ[1]), fightShape());
+  { const R = rect(boss.c0, boss.c1, boss.r0, boss.r1), d = Math.min(40, R.x1 - R.x0 - 10, R.y1 - R.y0 - 10); cellRoom.boss = addRoom("boss", R, d, d, "circ"); }
+  const nB = lay === "lane" ? Math.min(2, branchCells.length) : 1, brs = [];
+  for (const [bc, par] of branchCells.slice(0, nB)) {
+    let R = rect(bc[0], bc[0], bc[1], bc[1]);
+    if (lay === "arena") { const C = rect(0, 0, 0, 1), mid = Math.round((C.y0 + C.y1) / 2); R = { x0: C.x0, x1: C.x1, y0: fy(bc[1]) === 0 ? C.y0 : mid, y1: fy(bc[1]) === 0 ? mid : C.y1 }; }
+    const o = addRoom("side", R, 16, 16, "sq"); brs.push([o, cellRoom[cellKey(...par)]]);
+  }
+  // 畫房間
+  const inShape = (o, x, y) => {
+    const u = (x - o.x0 + 0.5) / o.w, v = (y - o.y0 + 0.5) / o.h;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return false;
+    if (o.shape === "circ") return (u - 0.5) ** 2 + (v - 0.5) ** 2 <= 0.25;
+    if (o.shape === "cross") return Math.abs(u - 0.5) <= 0.3 || Math.abs(v - 0.5) <= 0.3;
+    if (o.shape === "L") return !((o.q & 1 ? u > 0.55 : u < 0.45) && (o.q & 2 ? v > 0.55 : v < 0.45));
+    if (o.shape === "rd") { const k = 0.28, cu = Math.min(Math.max(u, k), 1 - k), cv = Math.min(Math.max(v, k), 1 - k), m = Math.min(o.w, o.h) * k; return ((u - cu) * o.w) ** 2 + ((v - cv) * o.h) ** 2 <= m * m; }
+    return true;
+  };
+  for (const o of rooms) for (let y = o.y0; y < o.y0 + o.h; y++) for (let x = o.x0; x < o.x0 + o.w; x++) if (inShape(o, x, y)) { g[y * IW + x] = 0; rm[y * IW + x] = o.id; }
+  // 走廊：Z 字，轉彎在兩間房的空隙中間；寬 6–8
+  let bad = false; const halls = [];
+  const paint = (x0, y0, x1, y1, lo, hi, A, B) => {
+    for (let y = Math.min(y0, y1) - lo; y <= Math.max(y0, y1) + hi; y++) for (let x = Math.min(x0, x1) - lo; x <= Math.max(x0, x1) + hi; x++) {
+      if (x < M || y < M || x >= IW - M || y >= IH - M) { bad = true; continue; }
+      const i = y * IW + x, k = rm[i];
+      if (k >= 0 && k !== A.id && k !== B.id) bad = true;
+      g[i] = 0; hall[i] = 1;
+    }
+  };
+  const link = (A, B) => {
+    const wd = ri(6, 8), lo = Math.floor((wd - 1) / 2), hi = wd - 1 - lo;
+    const gx = Math.max(A.x0, B.x0) - Math.min(A.x0 + A.w, B.x0 + B.w), gy = Math.max(A.y0, B.y0) - Math.min(A.y0 + A.h, B.y0 + B.h);
+    let mx, my;
+    if (gx >= gy) { // 左右相鄰
+      const [L, Rr] = A.cx < B.cx ? [A, B] : [B, A]; mx = Math.round((L.x0 + L.w + Rr.x0) / 2); my = Math.round((A.cy + B.cy) / 2);
+      paint(A.cx, A.cy, mx, A.cy, lo, hi, A, B); paint(mx, A.cy, mx, B.cy, lo, hi, A, B); paint(mx, B.cy, B.cx, B.cy, lo, hi, A, B);
+    } else {
+      const [T, Bt] = A.cy < B.cy ? [A, B] : [B, A]; my = Math.round((T.y0 + T.h + Bt.y0) / 2); mx = Math.round((A.cx + B.cx) / 2);
+      paint(A.cx, A.cy, A.cx, my, lo, hi, A, B); paint(A.cx, my, B.cx, my, lo, hi, A, B); paint(B.cx, my, B.cx, B.cy, lo, hi, A, B);
+    }
+    halls.push({ a: A.id, b: B.id, x: mx, y: my, len: Math.max(gx, gy) });
+  };
+  const chain = path.map((c) => cellRoom[cellKey(...c)]);
+  for (let i = 0; i + 1 < chain.length; i++) link(chain[i], chain[i + 1]);
+  link(chain[chain.length - 1], cellRoom.boss);
+  if (lay === "ring") link(cellRoom.boss, chain[0]);
+  for (const [a, b] of extra) link(cellRoom[cellKey(...a)], cellRoom[cellKey(...b)]);
+  const nMain = halls.length;
+  for (const [o, par] of brs) link(par, o);
+  if (bad) return null;
+  // 營地：房間裡，離房間邊 ≥4、離中心 ≥5（中心留給事件）、彼此 ≥7
+  const camps = [];
+  for (const o of rooms) {
+    if (o.kind !== "fight") continue;
+    o.camps = []; const n = campN();
+    for (let t = 0; t < 300 && o.camps.length < n; t++) {
+      const x = ri(o.x0 + 4, o.x0 + o.w - 5), y = ri(o.y0 + 4, o.y0 + o.h - 5);
+      if (!inShape(o, x - 3, y) || !inShape(o, x + 3, y) || !inShape(o, x, y - 3) || !inShape(o, x, y + 3)) continue;
+      if (Math.hypot(x - o.cx, y - o.cy) < 5 || o.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 7)) continue;
+      o.camps.push({ x, y }); camps.push({ x, y, room: o.id });
+    }
+  }
+  // 障礙：只在戰鬥房裡、離房間邊和走廊 4 格外、離中心和營地 3 格外
+  const sx = r() * 500, sy = r() * 500;
+  const okObs = (x, y, id) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const i = (y + dy) * IW + x + dx; if (rm[i] !== id || hall[i]) return false; } return true; };
+  for (const o of rooms) {
+    if (o.kind !== "fight") continue;
+    for (let y = o.y0; y < o.y0 + o.h; y++) for (let x = o.x0; x < o.x0 + o.w; x++) {
+      const v = r(); if (rm[y * IW + x] !== o.id || !okObs(x, y, o.id)) continue;
+      if (Math.hypot(x - o.cx, y - o.cy) < 4 || o.camps.some((c) => Math.hypot(c.x - x, c.y - y) < 3)) continue;
+      g[y * IW + x] = riftTile(theme, vnoise(x / 6 + sx, y / 6 + sy), v);
+    }
+  }
+  // 可達：從起點 flood fill；哪一間房有走不到的（>12% 地板），清掉那間的障礙
+  const walk = (t) => t === 0 || t === 3, start = rooms[0];
+  const flood = () => { const re = new Uint8Array(N), q = [start.cy * IW + start.cx]; re[q[0]] = 1; while (q.length) { const i = q.pop(); for (const n of [i - 1, i + 1, i - IW, i + IW]) if (!re[n] && walk(g[n])) { re[n] = 1; q.push(n); } } return re; };
+  let re = flood();
+  for (let pass = 0; pass < 2; pass++) {
+    let fixed = false;
+    for (const o of rooms) {
+      let tot = 0, ok = 0;
+      for (let y = o.y0; y < o.y0 + o.h; y++) for (let x = o.x0; x < o.x0 + o.w; x++) { const i = y * IW + x; if (rm[i] !== o.id) continue; tot++; if (re[i]) ok++; }
+      const need = [{ x: o.cx, y: o.cy }].concat(o.camps || []);
+      if (ok < tot * 0.88 || need.some((c) => !re[c.y * IW + c.x])) { fixed = true; for (let y = o.y0; y < o.y0 + o.h; y++) for (let x = o.x0; x < o.x0 + o.w; x++) { const i = y * IW + x; if (rm[i] === o.id && !walk(g[i])) g[i] = 0; } }
+    }
+    if (!fixed) break; re = flood();
+  }
+  for (const o of rooms) if (!re[o.cy * IW + o.cx]) return null;
+  return { g, rm, hall, rooms, camps, halls, nMain, lay, flip: [flipX, flipY], start: rooms[0], boss: cellRoom.boss, side: brs.map((b) => b[0]) };
+}
+function adjBoss(c, b) { return (c[0] >= b.c0 && c[0] <= b.c1 && (c[1] === b.r0 - 1 || c[1] === b.r1 + 1)) || (c[1] >= b.r0 && c[1] <= b.r1 && (c[0] === b.c0 - 1 || c[0] === b.c1 + 1)); }
+function hamPath(cells, start, len, endOk, r) { // 從 start 走過 len 格（相鄰、不重複），最後一格要 endOk
+  const has = (c) => cells.some((d) => d[0] === c[0] && d[1] === c[1]);
+  if (!has(start)) return null;
+  const out = [start], used = new Set([start + ""]); let steps = 0;
+  const dfs = () => {
+    if (++steps > 20000) return false;
+    if (out.length === len) return endOk(out[out.length - 1]);
+    const c = out[out.length - 1], nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map((d) => [c[0] + d[0], c[1] + d[1]]).filter((n) => has(n) && !used.has(n + ""));
+    for (let i = nb.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [nb[i], nb[j]] = [nb[j], nb[i]]; }
+    for (const n of nb) { out.push(n); used.add(n + ""); if (dfs()) return true; out.pop(); used.delete(n + ""); }
+    return false;
+  };
+  return dfs() ? out.slice() : null;
+}
+// ==/RGEN==
+function riftBuild(R) {
+  if (!RLAY[R.lay]) R.lay = "lane";
+  let G = riftGen(R.seed, R.lay, R.theme);
+  if (!G) { R.lay = "lane"; G = riftGen(R.seed + 1, "lane", R.theme); }
+  wmap = new Uint8Array(TW * TH).fill(2);
+  for (let ty = 0; ty < RIFT_IH; ty++) for (let tx = 0; tx < RIFT_IW; tx++) wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0 + tx] = G.g[ty * RIFT_IW + tx];
+  const T = (x, y) => riftT2W(x, y);
+  R.rooms = G.rooms.map((o) => Object.assign(T(o.cx, o.cy), { id: o.id, kind: o.kind, x0: (RIFT_IX0 + o.x0) * TS, y0: (RIFT_IY0 + o.y0) * TS, x1: (RIFT_IX0 + o.x0 + o.w) * TS, y1: (RIFT_IY0 + o.y0 + o.h) * TS, camps: (o.camps || []).map((c) => T(c.x, c.y)) }));
+  R.ent = T(G.start.cx, G.start.cy); R.boss = T(G.boss.cx, G.boss.cy);
+  R.pts = G.camps.map((c) => T(c.x, c.y));
+  R.halls = G.halls.slice(0, G.nMain).map((h) => T(h.x, h.y)); // 主線走廊中間（落單的遠程怪）
+  R.branches = G.side.map((o) => Object.assign(T(o.cx, o.cy), { used: false }));
+  R.chests = []; R.chestsDone = false;
+  // 從入口 flood fill（R.reach 給其他檔案用）
   const reach = new Uint8Array(TW * TH), q = [Math.floor(R.ent.y / TS) * TW + Math.floor(R.ent.x / TS)]; reach[q[0]] = 1;
   while (q.length) { const i = q.pop(); for (const n of [i - 1, i + 1, i - TW, i + TW]) if (!reach[n] && (wmap[n] === 0 || wmap[n] === 3)) { reach[n] = 1; q.push(n); } }
   R.reach = reach;
-  R.pts = pts.filter((p) => reach[Math.floor(p.y / TS) * TW + Math.floor(p.x / TS)]);
-  // 小地圖快取
+  R.pts = R.pts.filter((p) => reach[Math.floor(p.y / TS) * TW + Math.floor(p.x / TS)]);
+  // 小地圖快取（廣場要走過才亮：R.fogC）
   const mc = document.createElement("canvas"); mc.width = RIFT_IW; mc.height = RIFT_IH;
-  const g = mc.getContext("2d"), ground = ZONES[z].g[0];
+  const g = mc.getContext("2d"), ground = ZONES[R.theme].g[0];
   for (let ty = 0; ty < RIFT_IH; ty++) for (let tx = 0; tx < RIFT_IW; tx++) {
     const t = wmap[(RIFT_IY0 + ty) * TW + RIFT_IX0 + tx];
-    g.fillStyle = t === 0 ? (z === "snow" ? "#8a98ac" : ground) : t === 3 ? "#a8401a" : t === 4 ? "#2a4a7a" : "#141414";
+    g.fillStyle = t === 0 ? (R.theme === "snow" ? "#8a98ac" : ground) : t === 3 ? "#a8401a" : t === 4 ? "#2a4a7a" : t === 1 ? "#24361e" : "#141414";
     g.fillRect(tx, ty, 1, 1);
   }
   R.mini = mc;
+  if (R.lay === "arena") { R.fogC = document.createElement("canvas"); R.fogC.width = RIFT_IW; R.fogC.height = RIFT_IH; const f = R.fogC.getContext("2d"); f.fillStyle = "#0a0a0a"; f.fillRect(0, 0, RIFT_IW, RIFT_IH); }
+}
+function riftFogTick(R) { // 廣場：走過的地方在小地圖上打開
+  if (!R.fogC) return;
+  const f = R.fogC.getContext("2d"), tx = W0.x / TS - RIFT_IX0, ty = W0.y / TS - RIFT_IY0;
+  f.save(); f.beginPath(); f.arc(tx, ty, 16, 0, Math.PI * 2); f.clip(); f.drawImage(R.mini, 0, 0); f.restore();
+}
+// 事件、天命祭壇、寶箱的位置：支線盡頭（pref "branch"）或戰鬥房正中間（房間中心沒有營地）
+function riftSpot(R, pref) {
+  if (!R || !R.rooms) return null;
+  R.spotUsed = R.spotUsed || [];
+  if (pref === "branch") { const b = R.branches.find((o) => !o.used); if (b) { b.used = true; R.spotUsed.push(b); return { x: b.x, y: b.y }; } }
+  const fr = R.rooms.filter((o) => o.kind === "fight" && !R.spotUsed.includes(o));
+  const far = fr.filter((o) => dist(o, R.ent) > 260 && dist(o, R.boss) > 300), list = far.length ? far : fr;
+  const o = list[Math.floor(Math.random() * list.length)];
+  if (!o) return null;
+  R.spotUsed.push(o); return { x: o.x, y: o.y };
+}
+// 寶箱：沒有被事件、天命祭壇用掉的支線盡頭，各放一個（進場後第一幀放，事件和祭壇已經選好位置了）
+function riftChests(R) {
+  R.chestsDone = true;
+  for (const b of R.branches) if (!b.used) { b.used = true; R.chests.push({ x: b.x, y: b.y, open: false }); }
+}
+function riftChestOpen(R, c) {
+  c.open = true;
+  const lv = R.lv, il = Math.floor(lv / 3) + 2, Q = keyQuant(R.key), Rr = keyRar(R.key);
+  const roll = () => { let it = rollItem(1, il); if (Math.random() < Rr / 100) { const b = rollItem(1, il); if (b.q > it.q) it = b; } return it; };
+  const n = 1 + Math.floor(Q / 100) + (Math.random() < (Q % 100) / 100 ? 1 : 0); // 保底 1 件，物品數量加成多掉
+  for (let i = 0; i < n; i++) wDropItem(roll(), c);
+  if (Math.random() < 0.35) wDrop({ kind: "cur", c: randCur() }, c);
+  wDrop({ kind: "stone", v: 30 + lv * 2 }, c);
+  sfx("good"); burst(c.x, c.y, "#ffd84a", 30, 110, 0.6); floatText(c.x, c.y - 24, "寶箱", "#ffe066", true);
+}
+function riftChestDraw(c) {
+  ctx.save(); ctx.translate(Math.round(c.x), Math.round(c.y));
+  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0, 6, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#6a4020"; ctx.fillRect(-8, -4, 16, 10); ctx.fillStyle = "#3a2010"; ctx.fillRect(-8, 1, 16, 1);
+  if (c.open) { ctx.fillStyle = "#4a2a14"; ctx.fillRect(-8, -9, 16, 4); }
+  else { ctx.fillStyle = "#8a5428"; ctx.fillRect(-8, -8, 16, 5); ctx.fillStyle = "#ffd84a"; ctx.fillRect(-2, -4, 4, 4);
+    ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4); ctx.fillStyle = "#ffd84a"; ctx.fillRect(-1, -40, 2, 34); }
+  ctx.restore();
 }
 function riftSpawn(R) {
-  const mods = R.key.mods, sizeMul = mods.includes("swarm") ? 1.4 : 1;
+  const mods = R.key.mods, sizeMul = (mods.includes("swarm") ? 1.4 : 1) * (R.lay === "arena" ? 1.5 : 1); // 企劃 77：廣場每營怪 +50%
   R.total = 0;
-  for (const p of R.pts) {
-    const camp = { x: p.x, y: p.y, z: R.theme, lv: R.lv, size: Math.round((4 + Math.floor(Math.random() * 3)) * sizeMul), respawn: [], rift: true };
+  const list = R.pts.map((p) => ({ x: p.x, y: p.y, size: Math.round((4 + Math.floor(Math.random() * 3)) * sizeMul) }));
+  { const rng = ZONES[R.theme].mobs.filter((t) => WMOBS[t] && WMOBS[t].ai === "ranged"); // 走廊偶爾 2–3 隻落單的遠程怪
+    if (rng.length) for (const h of R.halls || []) if (Math.random() < 0.3 && dist(h, R.ent) > 200 && dist(h, R.boss) > 250) list.push({ x: h.x, y: h.y, size: 2 + Math.floor(Math.random() * 2), only: rng }); }
+  for (const p of list) {
+    const camp = { x: p.x, y: p.y, z: R.theme, lv: R.lv, size: p.size, respawn: [], rift: true, only: p.only };
     W0.camps.push(camp);
     for (let i = 0; i < camp.size; i++) {
       spawnWMob(camp);
@@ -109,7 +305,8 @@ function riftEnter(id) {
   const key = save.keys.find((k) => k.id === id);
   if (!key) return;
   save.keys = save.keys.filter((k) => k !== key); // 鑰匙進門就用掉
-  const R = RIFT = { key, tier: key.tier, lv: riftMobLv(key.tier), theme: riftTheme(key.tier), lives: riftLives(key.tier), pow: 0, t: 0, seed: (Math.random() * 1e9) | 0,
+  if (!RLAY[key.lay]) key.lay = RLAY_KEYS[Math.floor(Math.random() * RLAY_KEYS.length)]; // 企劃 77：舊鑰匙沒有地形，進場時隨機一種
+  const R = RIFT = { key, lay: key.lay, tier: key.tier, lv: riftMobLv(key.tier), theme: riftTheme(key.tier), lives: riftLives(key.tier), pow: 0, t: 0, seed: (Math.random() * 1e9) | 0,
     ret: { x: W0.x, y: W0.y }, armed: false, bossOn: false, bossDown: false, saveT: 10,
     saved: { wmap, mobs: W0.mobs, camps: W0.camps, drops: W0.drops, pools: W0.pools || [], grave: W0.grave } };
   W0.mobs = []; W0.camps = []; W0.drops = []; W0.pools = []; W0.grave = null; riftClearFx();
@@ -226,6 +423,9 @@ updateWorld = function (dt) {
   _updateWorldR.apply(this, arguments);
   if (!RIFT || state !== "world") return;
   R.t += dt;
+  if (!R.chestsDone) riftChests(R);
+  if ((R.fogT = (R.fogT || 0) - dt) <= 0) { R.fogT = 0.25; riftFogTick(R); }
+  for (const c of R.chests) if (!c.open && dist(p, c) < 18) riftChestOpen(R, c);
   if ((R.saveT -= dt) <= 0) { R.saveT = 10; save.w.x = Math.round(R.ret.x); save.w.y = Math.round(R.ret.y); writeSave(); }
   // 王門
   if (R.pow >= 100 && !R.bossOn && !R.bossDown && dist(p, R.boss) < 22) riftSpawnBoss();
@@ -289,6 +489,7 @@ drawCamps = function () {
   if (!RIFT) return;
   const R = RIFT;
   riftPortal(R.ent.x, R.ent.y, "140,220,255", "入口（撤離）");
+  for (const c of R.chests || []) if (Math.abs(c.x - cam.x) < W && Math.abs(c.y - cam.y) < H) riftChestDraw(c);
   if (R.bossDown) riftPortal(R.boss.x, R.boss.y, "255,220,120", "出口（回營地）");
   else if (R.pow >= 100 && !R.bossOn) riftPortal(R.boss.x, R.boss.y, "220,120,255", "王門");
 };
@@ -321,11 +522,12 @@ drawWorldHud = function () {
   // 小地圖
   const mw = Math.min(104, W * 0.26), mh = mw * RIFT_IH / RIFT_IW, mx0 = W - mw - 12 - SAFE.r, my0 = 58 + SAFE.t;
   ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(mx0 - 2, my0 - 2, mw + 4, Math.max(mh, mw * TH / TW) + 20);
-  ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 0.9; ctx.drawImage(R.mini, mx0, my0, mw, mh); ctx.globalAlpha = 1;
+  ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 0.9; ctx.drawImage(R.fogC || R.mini, mx0, my0, mw, mh); ctx.globalAlpha = 1;
   const sc = mw / (RIFT_IW * TS), mp = (o) => [mx0 + (o.x - RIFT_IX0 * TS) * sc, my0 + (o.y - RIFT_IY0 * TS) * sc];
   let [a, b] = mp(R.ent); ctx.fillStyle = "#8cdcff"; ctx.fillRect(a - 2, b - 2, 4, 4);
   [a, b] = mp(R.boss); if (R.bossDown) { ctx.fillStyle = "#ffdc78"; ctx.fillRect(a - 2.5, b - 2.5, 5, 5); } else if (R.pow >= 100) { ctx.fillStyle = `rgba(220,120,255,${0.6 + 0.4 * Math.sin(time * 6)})`; ctx.fillRect(a - 3, b - 3, 6, 6); }
   for (const m of W0.mobs) if (!m.dead && (m.elite || m.boss)) { [a, b] = mp(m); ctx.fillStyle = m.boss ? "#ff2a2a" : "#ff6b4a"; ctx.fillRect(a - 1.2, b - 1.2, 2.5, 2.5); }
+  for (const c of R.chests || []) if (!c.open) { [a, b] = mp(c); ctx.fillStyle = "#3a2010"; ctx.fillRect(a - 2.5, b - 2, 5, 4); ctx.fillStyle = "#ffd84a"; ctx.fillRect(a - 2, b - 1.5, 4, 1.5); } // 支線寶箱一開始就標出來
   if (W0.grave) { [a, b] = mp(W0.grave); ctx.fillStyle = "#9fe8ff"; ctx.fillRect(a - 1.5, b - 1.5, 3, 3); }
   [a, b] = mp(W0); ctx.fillStyle = "#fff"; ctx.fillRect(a - 1.5, b - 1.5, 3, 3);
   miniRect = null; // 秘境裡點小地圖不開星盤

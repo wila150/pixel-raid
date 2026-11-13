@@ -63,7 +63,7 @@ function fateCount(tier, key) { // 企劃 51 §8：只有鑰匙有「天命」�
 }
 function fatePlace(R) {
   const all = () => (R.evs || []).concat(R.fate.alt);
-  let pos = null;
+  let pos = typeof riftSpot === "function" ? riftSpot(R, "branch") : null; // 企劃 77：先放支線盡頭，沒有了放戰鬥房正中間
   for (let i = 0; i < 900 && !pos; i++) {
     const p = riftT2W(6 + Math.floor(Math.random() * (RIFT_IW - 12)), 5 + Math.floor(Math.random() * (RIFT_IH - 10)));
     if (!R.reach[evIdx(p.x, p.y)] || blockedCircle(p.x, p.y, 10)) continue;

@@ -307,6 +307,7 @@ function drawWBZones() {
 }
 // 祭壇（地圖上每區一座，冷卻中變灰）
 function drawAltars() {
+  if (typeof RIFT !== "undefined" && RIFT) return;
   for (const k of RB_KEYS) {
     const R = RBOSS[k], cool = rbCool(k) > 0, col = cool ? "140,140,150" : R.col;
     if (Math.abs(R.x - cam.x) > W && Math.abs(R.y - cam.y) > H) continue;

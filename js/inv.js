@@ -12,7 +12,7 @@ function mouseTarget(max) { // 游標在世界裡的位置（最遠 max）
 
 // ───────── 營地結界、太極護罩、魂火（世界座標）─────────
 function drawCamps() {
-  for (const wp of WAYPOINTS) {
+  if (!(typeof RIFT !== "undefined" && RIFT)) for (const wp of WAYPOINTS) {
     const on = save.w.wp.includes(wp.id);
     if (wp.id !== "town") { // 結界光圈
       ctx.save();

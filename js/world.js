@@ -378,7 +378,8 @@ function setPadLabels(world) {
 
 // 安全營地：每個傳送點周圍一圈結界，怪物進不來、子彈打不進來，踏進去就算把裝備帶回
 const CAMP_R = 72;
-const campAt = (x, y) => WAYPOINTS.find((wp) => wp.id !== "town" && Math.hypot(x - wp.x, y - wp.y) < CAMP_R);
+const inRiftW = () => typeof RIFT !== "undefined" && !!RIFT; // 企劃 77：秘境範圍蓋到世界時，照座標判斷的東西都跳過
+const campAt = (x, y) => !inRiftW() && WAYPOINTS.find((wp) => wp.id !== "town" && Math.hypot(x - wp.x, y - wp.y) < CAMP_R);
 const safeAt = (x, y) => zoneAt(x, y) === "town" || !!campAt(x, y);
 function enterWorld() {
   if (!wmap) buildWorld();
@@ -455,7 +456,7 @@ function mobHpMul(lv) {
   const [a, x] = T[T.length - 2], [b, y] = T[T.length - 1]; return y + (y - x) / (b - a) * (lv - b);
 }
 function spawnWMob(camp) {
-  const types = ZONES[camp.z].mobs, type = campPick(camp, types), d = WMOBS[type];
+  const types = ZONES[camp.z].mobs, type = camp.only ? camp.only[Math.floor(Math.random() * camp.only.length)] : campPick(camp, types), d = WMOBS[type]; // camp.only：指定怪種（企劃 77 秘境走廊的遠程怪）
   const lv = Math.max(1, camp.lv + Math.floor(Math.random() * 3) - 1), elite = Math.random() < 0.08;
   const hp = d.hp * mobHpMul(lv) * (elite ? 4 : 1);
   const mod = elite ? ELITE_MODS[Math.floor(Math.random() * ELITE_MODS.length)] : null;
@@ -1526,7 +1527,7 @@ function updateWorld(dt) {
     for (let i = c.respawn.length - 1; i >= 0; i--) { c.respawn[i] -= dt; if (c.respawn[i] <= 0) { c.respawn.splice(i, 1); spawnWMob(c); } }
   }
   for (const m of W0.mobs) { // 驅怪結界：怪物被推出營地
-    if (m.dead || m.boss) continue;
+    if (m.dead || m.boss || inRiftW()) continue;
     for (const wp of WAYPOINTS) {
       const c = wp.id === "town" ? TOWN : wp, dx = m.x - c.x, dy = m.y - c.y, d = Math.hypot(dx, dy), R = (wp.id === "town" ? TOWN.r + 10 : CAMP_R) + WMOBS[m.type].r;
       if (d < R) { const a = d > 0.1 ? Math.atan2(dy, dx) : rand(0, 6.28); m.x = c.x + Math.cos(a) * R; m.y = c.y + Math.sin(a) * R; if (m.st === "chase") m.st = "home"; }
@@ -1564,7 +1565,7 @@ function updateWorld(dt) {
   const z = zoneAt(p.x, p.y);
   if (z !== W0.zone) { W0.zone = z; W0.bannerT = 2.5; if (z === "town") { w.potions = Math.max(w.potions, B.potMax); if (typeof potFill === "function") potFill(); bankLoot("回到青雲城"); } }
   W0.bannerT = Math.max(0, W0.bannerT - dt);
-  for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮傳送陣：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
+  if (!inRiftW()) for (const wp of WAYPOINTS) if (!w.wp.includes(wp.id) && dist(wp, p) < CAMP_R) { w.wp.push(wp.id); floatText(p.x, p.y - 30, `點亮傳送陣：${wp.n}營地`, "#9fe8ff", true); sfx("arrive"); writeSave(); }
   const cp = campAt(p.x, p.y), cid = cp ? cp.id : null;
   if (cid !== (W0.camp || null)) { W0.camp = cid; if (cid) { floatText(p.x, p.y - 44, `進入安全營地・${cp.n}`, "#ffe9a0", true); if (typeof potFill === "function") potFill(); bankLoot("安全營地"); } else if (W0.zone !== "town") floatText(p.x, p.y - 44, "踏出結界，小心妖獸", "#ff9a7a"); }
 
@@ -1597,6 +1598,7 @@ const NPCS = [
 const NPC_IMG = {};
 for (const n of NPCS) NPC_IMG[n.id] = sprite([...HERO_TOP, "...kwk.kwk..", "...kk...kk.."], Object.assign({}, HERO_PAL, n.pal));
 function worldSpots() {
+  if (inRiftW()) return [];
   return [
     ...NPCS.map((n) => ({ ...n, kind: "npc" })),
     ...RB_KEYS.map((k) => ({ id: k === "volcano" ? "altar" : "altar-" + k, kind: "altar", rb: k, x: RBOSS[k].x, y: RBOSS[k].y, r: 20, n: `${RBOSS[k].n}的祭壇` })),
@@ -1754,7 +1756,7 @@ function renderWorld() {
   const objs = [];
   for (let ty = t0y; ty <= t1y + 1 && ty < TH; ty++) for (let tx = t0x; tx <= t1x; tx++) { const t = wmap[ty * TW + tx]; if (t === 1 || t === 2) objs.push({ y: ty * TS + 14, t, tx, ty }); }
   for (const m of W0.mobs) if (Math.abs(m.x - cam.x) < hw && Math.abs(m.y - cam.y) < hh) objs.push({ y: m.y, m });
-  for (const n of NPCS) if (Math.abs(n.x - cam.x) < hw && Math.abs(n.y - cam.y) < hh) objs.push({ y: n.y, n });
+  if (!inRiftW()) for (const n of NPCS) if (Math.abs(n.x - cam.x) < hw && Math.abs(n.y - cam.y) < hh) objs.push({ y: n.y, n });
   objs.push({ y: p.y, me: true });
   if (typeof othersList === "function") for (const o of othersList()) if (Math.abs(o.x - cam.x) < hw && Math.abs(o.y - cam.y) < hh) objs.push({ y: o.y, op: o });
   objs.sort((a, b) => a.y - b.y);
