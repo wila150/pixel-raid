@@ -305,7 +305,7 @@ function riftEnter(id) {
   const key = save.keys.find((k) => k.id === id);
   if (!key) return;
   save.keys = save.keys.filter((k) => k !== key); // 鑰匙進門就用掉
-  if (!RLAY[key.lay]) key.lay = RLAY_KEYS[Math.floor(Math.random() * RLAY_KEYS.length)]; // 企劃 77：舊鑰匙沒有地形，進場時隨機一種
+  if (!RLAY[key.lay]) key.lay = typeof keyLayRoll === "function" ? keyLayRoll() : RLAY_KEYS[Math.floor(Math.random() * RLAY_KEYS.length)]; // 企劃 77：舊鑰匙沒有地形，進場時隨機一種
   const R = RIFT = { key, lay: key.lay, tier: key.tier, lv: riftMobLv(key.tier), theme: riftTheme(key.tier), lives: riftLives(key.tier), pow: 0, t: 0, seed: (Math.random() * 1e9) | 0,
     ret: { x: W0.x, y: W0.y }, armed: false, bossOn: false, bossDown: false, saveT: 10,
     saved: { wmap, mobs: W0.mobs, camps: W0.camps, drops: W0.drops, pools: W0.pools || [], grave: W0.grave } };

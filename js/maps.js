@@ -39,16 +39,26 @@ const riftCap = () => (save.w && typeof rbKilled === "function" && rbKilled("sky
 const keyTierFor = (lv) => (lv < 28 ? 0 : clamp(Math.round((lv - 25) / 5), 1, RIFT_MAX));
 function makeKey(tier, q = null) {
   if (q === null) { const r = Math.random(); q = r < 0.15 ? 2 : r < 0.55 ? 1 : 0; }
-  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: clamp(tier, 1, riftCap()), q, mods: [], v: 2 };
+  const k = { id: "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), tier: clamp(tier, 1, riftCap()), q, mods: [], v: 2, lay: keyLayRoll() };
   const [a, b] = KEY_RARITY[q].mods;
   rollKeyMods(k, a + Math.floor(Math.random() * (b - a + 1)));
   return k;
 }
+// 企劃 77：鑰匙地形（長廊／環道／廣場），看輿圖鎖圖（rift77.js lockOf：封鎖＝不出、偏好＝×3）
+const KEY_LAYS = ["lane", "ring", "arena"];
+function keyLayRoll() {
+  const L = typeof lockOf === "function" ? lockOf() : { ban: [], fav: [] };
+  let ks = KEY_LAYS.filter((x) => !L.ban.includes("lay:" + x)); if (!ks.length) ks = KEY_LAYS.slice();
+  const w = ks.map((x) => (L.fav.includes("lay:" + x) ? 3 : 1)); let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < ks.length; i++) if ((r -= w[i]) < 0) return ks[i];
+  return ks[ks.length - 1];
+}
 function rollKeyMods(k, n, opt = {}) { // 一半前綴一半後綴（單數時後綴多一條）；opt.pre＝只加前綴（通貨點金）、opt.qty＝保證有物品數量（通貨混元），opt.keep＝保留原本的詞綴只補到 n 條
-  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
+  const fBan = typeof lockBan === "function" && lockBan("fate"), fFav = typeof lockFav === "function" && lockFav("fate"); // 企劃 77 鎖圖
+  const pre = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "p" && !MAP_MODS[m].x && !(m === "fate" && fBan)); let suf = Object.keys(MAP_MODS).filter((m) => MAP_MODS[m].t === "s" && !MAP_MODS[m].x);
   const grp = {}; suf = suf.filter((m) => { const g = MAP_MODS[m].g; if (!g) return true; (grp[g] = grp[g] || []).push(m); return false; }); // 同一組（四種元素）只留一條，機率跟一般詞綴一樣
   for (const g in grp) suf.push(grp[g][Math.floor(Math.random() * grp[g].length)]);
-  const wOf = (m) => (m === "fate" ? 0.5 * (1 + 0.5 * (typeof talLv === "function" ? talLv("fate") : 0)) : 1); // 天命基礎權重 0.5（v9.6.4）、輿圖天賦每點 +50%
+  const wOf = (m) => (m === "fate" ? 0.5 * (1 + 0.5 * (typeof talLv === "function" ? talLv("fate") : 0)) * (fFav ? 3 : 1) : 1); // 天命基礎權重 0.5（v9.6.4）、輿圖天賦每點 +50%
   const pick = (arr) => { let r = Math.random() * arr.reduce((s, m) => s + wOf(m), 0), i = arr.length - 1; for (let j = 0; j < arr.length; j++) if ((r -= wOf(arr[j])) < 0) { i = j; break; } return arr.splice(i, 1)[0]; };
   if (opt.keep) { // 只補新的（點金符／淬靈石）
     const has = (m) => k.mods.includes(m) || (MAP_MODS[m].g && k.mods.some((x) => MAP_MODS[x].g === MAP_MODS[m].g));
@@ -74,7 +84,7 @@ function keyModN(k) { return k.mods.filter((m) => MAP_MODS[m] && !MAP_MODS[m].x)
 const keyGod = (k) => keyModN(k) >= 7; // 7、8 條＝「極」
 const keyStars = (k) => Math.min(5, 1 + k.mods.filter((m) => MAP_MODS[m].t === "s").length + (k.tier >= 8 ? 1 : 0));
 const keyWarn = (k) => k.mods.filter((m) => MAP_MODS[m].bad && MAP_MODS[m].bad(curWeapon()));
-const keyName = (k) => `第 ${k.tier} 層秘境${keyGod(k) ? "・極" : ""}`;
+const keyName = (k) => `${k.lay && typeof RLAY !== "undefined" && RLAY[k.lay] ? `〔${RLAY[k.lay]}〕` : ""}第 ${k.tier} 層秘境${keyGod(k) ? "・極" : ""}`; // 企劃 77：前面加地形
 const keyCost = (k, up) => Math.round((up ? 20 : 8) * (1 + k.tier * 0.4));
 const hasMod = (m) => (typeof RIFT !== "undefined" && RIFT ? RIFT.key.mods.includes(m) : hunt && hunt.map && hunt.map.mods.includes(m));
 function addKey(k) {

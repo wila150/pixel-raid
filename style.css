@@ -1544,3 +1544,19 @@ body.touch76 #wbar { flex-wrap: nowrap; }
 #wsPick76 button { position: relative; width: 48px; height: 48px; border: 2px solid var(--c); border-radius: 8px; background: #1b1622; color: #ece4d4; }
 #wsPick76 button.on { box-shadow: 0 0 0 2px #ffd84a; } #wsPick76 button.empty { opacity: 0.4; }
 #wsPick76 img { width: 28px; height: 28px; image-rendering: pixelated; } #wsPick76 small { position: absolute; left: 3px; bottom: 1px; font-size: 9px; }
+
+/* 企劃 77 B：輿圖鎖圖分頁 */
+.ov .lk77top { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; margin: 6px 0 8px; font-size: 13px; }
+.ov .lk77top b { color: #ffd84a; }
+.ov .lk77top small { color: #b0a48e; flex-basis: 100%; }
+.ov .lk77list { display: flex; flex-direction: column; gap: 5px; }
+.ov .lk77 { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #1b1622; border: 1px solid #3a3442; border-left: 4px solid #5a4a38; border-radius: 4px; }
+.ov .lk77.ban { border-left-color: #ff6b5a; opacity: 0.85; }
+.ov .lk77.fav { border-left-color: #ffd84a; }
+.ov .lk77 .lkm { flex: 1; min-width: 0; }
+.ov .lk77 .lkm small { display: block; color: #b0a48e; font-size: 11px; line-height: 1.35; }
+.ov .lk77 .lkb, .ov .lk77 .lkf { font-style: normal; font-size: 11px; margin-left: 6px; padding: 0 5px; border-radius: 3px; }
+.ov .lk77 .lkb { background: #5a1e1a; color: #ffb0a8; }
+.ov .lk77 .lkf { background: #4a3a10; color: #ffe066; }
+.ov .lk77 .lka { display: flex; gap: 4px; flex-shrink: 0; }
+.ov .lk77 .lka button { padding: 4px 9px; font-size: 12px; min-width: 0; }
