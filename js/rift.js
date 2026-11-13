@@ -269,7 +269,9 @@ function riftChestDraw(c) {
 function riftSpawn(R) {
   const mods = R.key.mods, sizeMul = (mods.includes("swarm") ? 1.4 : 1) * (R.lay === "arena" ? 1.5 : 1); // 企劃 77：廣場每營怪 +50%
   R.total = 0;
-  const list = R.pts.map((p) => ({ x: p.x, y: p.y, size: Math.round((4 + Math.floor(Math.random() * 3)) * sizeMul) }));
+  // 企劃 77 bot：廣場每營 +50% 但營地數沒少，總量是長廊／環道的 1.7–2 倍 → 廣場只放 2/3 的營地（每營還是多 50%，總量差不多）
+  const pts = R.lay === "arena" ? R.pts.filter((_, i) => i % 3 !== 2) : R.pts;
+  const list = pts.map((p) => ({ x: p.x, y: p.y, size: Math.round((4 + Math.floor(Math.random() * 3)) * sizeMul) }));
   { const rng = ZONES[R.theme].mobs.filter((t) => WMOBS[t] && WMOBS[t].ai === "ranged"); // 走廊偶爾 2–3 隻落單的遠程怪
     if (rng.length) for (const h of R.halls || []) if (Math.random() < 0.3 && dist(h, R.ent) > 200 && dist(h, R.boss) > 250) list.push({ x: h.x, y: h.y, size: 2 + Math.floor(Math.random() * 2), only: rng }); }
   for (const p of list) {
