@@ -1503,8 +1503,6 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 #pad .btn-pot { display: none; }
 #pad .btn-pg { right: 182px; bottom: 182px; }
 #pad .btn.empty .plab { font-size: 16px; color: #d8ccb0; }
-@media (orientation: landscape) { body.inworld #wbar { left: max(112px, calc(env(safe-area-inset-left) + 112px)) !important; transform: none !important; } }
-@media (orientation: portrait) { body.inworld #wbar { left: 8px !important; right: 8px !important; transform: none !important; flex-wrap: wrap; justify-content: center; } }
 #pickBtn { right: max(84px, calc(env(safe-area-inset-right) + 84px)); bottom: calc(240px + env(safe-area-inset-bottom, 0px)); width: 50px; height: 50px; }
 /* 企劃 75 第二次驗收：圓圈太高會蓋小地圖、矮螢幕壓快捷列 → 改成普攻左邊兩排（1 2 3／4 5 換頁），閃身回普攻左上內圈，撿在閃身上面 */
 #pad .btn-skill { right: 104px; bottom: 4px; }
@@ -1515,4 +1513,34 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 #pad .btn-pg { right: 225px; bottom: 67px; }
 #pad .btn-roll { right: 18px; bottom: 104px; width: 58px; height: 58px; }
 #pickBtn { right: max(22px, calc(env(safe-area-inset-right) + 22px)); bottom: calc(170px + env(safe-area-inset-bottom, 0px)); }
-@media (orientation: landscape) { body.inworld #wbar { max-width: calc(100vw - 112px - 290px); flex-wrap: wrap; } }
+/* 企劃 76：手機介面精簡（只有觸控 body.touch76） */
+#m76btn { display: none; }
+body.touch76.inworld:not(.ovopen) #m76btn { display: grid; position: relative; }
+body.touch76:not(.ovopen) #quick .qbtn:not([data-q="bag"]):not([data-q="skill"]) { display: none; }
+body.touch76 #pauseBtn { display: none !important; }
+body.touch76 #railR { display: none !important; }
+body.touch76 #wbar .ws, body.touch76 #wbar .save, body.touch76 #wbar [data-it="rc"] { display: none; }
+body.touch76 #wbar { flex-wrap: nowrap; }
+#m76btn .m76h { font-size: 20px; line-height: 1; color: #ffe9a0; }
+#m76btn .m76n { position: absolute; right: 2px; top: 2px; width: 9px; height: 9px; border-radius: 50%; background: #ff4a4a; }
+#m76btn .m76n[hidden] { display: none; }
+#m76btn.on { border-color: #ffd84a; }
+#m76 { position: fixed; z-index: 30; top: calc(64px + env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right)); background: rgba(16, 13, 22, 0.94); border: 1px solid #6a5a40; border-radius: 10px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+#m76[hidden] { display: none; }
+#m76 .m76g { display: grid; grid-template-columns: repeat(4, 60px); gap: 6px; }
+@media (orientation: portrait) { #m76 .m76g { grid-template-columns: repeat(3, 64px); } }
+#m76 button { position: relative; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #221c2a; border: 1px solid #4a3d30; border-radius: 8px; color: #ece4d4; padding: 2px; }
+#m76 button small { font-size: 11px; }
+#m76 button .m76i, #m76 button img, #m76 button .qico, #m76 button .qico2 { width: 28px; height: 28px; }
+#m76 button b { font-size: 18px; }
+#m76 button.dot::after { content: ""; position: absolute; right: 4px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #ff4a4a; }
+#pad .btn-wsw, #pad .btn-sv { font-size: 10px; border-color: #8a7a5a; background: rgba(30, 24, 36, 0.75); }
+#pad .btn-wsw img { width: 22px; height: 22px; image-rendering: pixelated; }
+#pad .btn-wsw small { position: absolute; bottom: -2px; font-size: 9px; }
+#pad .btn-sv b { font-size: 11px; color: #cfe8ff; } #pad .btn-sv.cd { opacity: 0.55; }
+#pad .btn-sv .svcd { position: absolute; font-style: normal; font-size: 12px; color: #fff; text-shadow: 0 0 3px #000; }
+#wsPick76 { position: fixed; z-index: 25; display: flex; gap: 6px; padding: 6px; background: rgba(16,13,22,0.94); border: 1px solid #6a5a40; border-radius: 8px; }
+#wsPick76[hidden] { display: none; }
+#wsPick76 button { position: relative; width: 48px; height: 48px; border: 2px solid var(--c); border-radius: 8px; background: #1b1622; color: #ece4d4; }
+#wsPick76 button.on { box-shadow: 0 0 0 2px #ffd84a; } #wsPick76 button.empty { opacity: 0.4; }
+#wsPick76 img { width: 28px; height: 28px; image-rendering: pixelated; } #wsPick76 small { position: absolute; left: 3px; bottom: 1px; font-size: 9px; }
