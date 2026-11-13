@@ -1492,3 +1492,17 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 #pad.pgflash .btn-skill, #pad.pgflash .btn-ult, #pad.pgflash .btn-sk3, #pad.pgflash .btn-sk4, #pad.pgflash .btn-sk5 { animation: pgFlash 0.3s ease-out; }
 @keyframes pgFlash { 0% { box-shadow: 0 0 0 3px rgba(255, 233, 160, 0.9); } 100% { box-shadow: 0 0 0 0 rgba(255, 233, 160, 0); } }
 @media (prefers-reduced-motion: reduce) { #pad.pgflash .btn { animation: none; } }
+/* 企劃 75 驗收：手機技能鈕改成繞著普攻的一圈（半徑 150），閃身在最上面、換頁在外圈；丹藥在下方快捷列（大鈕拿掉），快捷列靠左不跟技能鈕重疊 */
+#pad .btn-skill, #pad .btn-ult, #pad .btn-sk3, #pad .btn-sk4, #pad .btn-sk5 { width: 52px; height: 52px; font-size: 11px; }
+#pad .btn-skill { right: 172px; bottom: 22px; }
+#pad .btn-ult { right: 161px; bottom: 79px; }
+#pad .btn-sk3 { right: 128px; bottom: 128px; }
+#pad .btn-sk4 { right: 79px; bottom: 161px; }
+#pad .btn-sk5 { right: 22px; bottom: 172px; }
+#pad .btn-roll { right: 14px; bottom: 236px; width: 58px; height: 58px; }
+#pad .btn-pot { display: none; }
+#pad .btn-pg { right: 182px; bottom: 182px; }
+#pad .btn.empty .plab { font-size: 16px; color: #d8ccb0; }
+@media (orientation: landscape) { body.inworld #wbar { left: max(112px, calc(env(safe-area-inset-left) + 112px)) !important; transform: none !important; } }
+@media (orientation: portrait) { body.inworld #wbar { left: 8px !important; right: 8px !important; transform: none !important; flex-wrap: wrap; justify-content: center; } }
+#pickBtn { right: max(84px, calc(env(safe-area-inset-right) + 84px)); bottom: calc(240px + env(safe-area-inset-bottom, 0px)); width: 50px; height: 50px; }

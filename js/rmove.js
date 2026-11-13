@@ -84,5 +84,6 @@ const _setPadLabelsRm = setPadLabels;
 setPadLabels = function () { // eslint-disable-line no-func-assign
   const r = _setPadLabelsRm.apply(this, arguments);
   PG_BTN.forEach((q) => { const b = pad.querySelector(q); if (b && b.dataset.pg) b.insertAdjacentHTML("beforeend", `<i class="pgno">${b.dataset.pg}</i>`); });
+  pgBtn.innerHTML = `<b>${skPage ? "Ⅱ" : "Ⅰ"}</b><small>換頁</small>`;
   return r;
 };

@@ -365,8 +365,10 @@ function setPadLabels(world) {
   pad.querySelectorAll(".btn").forEach((b) => {
     if (!world) { b.innerHTML = padOrig[b.dataset.act]; return; }
     applyWeapon();
-    const S0 = WSKILL[b.dataset.act] || {}; b.classList.toggle("empty", !!S0.empty); // 11/13：沒放招的 3～5 格藏起來
+    if (!b.dataset.act || b.classList.contains("btn-pg")) return; // 換頁鈕自己畫（rmove.js）
+    const S0 = WSKILL[b.dataset.act] || {}; b.classList.toggle("empty", !!S0.empty); // 沒放招的格子：半透明、只寫鍵號（位置固定）
     const k = PAD_KEYS[b.dataset.act], n = S0.n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
+    if (S0.empty) { b.innerHTML = `<span class="plab">＋<small>${k || ""}</small></span><i class="cd"></i>`; return; }
     const sl = b.dataset.act === "roll" ? "r" : SLOT_NUM.find((s) => SLOT_KEY[s] === b.dataset.act), sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
     const pi = sk && (sl === "r" || slotCls(sl)) && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl === "r" ? "r" : slotCls(sl), sk === "base" ? "" : sk, "pico") : ""; // 企劃 69 B：圖示看招式的類
     b.classList.toggle("hasico", !!pi);
@@ -2031,11 +2033,11 @@ function drawWorldHud() {
     ctx.textAlign = "center"; ctx.font = "bold 11px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#fff"; ctx.fillText("回城中…", W / 2, ry - 6);
   }
   // 經驗條（最下面一整條）
-  const ef = w.exp / expNext(w.lv);
+  const ef = w.lv >= LV_CAP ? 1 : clamp((w.exp || 0) / expNext(w.lv), 0, 1);
   ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillRect(0, H - 6, W, 6);
   ctx.fillStyle = "#e0c040"; ctx.fillRect(0, H - 5, W * ef, 4);
   ctx.textAlign = "center"; ctx.font = "bold 9px 'Noto Sans TC', sans-serif"; ctx.fillStyle = "#ffe9a0";
-  ctx.fillText(`經驗 ${Math.floor(ef * 100)}%`, W / 2, H - 10);
+  ctx.fillText(w.lv >= LV_CAP ? "已達等級上限" : `經驗 ${Math.floor(ef * 100)}%`, W / 2, H - 10);
   drawOrbs();
   // 地區名稱
   if (W0.bannerT > 0) {
