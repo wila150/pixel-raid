@@ -49,7 +49,7 @@ window.addEventListener("keydown", (e) => { if (e.key === "Alt" && state === "wo
 
 // 電腦：點地上的物品名字＝走過去撿
 cvs.addEventListener("pointerdown", (e) => {
-  if (state !== "world" || !W0 || !W0.drops || e.button !== 0) return;
+  if (state !== "world" || !W0 || !W0.drops || (e.button !== 0 && e.button !== 2)) return; // 右鍵點名字也撿（企劃 75）
   const Z = SCALE * 1.35, wx = cam.x + (e.clientX - W / 2) / Z, wy = cam.y + (e.clientY - H / 2) / Z;
   let hit = null, bd = 1e9;
   for (const o of W0.drops) {

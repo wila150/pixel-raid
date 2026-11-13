@@ -98,15 +98,20 @@ function comboGlow() {
 let comboLast = "";
 // 11/13 電腦版技能欄：左鍵、1～5、空白（身法），點一下打開技能寶石
 const SKB = [["a", "左鍵", "attack"], ["q", "1", "spin"], ["e", "2", "ult"], ["s3", "3", "s3"], ["s4", "4", "s4"], ["s5", "5", "s5"], ["r", "空白", "roll"]];
+const SKB2 = [["s6", "6", "s6"], ["s7", "7", "s7"], ["s8", "8", "s8"], ["s9", "9", "s9"], ["s10", "0", "s10"]];
 const SKB_W = 50, SKB_G = 4;
 let skbRects = [];
 const skBarRect = () => { const w = SKB.length * SKB_W + (SKB.length - 1) * SKB_G; return { x: Math.round(W / 2 - w / 2), y: H - SKB_W - 16, w, h: SKB_W }; };
 function drawSkillBar(p) {
   const R0 = skBarRect(), cg = comboGlow(), wt = curWeapon(); skbRects = [];
+  const two = typeof SLOT_LV !== "undefined" && (save.w.lv || 1) >= SLOT_LV.s6 - 10; // 企劃 75：第二頁（6～0）疊在上面一排，快開放才顯示
+  const L = SKB.map(([sl, key, id], i) => [sl, key, id, R0.x + i * (SKB_W + SKB_G), R0.y]);
+  if (two) SKB2.forEach(([sl, key, id], i) => L.push([sl, key, id, R0.x + (i + 1) * (SKB_W + SKB_G), R0.y - SKB_W - 10]));
   ctx.fillStyle = "rgba(12,10,16,0.82)"; ctx.fillRect(R0.x - 6, R0.y - 6, R0.w + 12, R0.h + 12);
   ctx.strokeStyle = "rgba(200,170,120,0.45)"; ctx.lineWidth = 1; ctx.strokeRect(R0.x - 5.5, R0.y - 5.5, R0.w + 11, R0.h + 11);
-  SKB.forEach(([sl, key, id], i) => {
-    const x = R0.x + i * (SKB_W + SKB_G), y = R0.y, S = WSKILL[id] || {}; skbRects.push({ x, y, w: SKB_W, h: SKB_W, sl });
+  if (two) { const x2 = R0.x + SKB_W + SKB_G - 6, y2 = R0.y - SKB_W - 16, w2 = 5 * SKB_W + 4 * SKB_G + 12; ctx.fillStyle = "rgba(12,10,16,0.82)"; ctx.fillRect(x2, y2, w2, SKB_W + 12); ctx.strokeStyle = "rgba(200,170,120,0.35)"; ctx.strokeRect(x2 + 0.5, y2 + 0.5, w2 - 1, SKB_W + 11); }
+  L.forEach(([sl, key, id, x, y]) => {
+    const S = WSKILL[id] || {}; skbRects.push({ x, y, w: SKB_W, h: SKB_W, sl });
     const locked = sl !== "r" && typeof slotUnlocked === "function" && !slotUnlocked(sl), empty = sl !== "r" && (S.empty || !S.cls);
     ctx.fillStyle = "#17131d"; ctx.fillRect(x, y, SKB_W, SKB_W);
     const f = locked || empty ? 0 : (p.cds[id] || 0) / Math.max(0.01, cdFull(id));

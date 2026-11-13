@@ -2,7 +2,7 @@
 // 先點寶石袋的寶石再點欄位放進去（或直接點欄位挑）；右鍵拿下；寶石袋右鍵＝自動放
 "use strict";
 let sgSel = null, sgTab = "all", sgSort = "col", sgFocus = null;
-const SG_ROWS = ["a", "q", "e", "s3", "s4", "s5"];
+const SG_ROWS = SLOTS6;
 const SG_COLC = { str: "#ff6b6b", agi: "#7dff8a", wis: "#6ab8ff" };
 const sgWtCol = (wt) => SG_COLC[(typeof TR_WMAIN !== "undefined" && TR_WMAIN[wt]) || "agi"] || "#e8dcc0";
 function sgSkillList(wt) { // 寶石袋裡的技能寶石：這把武器已經能用的招＋身法
@@ -71,7 +71,7 @@ renderTri = function (msg = "") { // eslint-disable-line no-func-assign
   const info = selX ? `<div class="sgdesc" style="--c:${selX.col}"><b>${selX.n}</b><small>${selX.t === "g" ? GEM_TYPE + "・" + gemCol(selX.g)[0] + "・Lv." + gemReq(selX.g) : selX.t === "r" ? "身法技能寶石" : (CLS_N[selX.c] || "") + "技能寶石"}</small><p>${String(selX.d || "").replace(/\n/g, "<br>")}</p>${selX.t === "g" && selX.cnt >= 3 && selX.lv < GEM_MAX ? `<button class="gmerge" data-sgm="${selX.g}">3 合 1（升一級）</button>` : ""}</div>` : `<div class="sgdesc dim"><small>點寶石看說明。右鍵＝自動放進第一個能放的欄位。</small><small>更多技能寶石到營地的「技能商人」買；輔助寶石打怪會掉。</small></div>`;
   return `${msg ? `<div class="emsg">${msg}</div>` : ""}<div class="sgw2">
     <div class="sgl"><p class="sghint">${hint}</p>
-      ${SG_ROWS.map((s) => sgRow(s, wt)).join("")}
+      ${SG_ROWS.slice(0, 6).map((s) => sgRow(s, wt)).join("")}<div class="sgsec">第二頁（電腦 6～0 鍵；手機按「Ⅰ／Ⅱ」換頁）</div>${SG_ROWS.slice(6).map((s) => sgRow(s, wt)).join("")}
       <div class="sgsec">被動欄</div>${sgRow("r", wt)}${sgRow("o", wt)}</div>
     <div class="sgr"><div class="sgh"><b>寶石袋</b><small>${items.length}</small></div>
       <div class="sgtabs">${[["all", "全部"], ["skill", "技能"], ["sup", "輔助"]].map(([k, t]) => `<button data-sgt="${k}" class="${sgTab === k ? "on" : ""}">${t}</button>`).join("")}</div>
@@ -100,7 +100,7 @@ function sgAutoSkill(x) {
   if (x.t === "r") { sgPlace(x, "r"); return; }
   const wt = curWeapon(), at = sgWhere(x, wt);
   if (at) { renderSkills(`「${x.n}」已經在${TRI_LAYER_N[at]}了`); return; }
-  const sl = ["q", "e", "s3", "s4", "s5"].find((s) => slotUnlocked(s) && !slotPick(wt, s).c) || null;
+  const sl = SLOT_NUM.find((s) => slotUnlocked(s) && !slotPick(wt, s).c) || null;
   if (!sl) { sfx("bad"); renderSkills("沒有空的技能欄了：點一個欄位換掉"); return; }
   sgPlace(x, sl);
 }

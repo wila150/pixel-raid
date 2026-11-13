@@ -7,7 +7,7 @@ const set74Save = () => { try { localStorage.setItem("pr_set74", JSON.stringify(
 // ───────── 改鍵：實體鍵 → 遊戲原本的鍵（攔在最前面，再發一個「原本那顆鍵」的事件，所以所有快捷鍵都跟著換）─────────
 // [id, 名稱, 遊戲內部的鍵, 預設實體鍵, 預設次要鍵]（11/13：1～5 放技能、Q／E／R／G 喝丹藥，照 Slay Monsters 的排法）
 const KEY_ACTS = [
-  ["技能", [["sk1", "技能 1", "sk1", "1"], ["sk2", "技能 2", "sk2", "2"], ["sk3", "技能 3", "sk3", "3"], ["sk4", "技能 4", "sk4", "4"], ["sk5", "技能 5", "sk5", "5"], ["roll", "身法（閃身）", " ", " ", "shift"], ["atk", "左鍵技能（鍵盤）", "j", "j"], ["save", "護身法術", "v", "v"]]],
+  ["技能", [["sk1", "技能 1", "sk1", "1"], ["sk2", "技能 2", "sk2", "2"], ["sk3", "技能 3", "sk3", "3"], ["sk4", "技能 4", "sk4", "4"], ["sk5", "技能 5", "sk5", "5"], ["sk6", "技能 6", "sk6", "6"], ["sk7", "技能 7", "sk7", "7"], ["sk8", "技能 8", "sk8", "8"], ["sk9", "技能 9", "sk9", "9"], ["sk10", "技能 0", "sk10", "0"], ["roll", "身法（閃身）", " ", " ", "shift"], ["atk", "左鍵技能（鍵盤）", "j", "j"], ["save", "護身法術", "v", "v"]]],
   ["移動", [["up", "向上", "w", "w"], ["down", "向下", "s", "s"], ["left", "向左", "a", "a"], ["right", "向右", "d", "d"]]],
   ["丹藥", [["pot_hp", "回春丹（生命）", "h", "q"], ["pot_mp", "聚氣丹（真氣）", "pmp", "e"], ["pot_guard", "護體丹", "pgd", "r"], ["pot_pure", "淨化丹", "ppu", "g"]]],
   ["互動", [["pick", "撿東西", "f", "f"], ["wsc", "換武器組（輪流）", "wsc", "x"], ["ws1", "武器組 1", "ws1", ""], ["ws2", "武器組 2", "ws2", ""], ["ws3", "武器組 3", "ws3", ""], ["names", "顯示掉落物名字（按住）", "alt", "alt"]]],
@@ -75,7 +75,7 @@ updateBgm = function () { AUDIO_BUS = "music"; try { return _updateBgm74.apply(t
 
 // ───────── 設定視窗 ─────────
 let setTab = "gen", keyCatch = null;
-const OPS = [["左鍵（按住）", "左鍵技能；點地上的物品名字＝走過去撿"], ["1／2／3／4／5", "技能欄上的技能（按住會一直放）"], ["空白／Shift", "身法（閃身）"], ["Q／E／R／G", "回春／聚氣／護體／淨化丹"], ["X", "換武器組（下方武器列也能點）"], ["F", "撿附近的東西"], ["按住 Alt", "顯示所有掉落物名字"], ["V", "護身法術"], ["I", "行囊"], ["C", "角色"], ["N", "技能寶石"], ["P", "天賦樹"], ["B", "鐵匠鋪"], ["M／Tab", "星盤（大地圖）"], ["Y", "任務"], ["K", "冒險手冊"], ["L", "卡片"], ["T", "聊天"], ["Esc", "關掉視窗／設定"]];
+const OPS = [["左鍵（按住）", "左鍵技能；點地上的物品名字＝走過去撿"], ["1～5／6～0", "技能欄上的技能（第二頁是 6～0；按住會一直放）"], ["右鍵（按住）", "往滑鼠的方向走；點一下＝走到那裡"], ["空白／Shift", "身法（閃身）"], ["Q／E／R／G", "回春／聚氣／護體／淨化丹"], ["X", "換武器組（下方武器列也能點）"], ["F", "撿附近的東西"], ["按住 Alt", "顯示所有掉落物名字"], ["V", "護身法術"], ["I", "行囊"], ["C", "角色"], ["N", "技能寶石"], ["P", "天賦樹"], ["B", "鐵匠鋪"], ["M／Tab", "星盤（大地圖）"], ["Y", "任務"], ["K", "冒險手冊"], ["L", "卡片"], ["T", "聊天"], ["Esc", "關掉視窗／設定"]];
 const OPS_TOUCH = [["左下搖桿", "移動"], ["右下大按鈕", "普攻（按住連打）"], ["Q／E 按鈕", "招式"], ["閃身按鈕", "身法"], ["「撿」按鈕", "撿附近的東西（靠近時出現）"], ["下方快捷欄", "換武器組、丹藥、回城符"], ["右上一排", "行囊、角色、技能、天賦…"]];
 function setGenHtml() {
   const sl = (k, n) => `<div class="s74sl"><span>${n}</span><input type="range" min="0" max="100" step="5" value="${VOL[k]}" data-vol="${k}" aria-label="${n}"><b>${VOL[k]}</b></div>`;
@@ -95,7 +95,7 @@ function setKeyHtml() {
   if (TOUCH) return `<p class="dim">手機、平板沒有鍵盤，這一頁只有接上鍵盤時有用。</p>`;
   const row = ([id, n]) => { const [a, b] = keyOf(id), chg = !!keyBinds[id]; return `<div class="s74k"><span>${n}</span><button data-kc="${id}:0" class="${keyCatch === id + ":0" ? "catch" : ""}">${keyCatch === id + ":0" ? "按一個鍵…" : keyLabel(a)}</button><button data-kc="${id}:1" class="${keyCatch === id + ":1" ? "catch" : ""}">${keyCatch === id + ":1" ? "按一個鍵…" : keyLabel(b)}</button><button data-kr="${id}" class="s74rst" ${chg ? "" : "disabled"} aria-label="恢復">↺</button></div>`; };
   return `<p class="s74note">點一格再按新的鍵；新的鍵已經被別的動作用了，兩個動作的鍵會對調。Esc、滑鼠不能改。只會存下你改過的鍵。</p>
-    <div class="s74row"><span>移動方式</span><button data-cm="0" class="${SET74.clickMove ? "" : "on"}">WASD 鍵盤移動</button><button data-cm="1" class="${SET74.clickMove ? "on" : ""}">滑鼠點擊移動</button><small class="dim">點擊移動：左鍵點地面走過去、點怪出左鍵那招</small></div>
+    <div class="s74row"><span>移動方式</span><button data-cm="0" class="${SET74.clickMove ? "" : "on"}">WASD＋右鍵移動</button><button data-cm="1" class="${SET74.clickMove ? "on" : ""}">左鍵點地移動</button><small class="dim">點擊移動：左鍵點地面走過去、點怪出左鍵那招</small></div>
     <div class="s74two keys">${KEY_ACTS.map(([g, L]) => `<div class="s74col"><h3>${g}<small>主要　次要</small></h3>${L.map(row).join("")}</div>`).join("")}</div>
     <div class="s74row"><button id="s74KeyAll">全部恢復預設</button></div>`;
 }

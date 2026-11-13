@@ -5,7 +5,7 @@
 // 每級傷害 +2%（企劃寫 3%，§3 驗算：Lv.100 平均寶石 10 級 → +27%，打王快 21% 超過 15%，照企劃改 2%），每 5 級冷卻 −3%。
 "use strict";
 const SKG_PRICE = 40, SKG_MAX = 20, SKG_DMG = 0.02, SKG_CD = 0.03, SKG_SHARE = 0.1;
-const SL_ID = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5", r: "roll" };
+const SL_ID = Object.assign({ r: "roll" }, SLOT_KEY);
 const skgKey = (wt, l, k) => (l === "r" ? "r:" + (k || "base") : `${wt}:${l}:${k || "base"}`);
 const skgStore = () => save.skg || (save.skg = {});
 const skgFree = (k) => k.endsWith(":base");

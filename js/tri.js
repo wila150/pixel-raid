@@ -102,7 +102,7 @@ const TRI_LV = { a: [10, 15, 20], q: [30, 40, 50], e: [20, 35, 55, 70, 85, 100],
 const TRI_LV_X = { fist: { a: [25], q: [45] } }; // 企劃 55：拳套第 4 個選項（散手、摔投）；其他武器不動
 const triLvAt = (wt, l, i) => { const L = TRI_LV[l]; if (i < L.length) return L[i]; const x = TRI_LV_X[wt] && TRI_LV_X[wt][l]; return (x && x[i - L.length]) || 999; };
 const E_LV = 5;
-const TRI_LAYER_N = { a: "左鍵", q: "技能 1", e: "技能 2", s3: "技能 3", s4: "技能 4", s5: "技能 5", o: "自動欄", r: "身法" };
+const TRI_LAYER_N = { a: "左鍵", q: "技能 1", e: "技能 2", s3: "技能 3", s4: "技能 4", s5: "技能 5", s6: "技能 6", s7: "技能 7", s8: "技能 8", s9: "技能 9", s10: "技能 0", o: "自動欄", r: "身法" };
 const triList = (wt, l) => (l === "r" ? TRI.r : TRI[wt] && TRI[wt][l]) || null;
 const wLv = () => (save.w && save.w.lv) || 1;
 function triMig() { // 舊存檔：三選一選過的直接當已開
@@ -251,7 +251,7 @@ function gemWhy(g, sl, skipI = -1, wt = curWeapon()) {
 }
 const gemFits = (g, sl) => { const k = g.split(":")[0]; if (k === "spread") return chainRow(sl).some((x) => x && x.startsWith("fire:")); return !gemWhy(g, sl, chainRaw(sl).indexOf(g)); };
 // 同一種輔助寶石還串在哪裡（這把武器的普攻／Q／E＋全武器共用的身法；在身法列找的時候看每把武器）
-const SL_ORD = ["a", "q", "e", "s3", "s4", "s5", "o", "r"];
+const SL_ORD = SLOTS6.concat(["o", "r"]);
 function slLabel(sl, wt) {
   if (sl === "r") { const k = triOf(wt, "r"), o = k && TRI.r.find((x) => x.k === k); return `身法${o ? `（${o.n}）` : ""}`; }
   const pk = slotPick(wt, sl); return `${SLOT_N[sl] === "左鍵" || SLOT_N[sl] === "自動" ? SLOT_N[sl] : "技能 " + SLOT_N[sl]}（${pk.c ? pickName(wt, pk.c, pk.k) : "空"}）`; // 11/13

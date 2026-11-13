@@ -280,9 +280,11 @@ const ATK_MP_K = 14, MELEE_MP = 0.7, MELEE_HEAL = 0.003, MELEE_HEAL_CD = 0.1, GR
 const meleeMpMul = (sl) => (typeof slotTags === "function" && save.w && slotTags(sl).includes("m") ? MELEE_MP : 1);
 // 企劃 69 A：E 類招式的冷卻（秒）和真氣（原本 Q 真氣的倍數）
 // 11/13 技能欄：左鍵＋1～5 共 6 格都能放任何一招（q＝1、e＝2，存檔相容；s3～s5 是新格）
-const SLOTS6 = ["a", "q", "e", "s3", "s4", "s5"], SLOT_KEY = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5" };
-const SLOT_N = { a: "左鍵", q: "1", e: "2", s3: "3", s4: "4", s5: "5", r: "空白", o: "自動" }, SLOT_IK = { a: "j", q: "sk1", e: "sk2", s3: "sk3", s4: "sk4", s5: "sk5" };
-const SLOT_LV = { e: 5, s3: 10, s4: 25, s5: 45 };
+// 11/13 企劃 75：第二頁 s6～s10（電腦 6～0 鍵；手機兩頁共用同 5 個位置）
+const SLOTS6 = ["a", "q", "e", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10"], SLOT_KEY = { a: "attack", q: "spin", e: "ult", s3: "s3", s4: "s4", s5: "s5", s6: "s6", s7: "s7", s8: "s8", s9: "s9", s10: "s10" };
+const SLOT_NUM = SLOTS6.slice(1), SLOT_SKK = SLOT_NUM.map((s) => SLOT_KEY[s]); // 1～10 格、對應的 WSKILL key
+const SLOT_N = { a: "左鍵", q: "1", e: "2", s3: "3", s4: "4", s5: "5", s6: "6", s7: "7", s8: "8", s9: "9", s10: "0", r: "空白", o: "自動" }, SLOT_IK = { a: "j", q: "sk1", e: "sk2", s3: "sk3", s4: "sk4", s5: "sk5", s6: "sk6", s7: "sk7", s8: "sk8", s9: "sk9", s10: "sk10" };
+const SLOT_LV = { e: 5, s3: 10, s4: 25, s5: 45, s6: 55, s7: 65, s8: 75, s9: 85, s10: 95 };
 const slotUnlocked = (sl) => !save.w || (save.w.lv || 1) >= (SLOT_LV[sl] || 1);
 const E_BUFF = new Set(["titan", "domain", "curse", "tslow", "gbell", "roar", "wwall", "stealth"]);
 function eCost(sk) {
@@ -325,9 +327,9 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
     const b = ws[CK[pk.c]];
     WSKILL[SLOT_KEY[sl]] = { n: b[0], cd: b[1], mp: pk.c === "e" ? 0 : b[2], cls: pk.c, k: pk.k };
   }
-  const SLK = { attack: "a", spin: "q", ult: "e", roll: "r", s3: "s3", s4: "s4", s5: "s5" }; // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
+  const SLK = Object.assign({ attack: "a", spin: "q", ult: "e", roll: "r" }, Object.fromEntries(SLOTS6.slice(3).map((s) => [s, s]))); // 輔助寶石：疾風、省元只算那一招；每串 1 顆耗真氣 +10%（企劃 21 §3-2-2）
   const T = typeof SK_CD !== "undefined" && SK_CD[wt], qcd = T ? T.q.base : ws.spin[1]; // 企劃 72 A：每招冷卻照強度（SK_CD 表）
-  for (const k of ["attack", "spin", "ult", "roll", "s3", "s4", "s5"]) {
+  for (const k of ["attack", "roll"].concat(SLOT_SKK)) {
     const S = WSKILL[k], sl = SLK[k]; if (S.empty) continue; const _x = 0, hl = gemLv("haste", sl), cdm = Math.max(0.4, 1 - 0.07 * hl), mm = typeof chainMpMul === "function" ? chainMpMul(sl) : 1; // 企劃 21 §8-6：真氣倍率相乘
     const tk = S.k || "base", tcd = k !== "roll" && T && T[S.cls] ? T[S.cls][tk] : undefined;
     if (S.cls === "e" && (S.k === "origin" || S.k === "uq")) { const [ecd, emx] = eCost(S.k); S.cd = ecd; S.cdr = hl ? 1 / cdm - 1 : 0; S.mp = Math.max(1, Math.round(ws.spin[2] * emx * mpLvMul() * mm * meleeMpMul(sl) * ((typeof B !== "undefined" && B && B.eMp) || 1))); continue; } // 起源覺醒、傳說 E：照舊
@@ -356,7 +358,7 @@ function applyWeapon() { // 企劃 69 B：左鍵／Q／E 三格各放一招，�
   }
 }
 applyWeapon();
-const PAD_KEYS = { attack: "左鍵", spin: "1", roll: "空白", ult: "2", s3: "3", s4: "4", s5: "5", potion: "Q" };
+const PAD_KEYS = Object.assign({ attack: "左鍵", roll: "空白", potion: "Q" }, Object.fromEntries(SLOT_NUM.map((s) => [SLOT_KEY[s], SLOT_N[s]])));
 const padOrig = {};
 pad.querySelectorAll(".btn").forEach((b) => { padOrig[b.dataset.act] = b.innerHTML; });
 function setPadLabels(world) {
@@ -365,7 +367,7 @@ function setPadLabels(world) {
     applyWeapon();
     const S0 = WSKILL[b.dataset.act] || {}; b.classList.toggle("empty", !!S0.empty); // 11/13：沒放招的 3～5 格藏起來
     const k = PAD_KEYS[b.dataset.act], n = S0.n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
-    const sl = { spin: "q", ult: "e", roll: "r", s3: "s3", s4: "s4", s5: "s5" }[b.dataset.act], sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
+    const sl = b.dataset.act === "roll" ? "r" : SLOT_NUM.find((s) => SLOT_KEY[s] === b.dataset.act), sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
     const pi = sk && (sl === "r" || slotCls(sl)) && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl === "r" ? "r" : slotCls(sl), sk === "base" ? "" : sk, "pico") : ""; // 企劃 69 B：圖示看招式的類
     b.classList.toggle("hasico", !!pi);
     b.innerHTML = `${pi}<span class="plab">${n}<small>${k}</small></span>${b.dataset.act === "potion" ? '<b class="count">3</b>' : ""}${b.dataset.act !== "attack" ? '<i class="cd"></i>' : ""}`;
@@ -396,7 +398,7 @@ function enterWorld() {
     makeCamps();
   }
   Object.assign(W0, { x: w.x, y: w.y, hp: B.maxHp, maxHp: B.maxHp, mp: B.maxMp, face: -Math.PI / 2, flip: false, walk: 0, iframe: 1, hurt: 0, swing: 0, shield: 3, en: W0.en || 0,
-    roll: 0, rollDir: 0, cds: { attack: 0, spin: 0, ult: 0, s3: 0, s4: 0, s5: 0, roll: 0, potion: 0 }, regenAcc: 0, lavaT: 0, es: B.maxEs, esT: 0 });
+    roll: 0, rollDir: 0, cds: Object.assign({ attack: 0, roll: 0, potion: 0 }, Object.fromEntries(SLOT_SKK.map((k) => [k, 0]))), regenAcc: 0, lavaT: 0, es: B.maxEs, esT: 0 });
   W0.voids = W0.voids || []; W0.orbs = W0.orbs || []; W0.barrs = []; W0.swArr = null; W0.novaP = null; W0.swRains = []; W0.infW = null; W0.emBall = null; W0.bkFx = []; W0.zaps = [];
   if (W0.keepHp) { W0.hp = Math.min(B.maxHp, W0.keepHp); W0.keepHp = 0; }
   particles = []; floaters = []; shake = 0; flashT = 0; hitstop = 0;
@@ -1162,7 +1164,7 @@ function updateWorld(dt) {
     p.dash2N = Math.max(0, (p.dash2N || 1) - 1); p.dash2T = p.dash2N > 0 ? 1 : 0; const t2 = near(160); if (t2) p.face = angTo(p, t2);
     p.roll = 0.18; p.rollDir = p.face; p.iframe = Math.max(p.iframe, 0.25); p.dashHit = new Set(); p.dashDmg = CHAIN_D; p.dashSl = chSl; p.dashDm = 1; sfx("dash"); netCast("q", p.face, p.x, p.y, "chain");
   }
-  for (const sl of ["q", "e", "s3", "s4", "s5"]) { // 11/13：1～5 格，按一下放、按住冷卻好就再放
+  for (const sl of SLOT_NUM) { // 11/13：1～10 格，按一下放、按住冷卻好就再放
     if (sl === chSl) continue;
     const k = SLOT_KEY[sl], S = WSKILL[k];
     if (!S || S.empty || !(slotPress(sl) || (slotHeld(sl) && !(p.cds[k] > 0)))) continue;
@@ -2078,7 +2080,7 @@ function drawWorldHud() {
     ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.beginPath(); ctx.arc(stick.ox + dx * kk, stick.oy + dy * kk, 22, 0, Math.PI * 2); ctx.fill();
   }
   // 按鈕冷卻
-  for (const k of ["spin", "ult", "s3", "s4", "s5", "roll", "potion"]) {
+  for (const k of SLOT_SKK.concat(["roll", "potion"])) {
     const el = pad.querySelector(`[data-act="${k}"] .cd`);
     if (el) { el.style.transform = "none"; el.style.setProperty("--cdf", clamp(p.cds[k] / (k === "potion" && W0.potCd ? W0.potCd : cdFull(k)), 0, 1)); } // 扇形轉圈冷卻
     const btn = pad.querySelector(`[data-act="${k}"]`);

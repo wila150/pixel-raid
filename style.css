@@ -1476,3 +1476,19 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 #updCard .ux { right: 0; }
 @media (pointer: fine) { #wbar { max-width: calc(50vw - 340px); } }
 .ov .trinfo[hidden] { display: none; }
+/* 企劃 75：自己的鼠標（電腦）、手機技能兩頁 */
+@media (pointer: fine) {
+  body.inworld, body.inworld #game, body.inworld .ov, body.inworld button, body.inworld .ov * { cursor: url(img/cursor/normal.png) 5 4, auto; }
+  body.inworld.cur-atk #game { cursor: url(img/cursor/attack.png) 5 4, crosshair; }
+  body.inworld.cur-pick #game { cursor: url(img/cursor/pick.png) 17 3, pointer; }
+  body.inworld input[type=text], body.inworld input[type=search], body.inworld textarea { cursor: text; }
+}
+#pad .btn.empty { display: grid; opacity: 0.35; }
+.btn-pg { right: 252px; bottom: 132px; width: 42px; height: 42px; font-size: 11px; border-color: #e8c46a; background: rgba(40, 30, 14, 0.75); }
+.btn-pg b { font: 700 15px "Noto Serif TC", serif; color: #ffe9a0; line-height: 1; } .btn-pg small { font-size: 8px; }
+.btn-pg[hidden] { display: none; }
+.btn-pg.ready::after { content: ""; position: absolute; right: 0; top: 0; width: 9px; height: 9px; border-radius: 50%; background: #7dff8a; box-shadow: 0 0 6px #7dff8a; }
+#pad .pgno { position: absolute; left: 2px; top: 0; font-style: normal; font-size: 10px; color: #ffe9a0; text-shadow: 0 0 3px #000; }
+#pad.pgflash .btn-skill, #pad.pgflash .btn-ult, #pad.pgflash .btn-sk3, #pad.pgflash .btn-sk4, #pad.pgflash .btn-sk5 { animation: pgFlash 0.3s ease-out; }
+@keyframes pgFlash { 0% { box-shadow: 0 0 0 3px rgba(255, 233, 160, 0.9); } 100% { box-shadow: 0 0 0 0 rgba(255, 233, 160, 0); } }
+@media (prefers-reduced-motion: reduce) { #pad.pgflash .btn { animation: none; } }
