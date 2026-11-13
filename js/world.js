@@ -368,7 +368,7 @@ function setPadLabels(world) {
     if (!b.dataset.act || b.classList.contains("btn-pg")) return; // 換頁鈕自己畫（rmove.js）
     const S0 = WSKILL[b.dataset.act] || {}; b.classList.toggle("empty", !!S0.empty); // 沒放招的格子：半透明、只寫鍵號（位置固定）
     const k = PAD_KEYS[b.dataset.act], n = S0.n || { roll: "閃身", potion: "丹藥" }[b.dataset.act];
-    if (S0.empty) { b.innerHTML = `<span class="plab">＋<small>${k || ""}</small></span><i class="cd"></i>`; return; }
+    if (S0.empty) { b.classList.remove("hasico"); b.innerHTML = `<span class="plab">＋<small>${k || ""}</small></span><i class="cd"></i>`; return; }
     const sl = b.dataset.act === "roll" ? "r" : SLOT_NUM.find((s) => SLOT_KEY[s] === b.dataset.act), sk = sl && typeof slotSkill === "function" && typeof skIco === "function" ? slotSkill(sl) : null; // 使用者畫的技能圖示（企劃 33）
     const pi = sk && (sl === "r" || slotCls(sl)) && sk !== "over" && sk !== "origin" && sk !== "uq" ? skIco(curWeapon(), sl === "r" ? "r" : slotCls(sl), sk === "base" ? "" : sk, "pico") : ""; // 企劃 69 B：圖示看招式的類
     b.classList.toggle("hasico", !!pi);
