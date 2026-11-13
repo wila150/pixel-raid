@@ -102,7 +102,7 @@ function m76Layout() {
   wb.style.maxWidth = "none"; wb.style.flexWrap = "nowrap";
   if (room >= natW * 0.75) { // 橫向：放在血球和技能中間，置中
     const sc = Math.min(1, room / natW), w = natW * sc, x = clamp(innerWidth / 2, L + w / 2, Rb - w / 2);
-    wb.style.left = Math.round(x) + "px"; wb.style.right = "auto"; wb.style.bottom = `calc(10px + env(safe-area-inset-bottom, 0px))`; wb.style.transform = `translateX(-50%) scale(${sc.toFixed(3)})`; wb.style.transformOrigin = "50% 100%";
+    wb.style.left = Math.round(x) + "px"; wb.style.right = "auto"; wb.style.bottom = `calc(20px + env(safe-area-inset-bottom, 0px))`; wb.style.transform = `translateX(-50%) scale(${sc.toFixed(3)})`; wb.style.transformOrigin = "50% 100%";
   } else { // 直向：放在技能區上面、畫面正中間
     wb.style.left = "50%"; wb.style.right = "auto"; wb.style.bottom = Math.round(vh - top + 8) + "px"; wb.style.transform = "translateX(-50%)"; wb.style.transformOrigin = "50% 100%";
   }

@@ -112,7 +112,7 @@ function hud3Tick() {
   { // 直向手機：武器組移到技能按鈕上面一排（原本疊在血球和劍氣斬上）
     const wb = document.getElementById("wbar"); let pt = 1e9;
     if (port) document.querySelectorAll("#pad .btn").forEach((el) => { const r = el.getBoundingClientRect(); if (r.height > 0) pt = Math.min(pt, r.top); });
-    if (wb) wb.style.bottom = port && pt < 1e9 ? Math.round(vh - pt + 8) + "px" : "";
+    if (wb && !document.body.classList.contains("touch76")) wb.style.bottom = port && pt < 1e9 ? Math.round(vh - pt + 8) + "px" : "";
   }
   const obs = padRects();
   // 聊天框：寬 40%（直向 70%），底部在武器組和技能按鈕上面
