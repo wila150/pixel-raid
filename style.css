@@ -1506,3 +1506,13 @@ body.ovopen #pad, body.ovopen #wbar { visibility: hidden; }
 @media (orientation: landscape) { body.inworld #wbar { left: max(112px, calc(env(safe-area-inset-left) + 112px)) !important; transform: none !important; } }
 @media (orientation: portrait) { body.inworld #wbar { left: 8px !important; right: 8px !important; transform: none !important; flex-wrap: wrap; justify-content: center; } }
 #pickBtn { right: max(84px, calc(env(safe-area-inset-right) + 84px)); bottom: calc(240px + env(safe-area-inset-bottom, 0px)); width: 50px; height: 50px; }
+/* 企劃 75 第二次驗收：圓圈太高會蓋小地圖、矮螢幕壓快捷列 → 改成普攻左邊兩排（1 2 3／4 5 換頁），閃身回普攻左上內圈，撿在閃身上面 */
+#pad .btn-skill { right: 104px; bottom: 4px; }
+#pad .btn-ult { right: 162px; bottom: 4px; }
+#pad .btn-sk3 { right: 220px; bottom: 4px; }
+#pad .btn-sk4 { right: 104px; bottom: 62px; }
+#pad .btn-sk5 { right: 162px; bottom: 62px; }
+#pad .btn-pg { right: 225px; bottom: 67px; }
+#pad .btn-roll { right: 18px; bottom: 104px; width: 58px; height: 58px; }
+#pickBtn { right: max(22px, calc(env(safe-area-inset-right) + 22px)); bottom: calc(170px + env(safe-area-inset-bottom, 0px)); }
+@media (orientation: landscape) { body.inworld #wbar { max-width: calc(100vw - 112px - 290px); flex-wrap: wrap; } }
