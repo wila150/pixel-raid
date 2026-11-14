@@ -1565,3 +1565,13 @@ body.touch76 #wbar { flex-wrap: nowrap; }
 #cloudWarn { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 58px); right: calc(env(safe-area-inset-right, 0px) + 128px); z-index: 60; padding: 3px 8px; background: rgba(20, 14, 30, 0.85); border: 1px solid #ffb04a; color: #ffd9a0; font: bold 11px 'Noto Sans TC', sans-serif; border-radius: 4px; cursor: pointer; }
 #cloudWarn b { color: #ffb04a; }
 .spick .btns button small { display: block; font-size: 12px; font-weight: normal; opacity: 0.85; margin-top: 2px; }
+
+/* v9.37 1.0 企劃第 3 項：按鈕按等級解鎖（js/unlock.js）——沒開的電腦按鈕藏起來但位置不動；手機 ☰ 灰格＋Lv.X；剛開的閃 3 秒＋紅點 */
+#quick .qbtn.ullock, #railR .rlb.ullock { visibility: hidden; pointer-events: none; }
+@keyframes ulFlash { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 102, 0); filter: none; } 50% { box-shadow: 0 0 0 3px #ffd666, 0 0 14px 4px rgba(255, 214, 102, .75); filter: brightness(1.5); } }
+#quick .qbtn.ulnew, #railR .rlb.ulnew, #m76btn.ulnew, #m76 button.ulnew { animation: ulFlash .6s ease-in-out 5; }
+#quick .qbtn.uldot::after, #railR .rlb.uldot::after, #railR .rlH.uldot::after, #m76btn.uldot::after, #m76 button.uldot::after { content: ""; position: absolute; right: 2px; top: 2px; width: 9px; height: 9px; border-radius: 50%; background: #ff4a3a; border: 1.5px solid #fff; z-index: 2; }
+#m76 button.ullock { filter: grayscale(1); opacity: .45; }
+#m76 button.ullock .ullv { display: block; font-style: normal; color: #ffd98a; font-size: 10px; line-height: 1.1; }
+body.inworld #pad .btn.sklock .plab .sklv { font-size: 12px; color: #cfc4dc; font-weight: bold; }
+#m76btn.ulnodot .m76n { display: none !important; }

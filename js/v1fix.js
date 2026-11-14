@@ -27,18 +27,44 @@ function hudCovers(wx, wy) {
 // Lv.10 前：秘境台、倉庫箱、鐵砧的名牌只在 120 內顯示
 const padLabelOn = (x, y) => !hudCovers(x, y) && !(save.w && (save.w.lv || 1) < 10 && W0 && Math.hypot(W0.x - x, W0.y - y) > 120);
 
-// ───────── 新角色出生點離秘境台太近：往南移到廣場空地 ─────────
+// ───────── 新角色出生點：城牆內廣場的空地（v9.37：v9.36 會掉進南邊城牆缺口，左右都是牆，按 D 走不動）─────────
+// 條件：城牆裡面；自己那格＋周圍 8 格是空地；朝上下左右各模擬走一次（角色半徑 5），撞牆前都要能走 ≥ 90（新手第 1 步要 80）；
+// 離秘境台／倉庫箱／鐵砧／NPC 至少 26（不會一出生就打開）。符合的裡面選「最短那個方向」最長的，再來靠近城中心。
+function spawnSpot1() {
+  if (!wmap) buildWorld();
+  pad77();
+  const spots = _worldSpots1();
+  const open = (tx, ty) => !solid(tx * TS + 8, ty * TS + 8);
+  const run = (x, y, dx, dy) => { for (let d = 2; d <= 120; d += 2) if (blockedCircle(x + dx * d, y + dy * d, 5)) return d - 2; return 120; };
+  const cx = Math.floor(TOWN.x / TS), cy = Math.floor(TOWN.y / TS);
+  let best = null, bd = -1e9;
+  for (let ty = cy - 3; ty <= cy + 3; ty++) for (let tx = cx - 6; tx <= cx + 6; tx++) { // 城牆內約 14×6 格
+    if (!open(tx, ty)) continue;
+    let ok = true;
+    for (let i = -1; i <= 1 && ok; i++) for (let j = -1; j <= 1 && ok; j++) ok = open(tx + i, ty + j);
+    if (!ok) continue;
+    for (let ox = 0; ox < TS; ox += 2) for (const oy of [4, 8, 12]) {
+      const x = tx * TS + ox, y = ty * TS + oy;
+      if (zoneAt(x, y) !== "town" || spots.some((s) => Math.hypot(s.x - x, s.y - y) < 26)) continue;
+      const m = Math.min(run(x, y, 1, 0), run(x, y, -1, 0), run(x, y, 0, 1), run(x, y, 0, -1));
+      if (m < 90) continue;
+      const sc = m - Math.hypot(x - TOWN.x, y - TOWN.y) * 0.3;
+      if (sc > bd) { bd = sc; best = { x, y }; }
+    }
+  }
+  return best || { x: WAYPOINTS[0].x - 4, y: WAYPOINTS[0].y + 25 };
+}
+// 新手第 1 步（走路）還沒過：走過倉庫箱／鐵砧／秘境台／NPC 不自動打開（城裡很小，往哪走都會經過）
+const _worldSpots1 = worldSpots;
+worldSpots = function () {
+  if (typeof tutOn === "function" && tutOn() && save.w.tut === 0) return [];
+  return _worldSpots1.apply(this, arguments);
+};
 function spawnFix1() {
   const w = save.w;
-  if (!w || !w.created || w.spawn1 || (w.lv || 1) > 1 || w.exp > 0 || (w.q || 0) > 0) return;
-  w.spawn1 = 1;
-  if (!wmap) buildWorld();
-  const P = pad77(); if (!P || Math.hypot(w.x - P.pad.x, w.y - P.pad.y) >= 80) return;
-  const far = (x, y) => Math.hypot(x - P.pad.x, y - P.pad.y) >= 80 && Math.hypot(x - P.stash.x, y - P.stash.y) >= 50 && Math.hypot(x - P.anvil.x, y - P.anvil.y) >= 50;
-  for (let dy = 0; dy <= 300; dy += 10) for (const dx of [0, 20, -20, 40, -40]) {
-    const x = WAYPOINTS[0].x + dx, y = w.y + dy;
-    if (far(x, y) && !blockedCircle(x, y, 8) && zoneAt(x, y) === "town") { w.x = x; w.y = y; return; }
-  }
+  if (!w || !w.created || w.spawn2 || (w.lv || 1) > 1 || w.exp > 0 || (w.q || 0) > 0) return;
+  w.spawn1 = w.spawn2 = 1;
+  const p = spawnSpot1(); w.x = p.x; w.y = p.y;
 }
 const _enterWorld1 = enterWorld;
 enterWorld = function () { try { spawnFix1(); } catch (e) { /* 找不到就用原本的 */ } return _enterWorld1.apply(this, arguments); };
