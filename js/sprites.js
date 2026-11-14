@@ -79,4 +79,14 @@ function eqKey(it) {
   const bt = Math.max(1, Math.min(8, +it.bt || 1)); // 沒有 bt 的舊裝備當第 1 階
   return `${s}:${bt}`;
 }
+// 掉在地上的裝備／丹藥：畫圖集那一格（world.js 掉落物迴圈呼叫）。畫了回 true；圖集沒載好、靴子、不認得的回 false → 照舊畫小方塊。
+function dropIcon(o) {
+  const pot = o.kind === "potion", k = pot ? "pot:hp" : o.kind === "item" ? eqKey(o.it) : "";
+  if (!k || !EQ_OK || !(k in EQ_I)) { if (k && !EQ_IMG) eqLoad(); return false; }
+  const n = pot ? 10 : 14, low = typeof A11 !== "undefined" && A11.low, bob = low ? 0 : Math.sin(time * 3 + o.x) * 1, i = EQ_I[k];
+  ctx.fillStyle = "rgba(0,0,0,0.38)"; ctx.beginPath(); ctx.ellipse(o.x, o.y + 3, n * 0.36 - bob * 0.3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+  const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  try { ctx.drawImage(EQ_IMG, (i % 8) * 64, Math.floor(i / 8) * 64, 64, 64, o.x - n / 2, o.y + 3 - n - bob, n, n); } catch (e) { ctx.imageSmoothingEnabled = sm; return false; }
+  ctx.imageSmoothingEnabled = sm; return true;
+}
 const potIco = (k, cls = "") => { const u = eqURL("pot:" + k); return u ? `<img class="eqi${cls ? " " + cls : ""}" src="${u}" alt="">` : ""; };

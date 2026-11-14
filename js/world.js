@@ -1719,7 +1719,7 @@ function renderWorld() {
         ctx.fillStyle = g; ctx.fillRect(o.x - pw / 2, o.y - bh, pw, bh); ctx.fillRect(o.x - pw, o.y - bh * 0.6, pw * 2, bh * 0.6);
         ctx.globalAlpha = 0.35; ctx.beginPath(); ctx.ellipse(o.x, o.y, 9 + Math.sin(time * 6) * 2, 4, 0, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ctx.restore();
       } else { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(time * 4 + o.x); ctx.fillStyle = c; ctx.fillRect(o.x - 1.5, o.y - hgt, 3, hgt); ctx.globalAlpha = 1; }
-      ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6); ctx.fillStyle = c; ctx.fillRect(o.x - 2, o.y - 2, 4, 4);
+      if (!(typeof dropIcon === "function" && dropIcon(o))) { ctx.fillStyle = "#1b1424"; ctx.fillRect(o.x - 3, o.y - 3, 6, 6); ctx.fillStyle = c; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); } // 素材運用：有圖集就畫裝備圖
       if (typeof dropNameOn !== "function" || dropNameOn(o)) { // 企劃 74：名字（設定可關，按住 Alt 一定顯示）；低於掉落過濾的變暗；靠近可以撿的加亮框
       const dim = typeof dropDim === "function" && dropDim(o), near = dist(o, W0) < pickReach();
       if (dim) ctx.globalAlpha = 0.45;
@@ -1733,6 +1733,7 @@ function renderWorld() {
       ctx.globalAlpha = 1;
       } else o.lb = null;
     } else if (o.kind === "stone") { ctx.fillStyle = "#9fe8ff"; ctx.fillRect(o.x - 2, o.y - 2, 4, 4); }
+    else if (o.kind === "potion" && typeof dropIcon === "function" && dropIcon(o)) {}
     else if (o.kind === "potion") { ctx.fillStyle = "#ff6b8a"; ctx.fillRect(o.x - 2, o.y - 3, 4, 5); ctx.fillStyle = "#fff"; ctx.fillRect(o.x - 1, o.y - 4, 2, 1); }
     else if (o.kind === "card" || o.kind === "ess") { // 卡片：粉紫卡＋光柱；精髓：青色晶體
       const c = o.kind === "card" ? "#ff9ad8" : "#7dffd8", by = o.y - 3 + Math.sin(time * 4 + o.x) * 1.5;
