@@ -55,7 +55,16 @@ wswBtn.addEventListener("pointerup", (e) => { e.stopPropagation(); clearTimeout(
 ["pointerleave", "pointercancel"].forEach((ev) => wswBtn.addEventListener(ev, () => clearTimeout(wswLP)));
 wsPick.addEventListener("pointerdown", (e) => { e.stopPropagation(); const b = e.target.closest("[data-wp]"); if (b && wsGet(+b.dataset.wp)) { switchW(+b.dataset.wp); sfx("click"); } wsPick.hidden = true; });
 document.addEventListener("pointerdown", (e) => { if (!wsPick.hidden && !wsPick.contains(e.target) && e.target !== wswBtn) wsPick.hidden = true; }, true);
-svBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (typeof heroSave === "function") heroSave(); });
+// 1.0 企劃第 4 項：名字超過 2 個字 → 按鈕寫 2 個字的簡稱，長按 450ms 顯示全名（點下去照舊馬上施放）
+const SV_SHORT = { rewind: "回溯", mist: "化霧", blood: "血霧" };
+const svShort = (k) => { const n = SAVES[k].n; return n.length > 2 ? SV_SHORT[k] || n.slice(0, 2) : n; };
+const svTip = document.createElement("div"); svTip.id = "svTip76"; svTip.hidden = true; if (M76) document.body.appendChild(svTip);
+let svLP = null;
+const svTipOff = () => { clearTimeout(svLP); svTip.hidden = true; };
+svBtn.addEventListener("pointerdown", (e) => { e.preventDefault(); e.stopPropagation(); if (typeof heroSave === "function") heroSave();
+  clearTimeout(svLP); svLP = setTimeout(() => { const h = SAVES[svKey()], r = svBtn.getBoundingClientRect(); svTip.innerHTML = `<b>${h.n}</b><small>冷卻 ${h.cd} 秒</small>`; svTip.style.right = Math.round(innerWidth - r.right) + "px"; svTip.style.bottom = Math.round(innerHeight - r.top + 6) + "px"; svTip.hidden = false; }, 450);
+});
+["pointerup", "pointerleave", "pointercancel"].forEach((ev) => svBtn.addEventListener(ev, svTipOff));
 let m76Key = "";
 function m76SmallDraw() {
   if (!save.w || !W0) return;
@@ -63,7 +72,7 @@ function m76SmallDraw() {
   const key = (it ? it.id : "-") + "|" + svKey() + "|" + cd;
   if (key === m76Key) return; m76Key = key;
   wswBtn.innerHTML = `${it ? itemIcon(it) : "<b>⇄</b>"}<small>換</small>`;
-  svBtn.innerHTML = `<b>${h.n.slice(0, 2)}</b>${cd ? `<i class="svcd">${cd}</i>` : ""}`;
+  svBtn.innerHTML = `<b>${svShort(svKey())}</b>${cd ? `<i class="svcd">${cd}</i>` : ""}`;
   svBtn.classList.toggle("cd", !!cd);
 }
 
