@@ -112,7 +112,7 @@ riftEnter = function () {
 function drawPad77() {
   const P = pad77(); if (!P || inRiftW()) return;
   const near = (o) => Math.abs(o.x - cam.x) < W && Math.abs(o.y - cam.y) < H;
-  const lab = (x, y, t, c) => { ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.strokeText(t, x, y); ctx.fillStyle = c; ctx.fillText(t, x, y); };
+  const lab = (x, y, t, c) => { if (typeof padLabelOn === "function" && !padLabelOn(x, y)) return; ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 2.5; ctx.strokeStyle = "rgba(0,0,0,0.8)"; ctx.strokeText(t, x, y); ctx.fillStyle = c; ctx.fillText(t, x, y); };
   if (near(P.pad)) { // 石台＋紫色漩渦
     const { x, y } = P.pad;
     ctx.fillStyle = "#4a4452"; ctx.fillRect(x - 15, y - 3, 30, 9); ctx.fillStyle = "#6a6274"; ctx.fillRect(x - 13, y - 5, 26, 4); ctx.fillStyle = "#2c2832"; ctx.fillRect(x - 15, y + 5, 30, 2);

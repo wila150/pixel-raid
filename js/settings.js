@@ -88,7 +88,7 @@ function setGenHtml() {
     <div class="s74row"><span>畫面方向</span><button data-o="land" class="${orient === "land" ? "on" : ""}">橫向</button><button data-o="port" class="${orient === "port" ? "on" : ""}">直向</button></div>
     <div class="s74row"><span>隊友招式特效</span>${[["full", "全部"], ["dim", "淡化"], ["off", "關閉"]].map(([v, n]) => `<button data-af="${v}" class="${(save.w.allyFx || "dim") === v ? "on" : ""}">${n}</button>`).join("")}</div>
     <h3>遊戲</h3>${tg(save.w.autoPot !== false, "ap", "血量低於 30% 自動吃回春丹")}${tg(!!save.w.autoAtk, "aa", "半自動朝最近的敵人割草")}
-    <h3>帳號</h3><div class="s74row wrap"><button id="s74Upd">更新內容</button><button id="s74Stuck">解除卡住</button><button id="s74Rep">回報問題${typeof ERR_LOG !== "undefined" && ERR_LOG.length ? `（${ERR_LOG.length}）` : ""}</button></div>
+    <h3>帳號</h3><div class="s74row wrap"><button id="s74Upd">更新內容</button><button id="s74Stuck">解除卡住</button>${typeof saveBakInfo === "function" && saveBakInfo() ? `<button id="s74Bak">還原備份存檔（${saveBakInfo().from}・Lv.${saveBakInfo().lv}）</button>` : ""}<button id="s74Rep">回報問題${typeof ERR_LOG !== "undefined" && ERR_LOG.length ? `（${ERR_LOG.length}）` : ""}</button></div>
   </div><div class="s74col"><h3>操作說明</h3><dl class="s74ops">${(TOUCH ? OPS_TOUCH : OPS).map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl></div></div>`;
 }
 function setKeyHtml() {
@@ -120,6 +120,7 @@ function openSettings() {
     all("[data-o]", (b) => b.onclick = () => { setOrient(b.dataset.o); updateRotHint(); sfx("click"); re(); });
     all("[data-af]", (b) => b.onclick = () => { save.w.allyFx = b.dataset.af; writeSave(); sfx("click"); re(); });
     $("#s74Upd").onclick = () => { sfx("click"); showUpdates(true); };
+    if ($("#s74Bak")) $("#s74Bak").onclick = (e) => { const b = e.currentTarget; if (!b.dataset.ok) { b.dataset.ok = 1; b.textContent = "再按一次確定（現在這份會被換掉、只能還原一次）"; return; } ovKind = null; ov.className = "ov hidden"; saveRestore(); };
     $("#s74Stuck").onclick = (e) => { const why = unstuck(false); if (why) e.currentTarget.textContent = why; };
     $("#s74Rep").onclick = (e) => errReport(e.currentTarget);
   } else if (setTab === "key") {

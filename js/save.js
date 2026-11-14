@@ -23,7 +23,20 @@ const blankSave = () => ({ xiuwei: 0, tr: {}, pet: null, petLv: 0, daily: {}, sc
 function loadSave() {
   try { return Object.assign(blankSave(), JSON.parse(localStorage.getItem(SAVE_KEY) || "{}")); } catch { return blankSave(); }
 }
-function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* 無痕模式存不了就算了 */ } if (typeof cloudSave === "function") cloudSave(); }
+// 1.0 企劃第 2 項：遊戲中存檔都記 save.ts（登入時拿來比雲端和本機哪份新）；save.uid 記是誰的存檔；存不了要提示
+let saveFailWarned = false;
+function writeSave() {
+  try { if (inWorld) save.ts = Date.now(); } catch (e) { /* world.js 還沒載入 */ }
+  if (typeof fbUser !== "undefined" && fbUser) save.uid = fbUser.uid;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {
+    if (!saveFailWarned) { saveFailWarned = true; if (typeof toast1 === "function") toast1("這個瀏覽器不能存檔（無痕模式或空間滿了？），關掉就會不見，建議登入帳號", 8); }
+  }
+  if (typeof cloudSave === "function") cloudSave();
+}
+function toast1(t, sec = 4) { // 不在遊戲畫面也看得到的小提示
+  const el = document.createElement("div"); el.className = "toast1"; el.textContent = t; document.body.appendChild(el);
+  setTimeout(() => el.remove(), sec * 1000);
+}
 let save = loadSave();
 const realmIdx = (xw = save.xiuwei) => REALMS.reduce((i, r, j) => (xw >= r.need ? j : i), 0);
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };

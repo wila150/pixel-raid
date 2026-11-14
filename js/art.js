@@ -555,6 +555,13 @@ function bindFashion() {
 
 // ───────── 建立角色：取名、選初始武器、選外觀 ─────────
 let createSel = { wt: "sword", skin: "none" };
+// 1.0 企劃第 1 項：新角色不吃任何「舊玩家補償」（改版通知、補償靈石／材料）。新的補償旗標要加進這兩個表
+const FRESH_W = ["hv", "triV", "eSwapV", "chV", "gemOne", "gemGrp", "trig72"]; // 每個角色自己的
+const FRESH_TOP = ["resMig", "resV2", "ibase", "stashMig", "gatherGift", "matGift", "skgHint"]; // 整個帳號共用的：全新帳號才標
+function freshChar() {
+  for (const k of FRESH_W) save.w[k] = 1;
+  if (!(save.chars || []).some(Boolean)) for (const k of FRESH_TOP) save[k] = 1;
+}
 function renderCreate(msg = "") {
   state = "title"; pad.classList.add("hidden");
   const def = (typeof fbUser !== "undefined" && fbUser && fbUser.displayName) || "";
@@ -576,11 +583,14 @@ function renderCreate(msg = "") {
   screenEl.classList.remove("hidden");
   screenEl.querySelectorAll(".cw").forEach((b) => b.addEventListener("click", () => { createSel.wt = b.dataset.k; sfx("click"); renderCreate(); }));
   screenEl.querySelectorAll(".skin").forEach((b) => b.addEventListener("click", () => { createSel.skin = b.dataset.k; sfx("click"); renderCreate(); }));
-  document.getElementById("cgo").onclick = () => {
+  document.getElementById("cgo").onclick = (e) => {
     const n = document.getElementById("cname").value.trim().replace(/[<>&"]/g, "");
     if (n.length < 2) { renderCreate("名字至少 2 個字"); return; }
+    if (save.w && save.w.created) return; // 連點兩次：不要建兩個角色
+    e.currentTarget.disabled = true;
     save.w = blankW();
     Object.assign(save.w, { created: 1, hv: 1, sv: "rewind", tut: save.chars && save.chars.length > 1 ? undefined : 0, nick: n, skin: createSel.skin, skins: ["none", "snow", createSel.skin].filter((v, i, a) => a.indexOf(v) === i) });
+    freshChar();
     const it = rollItem(0, 0, createSel.wt); it.q = 0; it.u = null; it.wt = createSel.wt; it.aff = {}; it.bt = 1; setBase(it); nameItem(it);
     if (save.eq.sword) save.bag.push(save.eq.sword);
     save.eq.sword = it;

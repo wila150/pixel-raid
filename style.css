@@ -1560,3 +1560,8 @@ body.touch76 #wbar { flex-wrap: nowrap; }
 .ov .lk77 .lkf { background: #4a3a10; color: #ffe066; }
 .ov .lk77 .lka { display: flex; gap: 4px; flex-shrink: 0; }
 .ov .lk77 .lka button { padding: 4px 9px; font-size: 12px; min-width: 0; }
+/* 1.0 企劃第 2 項：存檔提示 */
+.toast1 { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); z-index: 9999; max-width: min(90vw, 460px); padding: 10px 16px; background: rgba(40, 12, 12, 0.94); border: 1px solid #ff8a7a; color: #ffe0da; font: bold 14px 'Noto Sans TC', sans-serif; border-radius: 6px; text-align: center; pointer-events: none; }
+#cloudWarn { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 58px); right: calc(env(safe-area-inset-right, 0px) + 128px); z-index: 60; padding: 3px 8px; background: rgba(20, 14, 30, 0.85); border: 1px solid #ffb04a; color: #ffd9a0; font: bold 11px 'Noto Sans TC', sans-serif; border-radius: 4px; cursor: pointer; }
+#cloudWarn b { color: #ffb04a; }
+.spick .btns button small { display: block; font-size: 12px; font-weight: normal; opacity: 0.85; margin-top: 2px; }

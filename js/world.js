@@ -1775,7 +1775,7 @@ function renderWorld() {
       ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(n.x, n.y + 6, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
       ctx.drawImage(NPC_IMG[n.id], Math.round(n.x - 6), Math.round(n.y - 8 + Math.sin(time * 2 + n.x) * 0.6));
       ctx.font = "bold 7px 'Noto Sans TC', sans-serif"; ctx.textAlign = "center";
-      ctx.fillStyle = "#1b1424"; ctx.fillText(n.n, n.x + 0.5, n.y - 11.5); ctx.fillStyle = "#ffe066"; ctx.fillText(n.n, n.x, n.y - 12);
+      if (!(typeof hudCovers === "function" && hudCovers(n.x, n.y - 12))) { ctx.fillStyle = "#1b1424"; ctx.fillText(n.n, n.x + 0.5, n.y - 11.5); ctx.fillStyle = "#ffe066"; ctx.fillText(n.n, n.x, n.y - 12); }
     } else if (o.me && state !== "worldDead") {
       if (W0.decoy) { const D = W0.decoy; ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(time * 14); ctx.restore(); const g = heroGear(); drawHeroBody(D.x, D.y, D.face !== undefined ? D.face : D.flip ? Math.PI : 0, D.flip, +g[0], +g[1], +g[2], g[3], 0, 0.35 + 0.15 * Math.sin(time * 14)); } // 企劃 71 C
       if (p.iframe <= 0 || Math.floor(time * 20) % 2 || p.roll > 0) {
