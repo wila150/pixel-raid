@@ -266,7 +266,10 @@ function iconURL(key) {
   else g.drawImage(src, Math.round((n - src.width) / 2), Math.round((n - src.height) / 2));
   return (iconCache[key] = c.toDataURL());
 }
-const itemIcon = (it) => `<img class="icon" src="${iconURL(it.slot === "sword" ? wtOf(it) : it.slot)}" alt="">`;
+const itemIcon = (it) => { // 素材運用階段一：圖集載好就用武俠像素圖（造型看部位／武器、材質看基底階、傳說另外一格），不然照舊
+  const u = typeof eqURL === "function" ? eqURL(eqKey(it)) : "";
+  return u ? `<img class="icon eqi" src="${u}" alt="">` : `<img class="icon" src="${iconURL(it.slot === "sword" ? wtOf(it) : it.slot)}" alt="">`;
+};
 
 // ───────── 特效 ─────────
 let fxs = [];

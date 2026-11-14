@@ -68,10 +68,21 @@ wbarDraw = function (force) { // eslint-disable-line no-func-assign
   const key = POT_KEYS.map(potN).join();
   const r = _wbarDrawPot.call(this, force || key !== wbarDraw.k);
   wbarDraw.k = key;
+  { const b = wbar.querySelector('[data-it="pot"]'), u = potIco("hp", "qico"); if (b && u && !b.querySelector(".eqi")) { const o = b.querySelector(".ico, b"); if (o) o.outerHTML = u; } } // 回春丹也換自己的瓶子
+  if (!EQ_OK && EQ_IMG && EQ_IMG.complete === false) EQ_IMG.addEventListener("load", () => wbarDraw(true), { once: true });
   if (!wbar.classList.contains("hidden") && !wbar.querySelector('[data-it="mp"]')) {
     const pot = wbar.querySelector('[data-it="pot"]'); if (!pot) return r;
-    const h = ["mp", "guard", "pure"].map((k) => `<button class="qit pot2" data-it="${k}" title="${POTS[k].n}（${POTS[k].key}）" style="--pc:${POTS[k].c}"><b style="color:${POTS[k].c}">${POTS[k].n[0]}</b><small>×${potN(k)}</small>${TOUCH ? "" : `<i class="pk">${POTS[k].key}</i>`}</button>`).join("");
+    const h = ["mp", "guard", "pure"].map((k) => `<button class="qit pot2" data-it="${k}" title="${POTS[k].n}（${POTS[k].key}）" style="--pc:${POTS[k].c}">${potIco(k, "qico") || `<b style="color:${POTS[k].c}">${POTS[k].n[0]}</b>`}<small>×${potN(k)}</small>${TOUCH ? "" : `<i class="pk">${POTS[k].key}</i>`}</button>`).join("");
     pot.insertAdjacentHTML("afterend", h);
   }
+  return r;
+};
+// 素材運用階段一：進世界 3 秒後在背景載裝備圖集；載好時行囊／倉庫／鐵匠鋪開著就重畫一次
+const _enterWorldEqIco = enterWorld;
+enterWorld = function () { // eslint-disable-line no-func-assign
+  const r = _enterWorldEqIco.apply(this, arguments);
+  setTimeout(() => { if (typeof eqLoad !== "function") return; eqLoad(); EQ_IMG.addEventListener("load", () => {
+    try { wbarDraw(true); const k = typeof ovKind !== "undefined" ? ovKind : ""; if (document.body.classList.contains("ovopen")) { if (k === "bag" || k === "stash") renderEquip(); else if (k === "smith" && typeof renderSmith === "function") renderSmith(); } } catch (e) {}
+  }, { once: true }); }, 3000);
   return r;
 };

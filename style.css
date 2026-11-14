@@ -1575,3 +1575,7 @@ body.touch76 #wbar { flex-wrap: nowrap; }
 #m76 button.ullock .ullv { display: block; font-style: normal; color: #ffd98a; font-size: 10px; line-height: 1.1; }
 body.inworld #pad .btn.sklock .plab .sklv { font-size: 12px; color: #cfc4dc; font-weight: bold; }
 #m76btn.ulnodot .m76n { display: none !important; }
+/* 素材運用階段一：武俠像素裝備圖示（64px 原圖，縮小用平滑比較不糊）；丹藥瓶 */
+img.eqi { image-rendering: auto; }
+.ov .b2ico img { width: 32px; height: 32px; }
+.ov .b4pi.img { background: none; border-radius: 0; } .ov .b4pi.img img { width: 32px; height: 32px; }
