@@ -364,19 +364,63 @@ function drawSlash(p, wt) {
   ctx.restore();
 }
 // 手上的武器：平常斜拿，攻擊時跟著揮
+// v9.41 企劃 素材運用 v1.2：手上那把改畫裝備圖集 img/ic_eq.png 的那一格（位置、角度、揮砍時間都跟原本一樣）；圖集沒載好／沒有那一格 → 照舊畫 WPN_IMG。
+// 圖集的武器都是斜的（握把在左下、尖端朝右上 45°）→ 轉 45° 變成「朝右、握把在左」跟 WPN_IMG 同一個方向。
+// L＝畫出來多長（世界像素，角色約 27 高）、g＝握的位置（0 握把尾端～1 尖端）、m＝擺法（bow 弓身直立弓背朝前、mid 握中間）
+const HELD_EQ = {
+  sword: { L: 18, g: 0.1 }, staff: { L: 19, g: 0.14 }, blade: { L: 22, g: 0.2 }, fan: { L: 10, g: 0.06 }, bow: { L: 15, m: "bow" }, fist: { L: 7, m: "mid" },
+  "u:blade": { L: 19, g: 0.1 }, "u:bow": { L: 13, g: 0.3 }, // 傳說大刀是刀劍造型、傳說弓是弩（朝前拿）
+};
+const HELD_EQ_M = {}; // 每一格量一次：沿著 45° 軸的頭尾（t0,t1）、垂直方向的範圍（n0,n1）和重心（nm）
+function heldEqM(k) {
+  if (HELD_EQ_M[k]) return HELD_EQ_M[k];
+  let M = { t0: -37, t1: 37, n0: 35, n1: 55, nm: 45 };
+  try {
+    const c = document.createElement("canvas"); c.width = c.height = 64; const g = c.getContext("2d"), i = EQ_I[k];
+    g.drawImage(EQ_IMG, (i % 8) * 64, Math.floor(i / 8) * 64, 64, 64, 0, 0, 64, 64);
+    const d = g.getImageData(0, 0, 64, 64).data; let t0 = 1e9, t1 = -1e9, n0 = 1e9, n1 = -1e9, ns = 0, c0 = 0;
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) if (d[(y * 64 + x) * 4 + 3] > 40) { const t = (x - y) * Math.SQRT1_2, n = (x + y + 1) * Math.SQRT1_2; if (t < t0) t0 = t; if (t > t1) t1 = t; if (n < n0) n0 = n; if (n > n1) n1 = n; ns += n; c0++; }
+    if (c0 > 20 && t1 - t0 > 8) M = { t0, t1, n0, n1, nm: ns / c0 };
+  } catch (e) {}
+  return (HELD_EQ_M[k] = M);
+}
+// 這個角色手上要畫圖集哪一格：自己＝身上那把（武器種類＋基底階＋傳說）、別人只知道武器種類 → 用第 4 階。沒有就回 ""
+function heldEqKey(p, wt) {
+  if (typeof EQ_OK === "undefined" || !EQ_OK || !EQ_IMG || typeof eqKey !== "function") return "";
+  let k = "";
+  if (typeof W0 !== "undefined" && p === W0) { const it = save.eq.sword; if (it && wtOf(it) === wt) k = eqKey(it); }
+  else k = `${wt}:4`;
+  return k && k in EQ_I && (HELD_EQ[wt] || HELD_EQ[k.slice(0, k.lastIndexOf(":"))]) ? k : "";
+}
 function drawHeldWeapon(p, wt) {
   const img = WPN_IMG[wt]; if (!img) return;
   let a = p.face, off = 4;
   if (p.swing > 0 && (wt === "sword" || wt === "blade")) { const q = 1 - p.swing / (p.swingMax || 0.2), half = wt === "blade" ? 1.5 : 1.1; a = p.face - half + half * 2 * Math.min(1, q * 1.6); }
   else if (p.swing > 0 && wt === "fist") off = 9;
   else if (!(p.swing > 0) && (wt === "sword" || wt === "blade")) a = p.flip ? Math.PI + 0.9 : -0.9; // 收劍：斜靠在身上
+  const k = heldEqKey(p, wt); let tip = 12, ok = false;
   ctx.save();
   ctx.translate(Math.round(p.x + Math.cos(a) * off), Math.round(p.y + 1 + Math.sin(a) * off * 0.6));
-  if (wt === "bow") { ctx.rotate(p.face); ctx.drawImage(img, -2, -img.height / 2); }
-  else if (wt === "fist") { ctx.drawImage(img, -3, -2); }
-  else { ctx.rotate(a); if (Math.cos(a) < 0 && wt !== "staff") ctx.scale(1, -1); ctx.drawImage(img, -2, -img.height / 2); }
+  if (k) {
+    try {
+      const C = HELD_EQ[k.slice(0, k.lastIndexOf(":"))] || HELD_EQ[wt], M = heldEqM(k), i = EQ_I[k], len = M.t1 - M.t0, s = C.L / len;
+      const bow = C.m === "bow", mid = C.m === "mid", r = wt === "bow" || wt === "fist" ? p.face : a; // 弓、拳套跟原本一樣只看面向
+      const t = bow || mid ? (M.t0 + M.t1) / 2 : M.t0 + len * C.g, n = bow ? M.n1 - 2 / s : mid ? (M.n0 + M.n1) / 2 : M.nm; // 握的那一點（圖集格子裡）；弓＝弦在手後面 2px
+      ctx.rotate(r); if (!bow && Math.cos(r) < 0) ctx.scale(1, -1); // 朝左：上下翻（刀刃、扇面才不會反）
+      ctx.scale(s, s); ctx.rotate(bow ? Math.PI * 0.75 : Math.PI / 4);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(EQ_IMG, (i % 8) * 64, Math.floor(i / 8) * 64, 64, 64, -(t + n) * Math.SQRT1_2, -(n - t) * Math.SQRT1_2, 64, 64);
+      tip = C.L * (1 - (C.g || 0)); ok = true;
+    } catch (e) { ok = false; }
+  }
+  if (!ok) {
+    if (k) { ctx.restore(); ctx.save(); ctx.translate(Math.round(p.x + Math.cos(a) * off), Math.round(p.y + 1 + Math.sin(a) * off * 0.6)); } // 畫圖集出錯：座標還原再畫舊圖
+    if (wt === "bow") { ctx.rotate(p.face); ctx.drawImage(img, -2, -img.height / 2); }
+    else if (wt === "fist") { ctx.drawImage(img, -3, -2); }
+    else { ctx.rotate(a); if (Math.cos(a) < 0 && wt !== "staff") ctx.scale(1, -1); ctx.drawImage(img, -2, -img.height / 2); }
+  }
   ctx.restore();
-  if (wt === "staff") { const tx = p.x + Math.cos(a) * (off + 12), ty = p.y + 1 + Math.sin(a) * (off + 12) * 0.6; ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = `rgba(201,162,255,${0.35 + 0.2 * Math.sin(time * 6)})`; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
+  if (wt === "staff") { const tx = p.x + Math.cos(a) * (off + tip), ty = p.y + 1 + Math.sin(a) * (off + tip) * 0.6; ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = `rgba(201,162,255,${0.35 + 0.2 * Math.sin(time * 6)})`; ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }
 }
 // 飛行物的拖尾
 function drawTrail(s, c, w) {
