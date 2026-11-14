@@ -81,7 +81,7 @@ function setGenHtml() {
   const sl = (k, n) => `<div class="s74sl"><span>${n}</span><input type="range" min="0" max="100" step="5" value="${VOL[k]}" data-vol="${k}" aria-label="${n}"><b>${VOL[k]}</b></div>`;
   const tg = (on, attr, n) => `<label class="s74tg"><span>${n}</span><input type="checkbox" data-${attr} ${on ? "checked" : ""}><i></i></label>`;
   return `<div class="s74two"><div class="s74col">
-    <h3>音量</h3>${sl("m", "主音量")}${sl("s", "音效")}${sl("b", "音樂")}${tg(muted, "mute", "靜音")}${tg(A11.bgm, "bgm", "背景音樂（每個地區不同）")}
+    <h3>音量</h3>${sl("m", "主音量")}${sl("s", "音效")}${sl("b", "音樂")}${tg(muted, "mute", "靜音")}${tg(A11.bgm, "bgm", "背景音樂（每個地區不同）")}${tg(A11.real, "real", "配樂用真實音樂（關掉＝簡易合成音樂，不用下載）")}
     <h3>畫面</h3>${tg(SET74.dmg, "dmg", "顯示傷害數字")}${tg(SET74.names, "names", "一直顯示掉落物名字（關掉＝只有按住 Alt 才顯示；紫、橘一定顯示）")}
     ${tg(A11.low, "low", "低階手機模式（解析度降低、特效減半）")}${tg(A11.cb, "cb", "色弱預警（危險範圍加閃爍白色虛線）")}
     <div class="s74row"><span>字體大小</span>${[["s", "小"], ["m", "中"], ["l", "大"]].map(([v, n]) => `<button data-fz="${v}" class="${A11.font === v ? "on" : ""}">${n}</button>`).join("")}</div>
@@ -89,7 +89,7 @@ function setGenHtml() {
     <div class="s74row"><span>隊友招式特效</span>${[["full", "全部"], ["dim", "淡化"], ["off", "關閉"]].map(([v, n]) => `<button data-af="${v}" class="${(save.w.allyFx || "dim") === v ? "on" : ""}">${n}</button>`).join("")}</div>
     <h3>遊戲</h3>${tg(save.w.autoPot !== false, "ap", "血量低於 30% 自動吃回春丹")}${tg(!!save.w.autoAtk, "aa", "半自動朝最近的敵人割草")}
     <h3>帳號</h3><div class="s74row wrap"><button id="s74Upd">更新內容</button><button id="s74Stuck">解除卡住</button>${typeof saveBakInfo === "function" && saveBakInfo() ? `<button id="s74Bak">還原備份存檔（${saveBakInfo().from}・Lv.${saveBakInfo().lv}）</button>` : ""}<button id="s74Rep">回報問題${typeof ERR_LOG !== "undefined" && ERR_LOG.length ? `（${ERR_LOG.length}）` : ""}</button></div>
-  </div><div class="s74col"><h3>操作說明</h3><dl class="s74ops">${(TOUCH ? OPS_TOUCH : OPS).map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl></div></div>`;
+  </div><div class="s74col"><h3>操作說明</h3><dl class="s74ops">${(TOUCH ? OPS_TOUCH : OPS).map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl><h3>致謝</h3><p class="dim">Music by Richard Guo</p></div></div>`;
 }
 function setKeyHtml() {
   if (TOUCH) return `<p class="dim">手機、平板沒有鍵盤，這一頁只有接上鍵盤時有用。</p>`;
@@ -114,7 +114,7 @@ function openSettings() {
   if (setTab === "gen") {
     all("[data-vol]", (r) => { r.oninput = () => { setVol(r.dataset.vol, +r.value); r.nextElementSibling.textContent = r.value; }; r.onchange = () => sfx("click"); });
     const ck = (a, f) => all(`[data-${a}]`, (c) => c.onchange = () => { f(c.checked); writeSave(); sfx("click"); });
-    ck("mute", (v) => setMuted(v)); ck("bgm", (v) => a11Set("bgm", v)); ck("dmg", (v) => { SET74.dmg = v; set74Save(); }); ck("names", (v) => { SET74.names = v; set74Save(); });
+    ck("mute", (v) => setMuted(v)); ck("bgm", (v) => a11Set("bgm", v)); ck("real", (v) => a11Set("real", v)); ck("dmg", (v) => { SET74.dmg = v; set74Save(); }); ck("names", (v) => { SET74.names = v; set74Save(); });
     ck("low", (v) => a11Set("low", v)); ck("cb", (v) => a11Set("cb", v)); ck("ap", (v) => { save.w.autoPot = v; }); ck("aa", (v) => { save.w.autoAtk = v; });
     all("[data-fz]", (b) => b.onclick = () => { a11Set("font", b.dataset.fz); sfx("click"); re(); });
     all("[data-o]", (b) => b.onclick = () => { setOrient(b.dataset.o); updateRotHint(); sfx("click"); re(); });

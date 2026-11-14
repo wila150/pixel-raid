@@ -170,3 +170,66 @@ updateBgm = function () {
     bgmNext += beat;
   }
 };
+
+// ───────── 素材運用階段三：真的配樂（Richard Guo，music/<區>.mp3，96kbps）─────────
+// 只載「現在這區」那一首（HTMLAudio 串流，不整首解碼，手機不吃記憶體）；換區淡出 1 秒＋取消沒載完的；
+// 靜音、關音樂、選「簡易音樂」、低階模式、省流量／2G／3G、還沒點過畫面 → 不下載；載入失敗 → 照舊播合成音樂。
+A11.real = localStorage.getItem("pr_real") !== "0"; // 配樂：真實音樂（預設）／簡易音樂
+const BGM_FILE = { town: "town", grass: "grass", forest: "forest", waste: "waste", volcano: "volcano", snow: "snow", swamp: "swamp", thunder: "thunder", sky: "sky", boss: "boss" };
+const RM = { cur: null, old: [], fail: {}, swT: -99 }; // cur = {k, el, node, g, ready}
+const rmSaveData = () => { const c = navigator.connection; return !!(c && (c.saveData || /(^|-)(2g|3g)$/.test(c.effectiveType || ""))); };
+const rmAllowed = () => !!actx && actx.state === "running" && !muted && A11.bgm && A11.real && !A11.low && !rmSaveData();
+function rmKill(t, fade) {
+  if (!t) return;
+  try {
+    if (fade && t.g && t.ready) { const n = actx.currentTime; t.g.gain.cancelScheduledValues(n); t.g.gain.setValueAtTime(t.g.gain.value, n); t.g.gain.linearRampToValueAtTime(0, n + 1); RM.old.push(t); setTimeout(() => rmKill(t, false), 1100); return; }
+    RM.old = RM.old.filter((o) => o !== t);
+    t.el.pause(); t.el.removeAttribute("src"); t.el.load(); // 取消下載
+    if (t.node) t.node.disconnect(); if (t.g) t.g.disconnect();
+  } catch (e) {}
+}
+function rmStart(k) {
+  const el = new Audio(); el.loop = true; el.preload = "auto"; el.crossOrigin = "anonymous";
+  const t = { k, el, node: null, g: null, ready: false };
+  el.addEventListener("canplay", () => {
+    if (RM.cur !== t || t.ready) return;
+    try {
+      audioBus(); t.node = actx.createMediaElementSource(el); t.g = actx.createGain(); t.g.gain.value = 0;
+      t.node.connect(t.g); t.g.connect(busM);
+      const n = actx.currentTime; t.g.gain.linearRampToValueAtTime(1, n + 1); // 淡入；合成音樂這時停排（已經排的 0.3 秒自己放完）
+      const p = el.play(); if (p && p.catch) p.catch(() => rmUnlock(t)); // iPhone 有時要等下一次點畫面才肯播
+      t.ready = true;
+    } catch (e) { RM.fail[k] = 1; rmKill(t); if (RM.cur === t) RM.cur = null; }
+  });
+  el.addEventListener("error", () => { RM.fail[k] = 1; rmKill(t); if (RM.cur === t) RM.cur = null; }); // 載入失敗：這次開遊戲不再試，播合成音樂
+  el.addEventListener("timeupdate", () => { // 不是做好的循環：結尾 1.5 秒淡出、回到開頭淡入
+    if (!t.ready || !t.g || !el.duration) return; const n = actx.currentTime, left = el.duration - el.currentTime;
+    if (left < 1.5 && !t.endF) { t.endF = 1; t.g.gain.cancelScheduledValues(n); t.g.gain.setValueAtTime(t.g.gain.value, n); t.g.gain.linearRampToValueAtTime(0.05, n + Math.max(0.2, left)); }
+    else if (t.endF && el.currentTime < 1) { t.endF = 0; t.g.gain.cancelScheduledValues(n); t.g.gain.setValueAtTime(t.g.gain.value, n); t.g.gain.linearRampToValueAtTime(1, n + 1.2); }
+  });
+  el.src = `music/${BGM_FILE[k]}.mp3?v=${typeof GAME_VER !== "undefined" ? GAME_VER : 1}`;
+  return t;
+}
+function rmUnlock(t) {
+  const go = () => { window.removeEventListener("pointerdown", go, true); window.removeEventListener("keydown", go, true); if (RM.cur === t) { const p = t.el.play(); if (p && p.catch) p.catch(() => {}); } };
+  window.addEventListener("pointerdown", go, true); window.addEventListener("keydown", go, true);
+}
+function rmTick() {
+  const want = rmAllowed() ? bgmPick() : null, now = performance.now() / 1000;
+  const k = want && BGM_FILE[want] && !RM.fail[want] ? want : null;
+  const C = RM.cur;
+  if (!k) { if (C) { rmKill(C, true); RM.cur = null; } return null; }
+  const hold = state === "paused" || document.hidden; // 選單暫停、切到背景：先停，回來接著播
+  if (C && C.k === k) { if (C.ready) { if (hold && !C.el.paused) { C.el.pause(); C.held = 1; } else if (!hold && C.held) { C.held = 0; const p = C.el.play(); if (p && p.catch) p.catch(() => rmUnlock(C)); } } return C; }
+  if (C && now - RM.swT < 4) return C; // 兩區交界來回走：至少 4 秒才換一次
+  if (C) rmKill(C, true);
+  if (hold) { RM.cur = null; return null; }
+  RM.swT = now; RM.cur = rmStart(k); return RM.cur;
+}
+const _updateBgmRM = updateBgm;
+updateBgm = function () { // eslint-disable-line no-func-assign
+  let C = null; try { C = rmTick(); } catch (e) {}
+  if (C && C.ready && !C.el.paused) return; // 真音樂在播：不排合成音
+  return _updateBgmRM.apply(this, arguments);
+};
+document.addEventListener("visibilitychange", () => { try { if (document.hidden && RM.cur && RM.cur.ready && !RM.cur.el.paused) { RM.cur.el.pause(); RM.cur.held = 1; } } catch (e) {} });
