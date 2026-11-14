@@ -12,7 +12,7 @@ const ulSawAltar = () => {
   if (typeof W0 === "undefined" || !W0 || (typeof RIFT !== "undefined" && RIFT) || typeof RB_KEYS === "undefined") return false;
   return RB_KEYS.some((k) => Math.hypot(RBOSS[k].x - W0.x, RBOSS[k].y - W0.y) < 300);
 };
-// [按鈕, 開放條件, 灰格上的字, 開放時劍靈台詞]（照企劃 CSV；行囊、技能、設定、任務一開始就有，不在表裡）
+// [按鈕, 開放條件, 灰格上的字, 開放時劍靈台詞]（照企劃 CSV v1.1；行囊、技能、設定、任務、星盤一開始就有，不在表裡）
 const UL = [
   ["ap", () => ulLv() >= 3, "Lv.3", ""],
   ["tree", () => ulLv() >= 5, "Lv.5", "天賦點開了，點一點變強"],
@@ -20,7 +20,6 @@ const UL = [
   ["book", () => ulLv() >= 8, "Lv.8", ""],
   ["cards", ulHasCard, "拿到卡片", ""],
   ["rift", () => ulLv() >= 20 || ulHasKey(), "Lv.20", ""],
-  ["map", () => ulLv() >= 30, "Lv.30", ""],
   ["rank", () => ulLv() >= 15, "Lv.15", ""],
   ["altar", () => (save.w.ul && save.w.ul.altar) || ulSawAltar(), "看到祭壇", ""],
 ];
@@ -41,7 +40,7 @@ const ulSay = (k) => { const t = ulTxt(k); popWord(W0 || { x: 0, y: 0 }, t.start
 const ulSeen = (k) => { const s = ulSt(); if (s && s[k] === 2) { s[k] = 1; writeSave(); ulPaint(); } };
 
 // ───────── 點下去：還沒開就只說「Lv.X 開放」；剛開的點了紅點消失 ─────────
-const UL_HUD = { map: "map", tp: "map" };
+const UL_HUD = {};
 const _ovGoUL = ovGo;
 ovGo = function (q) { // eslint-disable-line no-func-assign
   if (!ulOpen(q)) { sfx("click"); ulSay(q); return; }
