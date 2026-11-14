@@ -1579,3 +1579,18 @@ body.inworld #pad .btn.sklock .plab .sklv { font-size: 12px; color: #cfc4dc; fon
 img.eqi { image-rendering: auto; }
 .ov .b2ico img { width: 32px; height: 32px; }
 .ov .b4pi.img { background: none; border-radius: 0; } .ov .b4pi.img img { width: 32px; height: 32px; }
+
+/* ───────── 1.0 企劃第 4 項：手機小地方（只有觸控 body.touch76；電腦不動） ───────── */
+/* 護身法術按鈕長按：全名 */
+#svTip76 { position: fixed; z-index: 30; padding: 6px 10px; border-radius: 8px; border: 1px solid #8a7a5a; background: rgba(20, 15, 26, 0.94); color: #cfe8ff; font: 700 14px "Noto Sans TC", sans-serif; white-space: nowrap; pointer-events: none; }
+#svTip76[hidden] { display: none; }
+#svTip76 small { display: block; font-weight: 400; font-size: 11px; color: #b0a48e; }
+/* 手機橫向（高 ≤ 430）行囊：裝備格每列 6 格、圖示至少 36px；升級箭頭移到格子右上角外框上，不壓圖 */
+@media (orientation: landscape) and (max-height: 430px) {
+  body.touch76 .ov .b4grid { grid-template-columns: repeat(6, minmax(44px, 1fr)); gap: 9px; padding: 8px 8px 0 0; }
+  body.touch76 .ov .b3 .b4c { height: auto; min-height: 44px; padding: 0; overflow: visible; } /* v9.12 矮螢幕把 .b2row 壓成 32px 高，格子不能跟著扁 */
+  body.touch76 .ov .b4c img { width: 80%; height: 80%; min-width: 36px; min-height: 36px; }
+  body.touch76 .ov .b4c .b4t { right: -8px; top: -8px; z-index: 1; gap: 2px; align-items: center; }
+  body.touch76 .ov .b4c .b4t .up { display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; background: #12301a; border: 1px solid #7dff8a; font-size: 10px; line-height: 1; font-weight: 900; }
+  body.touch76 .ov .b4c .b4t em:not(.up) { margin-top: 10px; text-shadow: 0 0 2px #000, 0 0 2px #000; }
+}
